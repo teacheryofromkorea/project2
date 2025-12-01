@@ -1,24 +1,202 @@
-const missions = ["알림장 적기", "교실 정리", "급식 예절 지키기"];
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 function MissionSidebar() {
+  const [missions, setMissions] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [newMission, setNewMission] = useState("");
+  const [editMission, setEditMission] = useState(null);
+  const [editText, setEditText] = useState("");
+  
+
+  // -------------------------
+  // 1) SUPABASE: 미션 불러오기
+  // -------------------------
+  const fetchMissions = async () => {
+    const { data, error } = await supabase
+      .from("missions")
+      .select("*")
+      .order("created_at", { nullsFirst : true, ascending: true });
+
+    if (error) {
+      console.error("미션 불러오기 오류:", error);
+      return;
+    }
+    setMissions(data);
+  };
+
+  useEffect(() => {
+    fetchMissions();
+  }, []);
+
+  // -------------------------
+  // 2) SUPABASE: 미션 추가
+  // -------------------------
+  const addMission = async () => {
+    if (newMission.trim() === "") return;
+
+    const { error } = await supabase
+      .from("missions")
+      .insert([{ text: newMission }]);
+
+    if (error) {
+      console.error("추가 오류:", error);
+      return;
+    }
+
+    setNewMission("");
+    fetchMissions(); // 화면 갱신
+  };
+
+  // -------------------------
+  // 3) SUPABASE: 미션 삭제
+  // -------------------------
+  const deleteMission = async (id) => {
+    const { error } = await supabase.from("missions").delete().eq("id", id);
+
+    if (error) {
+      console.error("삭제 오류:", error);
+      return;
+    }
+
+    fetchMissions(); // 화면 갱신
+  };
+
+  const updateMission = async () => {
+    if (editText.trim() === "") return;
+
+    const { error } = await supabase
+      .from("missions")
+      .update({ text: editText })
+      .eq("id", editMission.id);
+
+    if (error) {
+      console.error("업데이트 오류:", error);
+      return;
+    }
+
+    setEditMission(null);
+    setEditText("");
+    fetchMissions();
+  };
+
   return (
-    <aside className="bg-white/50 backdrop-blur rounded-3xl p-4 shadow-sm flex flex-col">
-      <h2 className="text-2xl font-bold mb-4">🎯 오늘의 미션</h2>
+    <>
+      <aside className="bg-white/50 backdrop-blur rounded-3xl p-4 shadow-sm flex flex-col">
+        <h2 className="text-2xl font-bold mb-4">🎯 오늘의 미션</h2>
 
-      <ul className="space-y-2 flex-1">
-        {missions.map((text, idx) => (
-          <li key={idx}>
-            <button className="w-full bg-white rounded-full px-4 py-2 text-sm font-semibold shadow-sm hover:bg-purple-50 transition">
-              {idx + 1}. {text}
+        <ul className="space-y-2 flex-1">
+          {missions.map((item, idx) => (
+            <li key={item.id}>
+              <button className="w-full bg-white rounded-full px-4 py-2 text-sm font-semibold shadow-sm hover:bg-purple-50 transition">
+                {idx + 1}. {item.text}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          className="mt-4 w-full bg-purple-500 text-white text-sm font-semibold py-2 rounded-full"
+          onClick={() => setIsEditing(true)}
+        >
+          ✏️ 미션 편집
+        </button>
+      </aside>
+
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
+            <h3 className="text-lg font-bold mb-4">미션 편집</h3>
+
+            <ul className="space-y-2 mb-4">
+              {missions.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-lg"
+                >
+                  <span>{item.text}</span>
+                  <div className="flex space-x-2">
+                    <button
+                      className="text-blue-500 font-semibold"
+                      onClick={() => {
+                        setEditMission(item);
+                        setEditText(item.text);
+                      }}
+                    >
+                      수정
+                    </button>
+
+                    <button
+                      className="text-red-500 font-semibold"
+                      onClick={() => deleteMission(item.id)}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <input
+              className="w-full border rounded-lg px-3 py-2 mb-3"
+              placeholder="새 미션 입력"
+              value={newMission}
+                autoComplete="off"
+  autoCorrect="off"
+  spellCheck="false"
+              onChange={(e) => setNewMission(e.target.value)}
+            />
+
+            <button
+              className="w-full bg-green-500 text-white py-2 rounded-full mb-2 font-semibold"
+              onClick={addMission}
+            >
+              추가
             </button>
-          </li>
-        ))}
-      </ul>
 
-      <button className="mt-4 w-full bg-purple-500 text-white text-sm font-semibold py-2 rounded-full">
-        ✏️ 미션 편집
-      </button>
-    </aside>
+            <button
+              className="w-full bg-gray-300 py-2 rounded-full font-semibold"
+              onClick={() => setIsEditing(false)}
+            >
+              닫기
+            </button>
+          </div>
+
+          {editMission && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
+                <h3 className="text-lg font-bold mb-4">미션 수정</h3>
+
+                <input
+                  className="w-full border rounded-lg px-3 py-2 mb-3"
+                  value={editText}
+                  autoComplete="off"
+                  spellCheck="false"
+                  onChange={(e) => setEditText(e.target.value)}
+                />
+
+                <button
+                  className="w-full bg-blue-500 text-white py-2 rounded-full mb-2 font-semibold"
+                  onClick={updateMission}
+                >
+                  저장
+                </button>
+
+                <button
+                  className="w-full bg-gray-300 py-2 rounded-full font-semibold"
+                  onClick={() => {
+                    setEditMission(null);
+                    setEditText("");
+                  }}
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
