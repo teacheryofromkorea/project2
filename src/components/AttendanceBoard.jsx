@@ -1,8 +1,43 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import StudentTaskModal from "./StudentTaskModal";
 
 function AttendanceBoard() {
   const [students, setStudents] = useState([]);
+  // 모달 상태
+const [isModalOpen, setIsModalOpen] = useState(false);
+
+// 선택된 학생
+const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // -------------------------------
+  // supabase 에서 routines, missions 목록 불러오기
+  // -------------------------------
+
+const [routines, setRoutines] = useState([]);
+const [missions, setMissions] = useState([]);
+
+const fetchRoutines = async () => {
+  const { data } = await supabase
+    .from("routines")
+    .select("*")
+    .order("order_index", { ascending: true });
+  setRoutines(data);
+};
+
+const fetchMissions = async () => {
+  const { data } = await supabase
+    .from("missions")
+    .select("*")
+    .order("order_index", { ascending: true });
+  setMissions(data);
+};
+
+useEffect(() => {
+  fetchStudents();
+  fetchRoutines();
+  fetchMissions();
+}, []);
 
   // -------------------------------
   // 1) 학생 목록 불러오기
@@ -63,11 +98,14 @@ function AttendanceBoard() {
 
               {s.status === "present" ? (
                 <button
-                  onClick={() => markPresent(s.id, s.status)}
-                  className="px-4 py-1 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm shadow whitespace-nowrap"
-                >
-                  미션
-                </button>
+  onClick={() => {
+    setSelectedStudent(s);   // 선택한 학생 정보 저장
+    setIsModalOpen(true);    // 모달 열기
+  }}
+  className="px-4 py-1 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm shadow whitespace-nowrap"
+>
+  미션
+</button>
               ) : (
                 <button
                   onClick={() => markPresent(s.id, s.status)}
@@ -101,7 +139,7 @@ function AttendanceBoard() {
 
               {s.status === "present" ? (
                 <button
-                  onClick={() => markPresent(s.id, s.status)}
+                  onClick={() => { setSelectedStudent(s); setIsModalOpen(true); }}
                   className="px-4 py-1 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm shadow whitespace-nowrap"
                 >
                   미션
@@ -117,6 +155,18 @@ function AttendanceBoard() {
             </div>
           ))}
         </div>
+
+          {/* 학생 루틴/미션 모달 */}
+<StudentTaskModal
+  isOpen={isModalOpen}
+  onClose={() => setIsModalOpen(false)}
+  student={selectedStudent}
+  routines={routines}   // 루틴 데이터 연결
+  missions={missions}   // 미션 데이터 연결
+/>
+
+
+
       </div>
 
     </div>

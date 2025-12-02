@@ -1,24 +1,98 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 function RoutineSidebar() {
-  const [routineItems, setRoutineItems] = useState([
-    "책가방 정리",
-    "필기구 준비",
-    "알림장 확인",
-    "하루 계획 세우기",
-  ]);
+  // 🗂 루틴 목록 (DB에서 불러옴)
+  const [routineItems, setRoutineItems] = useState([]);
+
+  // 📌 Supabase에서 루틴 불러오기
+  useEffect(() => {
+    const fetchRoutines = async () => {
+      const { data, error } = await supabase
+        .from("routines")
+        .select("*")
+        .order("order_index", { ascending: true });
+
+      if (!error && data) {
+        setRoutineItems(data);
+      }
+    };
+
+    fetchRoutines();
+  }, []);
 
   const [isEditing, setIsEditing] = useState(false);
   const [newRoutine, setNewRoutine] = useState("");
+  const [editRoutineIndex, setEditRoutineIndex] = useState(null);
+  const [editText, setEditText] = useState("");
 
-  const addRoutine = () => {
+  const addRoutine = async () => {
     if (newRoutine.trim() === "") return;
-    setRoutineItems([...routineItems, newRoutine]);
-    setNewRoutine("");
+
+    // DB에 삽입
+    const { data, error } = await supabase
+      .from("routines")
+      .insert({
+        text: newRoutine,
+        order_index: routineItems.length,
+      })
+      .select()
+      .single();
+
+    if (!error) {
+      setRoutineItems([...routineItems, data]);
+      setNewRoutine("");
+    }
   };
 
-  const deleteRoutine = (index) => {
-    setRoutineItems(routineItems.filter((_, i) => i !== index));
+  const deleteRoutine = async (index) => {
+    const id = routineItems[index].id;
+
+    await supabase.from("routines").delete().eq("id", id);
+
+    const updated = routineItems.filter((_, i) => i !== index);
+
+    // order 재정렬
+    const reordered = updated.map((item, i) => ({
+      ...item,
+      order_index: i,
+    }));
+    setRoutineItems(reordered);
+
+    // DB에도 반영
+    for (const item of reordered) {
+      await supabase
+        .from("routines")
+        .update({ order_index: item.order_index })
+        .eq("id", item.id);
+    }
+  };
+
+  const moveRoutine = async (index, direction) => {
+    const newList = [...routineItems];
+    if (direction === "up" && index === 0) return;
+    if (direction === "down" && index === newList.length - 1) return;
+
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+
+    // swap
+    [newList[index], newList[swapIndex]] = [newList[swapIndex], newList[index]];
+
+    // 새 index 재정렬
+    const reordered = newList.map((item, i) => ({
+      ...item,
+      order_index: i,
+    }));
+
+    setRoutineItems(reordered);
+
+    // DB에도 반영
+    for (const item of reordered) {
+      await supabase
+        .from("routines")
+        .update({ order_index: item.order_index })
+        .eq("id", item.id);
+    }
   };
 
   return (
@@ -27,10 +101,10 @@ function RoutineSidebar() {
         <h2 className="text-2xl font-bold mb-4">✏️ 등교시 루틴</h2>
 
         <ul className="space-y-2 flex-1">
-          {routineItems.map((text, idx) => (
+          {routineItems.map((item, idx) => (
             <li key={idx}>
               <button className="w-full bg-white rounded-full px-4 py-2 text-sm font-semibold shadow-sm hover:bg-pink-50 transition">
-                {idx + 1}. {text}
+                {idx + 1}. {item.text}
               </button>
             </li>
           ))}
@@ -50,15 +124,38 @@ function RoutineSidebar() {
             <h3 className="text-lg font-bold mb-4">루틴 편집</h3>
 
             <ul className="space-y-2 mb-4">
-              {routineItems.map((text, index) => (
+              {routineItems.map((item, index) => (
                 <li key={index} className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-lg">
-                  <span>{text}</span>
-                  <button
-                    className="text-red-500 font-semibold"
-                    onClick={() => deleteRoutine(index)}
-                  >
-                    삭제
-                  </button>
+                  <span className="flex-1">{item.text}</span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      className="text-gray-500 font-bold"
+                      onClick={() => moveRoutine(index, "up")}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      className="text-gray-500 font-bold"
+                      onClick={() => moveRoutine(index, "down")}
+                    >
+                      ▼
+                    </button>
+                    <button
+                      className="text-blue-500 font-semibold"
+                      onClick={() => {
+                        setEditRoutineIndex(index);
+                        setEditText(item.text);
+                      }}
+                    >
+                      수정
+                    </button>
+                    <button
+                      className="text-red-500 font-semibold"
+                      onClick={() => deleteRoutine(index)}
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -84,6 +181,48 @@ function RoutineSidebar() {
               닫기
             </button>
           </div>
+
+          {editRoutineIndex !== null && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
+                <h3 className="text-lg font-bold mb-4">루틴 수정</h3>
+
+                <input
+                  className="w-full border rounded-lg px-3 py-2 mb-3"
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                />
+
+                <button
+                  className="w-full bg-blue-500 text-white py-2 rounded-full mb-2 font-semibold"
+                  onClick={async () => {
+                    const id = routineItems[editRoutineIndex].id;
+
+                    await supabase.from("routines").update({ text: editText }).eq("id", id);
+
+                    const updated = [...routineItems];
+                    updated[editRoutineIndex].text = editText;
+
+                    setRoutineItems(updated);
+                    setEditRoutineIndex(null);
+                    setEditText("");
+                  }}
+                >
+                  저장
+                </button>
+
+                <button
+                  className="w-full bg-gray-300 py-2 rounded-full font-semibold"
+                  onClick={() => {
+                    setEditRoutineIndex(null);
+                    setEditText("");
+                  }}
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>

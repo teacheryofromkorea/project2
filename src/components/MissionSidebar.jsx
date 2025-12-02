@@ -16,7 +16,7 @@ function MissionSidebar() {
     const { data, error } = await supabase
       .from("missions")
       .select("*")
-      .order("created_at", { nullsFirst : true, ascending: true });
+      .order("order_index", { nullsFirst : true, ascending: true });
 
     if (error) {
       console.error("미션 불러오기 오류:", error);
@@ -35,9 +35,16 @@ function MissionSidebar() {
   const addMission = async () => {
     if (newMission.trim() === "") return;
 
-    const { error } = await supabase
-      .from("missions")
-      .insert([{ text: newMission }]);
+  // 현재 미션 중 가장 큰 order_index 찾기
+  const maxIndex =
+    missions.length > 0
+      ? Math.max(...missions.map((m) => m.order_index ?? 0)) + 1
+      : 0;
+
+  // order_index 포함해서 insert
+  const { error } = await supabase
+    .from("missions")
+    .insert([{ text: newMission, order_index: maxIndex }]);
 
     if (error) {
       console.error("추가 오류:", error);
@@ -60,6 +67,33 @@ function MissionSidebar() {
     }
 
     fetchMissions(); // 화면 갱신
+  };
+
+  const moveMission = async (index, direction) => {
+    const newList = [...missions];
+
+    if (direction === "up" && index === 0) return;
+    if (direction === "down" && index === newList.length - 1) return;
+
+    const target = newList[index];
+    const swapWith =
+      direction === "up" ? newList[index - 1] : newList[index + 1];
+
+    const tempOrder = target.order_index;
+    target.order_index = swapWith.order_index;
+    swapWith.order_index = tempOrder;
+
+    await supabase
+      .from("missions")
+      .update({ order_index: target.order_index })
+      .eq("id", target.id);
+
+    await supabase
+      .from("missions")
+      .update({ order_index: swapWith.order_index })
+      .eq("id", swapWith.id);
+
+    fetchMissions();
   };
 
   const updateMission = async () => {
@@ -114,8 +148,23 @@ function MissionSidebar() {
                   key={item.id}
                   className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-lg"
                 >
-                  <span>{item.text}</span>
-                  <div className="flex space-x-2">
+                  <span className="flex-1">{item.text}</span>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      className="text-gray-500 font-bold"
+                      onClick={() => moveMission(missions.findIndex(m => m.id === item.id), "up")}
+                    >
+                      ▲
+                    </button>
+
+                    <button
+                      className="text-gray-500 font-bold"
+                      onClick={() => moveMission(missions.findIndex(m => m.id === item.id), "down")}
+                    >
+                      ▼
+                    </button>
+
                     <button
                       className="text-blue-500 font-semibold"
                       onClick={() => {
