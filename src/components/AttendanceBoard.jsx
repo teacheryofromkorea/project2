@@ -93,13 +93,17 @@ function AttendanceBoard() {
     setMissionStatus(missionData || []);
   };
 
-  useEffect(() => {
-    fetchStudents();
-    fetchRoutines();
-    fetchMissions();
-    fetchStatus();
-    fetchAttendance();
-  }, []);
+useEffect(() => {
+  (async () => {
+    await Promise.all([
+      fetchStudents(),
+      fetchRoutines(),
+      fetchMissions(),
+      fetchStatus(),
+      fetchAttendance(),
+    ]);
+  })();
+}, []);
 
   // -------------------------------
   // 1) 학생 목록 불러오기
