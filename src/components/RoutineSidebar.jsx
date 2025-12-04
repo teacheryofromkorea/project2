@@ -4,22 +4,28 @@ import { supabase } from "../lib/supabaseClient";
 function RoutineSidebar() {
   // 🗂 루틴 목록 (DB에서 불러옴)
   const [routineItems, setRoutineItems] = useState([]);
+  const [routineTitle, setRoutineTitle] = useState("✏️ 등교시 루틴");
 
   // 📌 Supabase에서 루틴 불러오기
-  useEffect(() => {
-    const fetchRoutines = async () => {
-      const { data, error } = await supabase
-        .from("routines")
-        .select("*")
-        .order("order_index", { ascending: true });
+useEffect(() => {
+  const fetchRoutines = async () => {
+    const { data, error } = await supabase
+      .from("routines")
+      .select("*")
+      .order("order_index", { ascending: true });
 
-      if (!error && data) {
-        setRoutineItems(data);
+    if (!error && data) {
+      setRoutineItems(data);
+
+      // 🔥 DB에서 제목 가져오기
+      if (data.length > 0 && data[0].routine_title) {
+        setRoutineTitle(data[0].routine_title);
       }
-    };
+    }
+  };
 
-    fetchRoutines();
-  }, []);
+  fetchRoutines();
+}, []);
 
   const [isEditing, setIsEditing] = useState(false);
   const [newRoutine, setNewRoutine] = useState("");
@@ -98,7 +104,7 @@ function RoutineSidebar() {
   return (
     <>
       <aside className="bg-white/50 backdrop-blur rounded-3xl p-4 shadow-sm flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">✏️ 등교시 루틴</h2>
+        <h2 className="text-2xl font-bold mb-4">{routineTitle}</h2>
 
         <ul className="space-y-2 flex-1">
           {routineItems.map((item, idx) => (
@@ -122,6 +128,12 @@ function RoutineSidebar() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
             <h3 className="text-lg font-bold mb-4">루틴 편집</h3>
+
+            <input
+              className="w-full border rounded-lg px-3 py-2 mb-3 font-semibold"
+              value={routineTitle}
+              onChange={(e) => setRoutineTitle(e.target.value)}
+            />
 
             <ul className="space-y-2 mb-4">
               {routineItems.map((item, index) => (
@@ -174,12 +186,24 @@ function RoutineSidebar() {
               추가
             </button>
 
-            <button
-              className="w-full bg-gray-300 py-2 rounded-full font-semibold"
-              onClick={() => setIsEditing(false)}
-            >
-              닫기
-            </button>
+<button
+  className="w-full bg-gray-300 py-2 rounded-full font-semibold"
+  onClick={async () => {
+    // 🔥 제목 저장: 모든 루틴 row의 routine_title 업데이트
+    if (routineItems.length > 0) {
+      const ids = routineItems.map((item) => item.id);
+
+      await supabase
+        .from("routines")
+        .update({ routine_title: routineTitle })
+        .in("id", ids);
+    }
+
+    setIsEditing(false);
+  }}
+>
+  닫기
+</button>
           </div>
 
           {editRoutineIndex !== null && (

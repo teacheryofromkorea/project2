@@ -7,6 +7,8 @@ function MissionSidebar() {
   const [newMission, setNewMission] = useState("");
   const [editMission, setEditMission] = useState(null);
   const [editText, setEditText] = useState("");
+  const [missionTitle, setMissionTitle] = useState("오늘의 미션");
+  
   
 
   // -------------------------
@@ -23,6 +25,10 @@ function MissionSidebar() {
       return;
     }
     setMissions(data);
+if (data && data.length > 0) {
+  const titleRow = data.find((m) => m.mission_title !== null);
+  setMissionTitle(titleRow?.mission_title ?? "오늘의 미션");
+}
   };
 
   useEffect(() => {
@@ -117,7 +123,9 @@ function MissionSidebar() {
   return (
     <>
       <aside className="bg-white/50 backdrop-blur rounded-3xl p-4 shadow-sm flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">🎯 오늘의 미션</h2>
+        <h2 className="text-2xl font-bold mb-4">
+          {missionTitle}
+        </h2>
 
         <ul className="space-y-2 flex-1">
           {missions.map((item, idx) => (
@@ -135,12 +143,21 @@ function MissionSidebar() {
         >
           ✏️ 미션 편집
         </button>
+
       </aside>
 
       {isEditing && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
             <h3 className="text-lg font-bold mb-4">미션 편집</h3>
+            {/* 제목 수정 입력 */}
+            <input
+              className="w-full border rounded-lg px-3 py-2 mb-4 font-semibold"
+              value={missionTitle}
+              onChange={(e) => setMissionTitle(e.target.value)}
+              placeholder="미션 제목 수정"
+            />
+
 
             <ul className="space-y-2 mb-4">
               {missions.map((item) => (
@@ -203,12 +220,29 @@ function MissionSidebar() {
               추가
             </button>
 
-            <button
-              className="w-full bg-gray-300 py-2 rounded-full font-semibold"
-              onClick={() => setIsEditing(false)}
-            >
-              닫기
-            </button>
+<button
+  className="w-full bg-gray-300 py-2 rounded-full font-semibold"
+  onClick={async () => {
+    if (missions.length > 0) {
+      const ids = missions.map((item) => item.id);
+
+      const { error } = await supabase
+        .from("missions")
+        .update({ mission_title: missionTitle })
+        .in("id", ids);
+
+      if (error) {
+        console.error("미션 제목 저장 오류:", error);
+        return;
+      }
+    }
+
+    setIsEditing(false);
+    fetchMissions(); // 제목/목록 다시 불러오기
+  }}
+>
+  닫기
+</button>
           </div>
 
           {editMission && (
