@@ -54,18 +54,24 @@ useEffect(() => {
   const deleteRoutine = async (index) => {
     const id = routineItems[index].id;
 
+    // 1) 루틴 삭제
     await supabase.from("routines").delete().eq("id", id);
 
+    // 2) 이 루틴에 대한 학생별 상태도 같이 삭제
+    await supabase
+      .from("student_routine_status")
+      .delete()
+      .eq("routine_id", id);
+
+    // 3) 프런트 쪽 목록 정리 및 order_index 재정렬
     const updated = routineItems.filter((_, i) => i !== index);
 
-    // order 재정렬
     const reordered = updated.map((item, i) => ({
       ...item,
       order_index: i,
     }));
     setRoutineItems(reordered);
 
-    // DB에도 반영
     for (const item of reordered) {
       await supabase
         .from("routines")
@@ -73,7 +79,6 @@ useEffect(() => {
         .eq("id", item.id);
     }
   };
-
   const moveRoutine = async (index, direction) => {
     const newList = [...routineItems];
     if (direction === "up" && index === 0) return;

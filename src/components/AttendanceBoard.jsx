@@ -12,19 +12,38 @@ function AttendanceBoard() {
   const [attendanceStatus, setAttendanceStatus] = useState([]);
 
   const getPendingTasks = (studentId) => {
+    // ✅ 지금 실제로 화면에 존재하는 루틴/미션 id만 사용
+    const activeRoutineIds = new Set(routines.map((r) => r.id));
+    const activeMissionIds = new Set(missions.map((m) => m.id));
+
+    // ✅ 학생이 완료한 "존재하는" 루틴만 계산
     const doneRoutineIds = new Set(
       routineStatus
-        .filter((row) => row.student_id === studentId && row.completed)
+        .filter(
+          (row) =>
+            row.student_id === studentId &&
+            row.completed &&
+            activeRoutineIds.has(row.routine_id)
+        )
         .map((row) => row.routine_id)
     );
 
+    // ✅ 학생이 완료한 "존재하는" 미션만 계산
     const doneMissionIds = new Set(
       missionStatus
-        .filter((row) => row.student_id === studentId && row.completed)
+        .filter(
+          (row) =>
+            row.student_id === studentId &&
+            row.completed &&
+            activeMissionIds.has(row.mission_id)
+        )
         .map((row) => row.mission_id)
     );
 
+    // 전체 개수 = 현재 존재하는 루틴 + 미션 개수
     const total = routines.length + missions.length;
+
+    // 완료 개수를 빼서 "남은 작업 수" 계산
     return Math.max(0, total - (doneRoutineIds.size + doneMissionIds.size));
   };
 

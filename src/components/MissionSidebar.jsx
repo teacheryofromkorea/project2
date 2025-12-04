@@ -65,14 +65,30 @@ if (data && data.length > 0) {
   // 3) SUPABASE: 미션 삭제
   // -------------------------
   const deleteMission = async (id) => {
-    const { error } = await supabase.from("missions").delete().eq("id", id);
+    // 1) 미션 삭제
+    const { error } = await supabase
+      .from("missions")
+      .delete()
+      .eq("id", id);
 
     if (error) {
       console.error("삭제 오류:", error);
       return;
     }
 
-    fetchMissions(); // 화면 갱신
+    // 2) 이 미션에 대한 학생별 상태도 같이 삭제
+    const { error: statusError } = await supabase
+      .from("student_mission_status")
+      .delete()
+      .eq("mission_id", id);
+
+    if (statusError) {
+      console.error("상태 삭제 오류:", statusError);
+      // 여기서 바로 return 할 필요는 없음 (화면 갱신은 계속)
+    }
+
+    // 3) 화면 갱신
+    fetchMissions();
   };
 
   const moveMission = async (index, direction) => {
