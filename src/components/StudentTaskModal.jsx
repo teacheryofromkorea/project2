@@ -147,7 +147,9 @@ setMissionStatus(missionMap);
 
 
           <div className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/60">
-            <h3 className="font-semibold mb-3 text-black-700">🧭 등교 루틴</h3>
+            <h3 className="font-semibold mb-3 text-black-700">
+  🧭 {routines?.[0]?.routine_title || "등교 루틴"}
+</h3>
 
             <ul className="space-y-2">
               {routines.map((r) => (
@@ -174,7 +176,9 @@ setMissionStatus(missionMap);
 
           {/* ---------------------- 우측: 오늘의 미션 체크 ---------------------- */}
           <div className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/60">
-            <h3 className="font-semibold mb-3 text-black-700">🔥 오늘의 미션</h3>
+            <h3 className="font-semibold mb-3 text-black-700">
+  🔥 {missions?.[0]?.mission_title || "오늘의 미션"}
+</h3>
 
             <ul className="space-y-2">
               {missions.map((m) => (
