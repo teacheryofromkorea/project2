@@ -122,7 +122,7 @@ function MissionSidebar() {
         <ul className="space-y-2 flex-1">
           {missions.map((item, idx) => (
             <li key={item.id}>
-              <button className="w-full bg-white rounded-full px-4 py-2 text-sm font-semibold shadow-sm hover:bg-purple-50 transition">
+              <button className="w-full bg-white rounded-full px-4 py-2 text-xl font-semibold shadow-sm hover:bg-purple-50 transition">
                 {idx + 1}. {item.text}
               </button>
             </li>

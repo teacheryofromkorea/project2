@@ -8,7 +8,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-pink-200 via-purple-200 to-orange-200 text-gray-900">
       <TopNav />
 
-      <main className="px-6 pb-8 pt-4 max-w-6xl mx-auto">
+      <main className="flex-1 px-8 pb-8 pt-4">
         <div className="grid grid-cols-[260px,1fr,260px] gap-4">
           <RoutineSidebar />
           <AttendanceBoard />
