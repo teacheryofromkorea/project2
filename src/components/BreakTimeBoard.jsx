@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+import TodayChallengeSidebar from "./TodayChallengeSidebar";
+import SeatCheckContainer from "./SeatCheckContainer";
+import ClassDutySidebar from "./ClassDutySidebar";
 
 export default function BreakTimeBoard() {
   const [routineItems, setRoutineItems] = useState([]);
@@ -106,9 +109,7 @@ useEffect(() => {
     <div className="grid grid-cols-[260px,1fr,260px] gap-4 h-full">
 
       {/* 1. 좌측 오늘의 도전 */}
-      <div className="bg-white/70 rounded-2xl shadow p-4">
-        오늘의 도전 사이드바
-      </div>
+<TodayChallengeSidebar />
 
       {/* 중앙 (상단 + 하단) */}
       <div className="flex flex-col gap-4">
@@ -149,15 +150,11 @@ useEffect(() => {
 </div>
 
         {/* 3. 하단 착석 체크 */}
-        <div className="bg-white/70 rounded-2xl shadow p-6 flex-1">
-          착석 체크 컨테이너
-        </div>
+<SeatCheckContainer />
       </div>
 
       {/* 4. 우측 역할 사이드바 */}
-      <div className="bg-white/70 rounded-2xl shadow p-4">
-        우리반의 소중한 일 사이드바
-      </div>
+<ClassDutySidebar />
 
       {isRoutineModalOpen && (
         <div
