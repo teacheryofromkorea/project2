@@ -1,19 +1,26 @@
-function TopNav() {
-  const tabs = ["등교", "쉬는시간", "점심", "수업", "하교", "능력치", "현황", "도구"];
 
+
+function TopNav({ setActiveTab }) {
+  
+  const tabs = ["등교", "쉬는시간", "점심", "수업", "하교", "능력치", "현황", "도구"];
+  
   return (
     <header className="bg-white/60 backdrop-blur border-b border-white/50">
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
         <nav className="flex gap-2">
           {tabs.map((tab, idx) => (
-            <button
-              key={tab}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                idx === 0 ? "bg-pink-500 text-white shadow" : "text-gray-600 hover:bg-white"
-              }`}
-            >
-              {tab}
-            </button>
+<button
+  key={tab}
+  onClick={() => {
+  if (tab === "쉬는시간") setActiveTab("break");
+  else if (tab === "등교") setActiveTab("attendance");
+}}  // ← 이거 추가!
+  className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+    idx === 0 ? "bg-pink-500 text-white shadow" : "text-gray-600 hover:bg-white"
+  }`}
+>
+  {tab}
+</button>
           ))}
         </nav>
 
@@ -26,6 +33,9 @@ function TopNav() {
       </div>
     </header>
   );
+
+
 }
+
 
 export default TopNav;
