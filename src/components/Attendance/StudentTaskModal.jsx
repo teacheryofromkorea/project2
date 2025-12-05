@@ -1,7 +1,7 @@
 import React from "react";
 import confetti from "canvas-confetti";
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 
 // 🔥 도장 버튼 컴포넌트
 function StampButton({ completed, onToggle }) {

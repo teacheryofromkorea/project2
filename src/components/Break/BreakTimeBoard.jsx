@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 import TodayChallengeSidebar from "./TodayChallengeSidebar";
 import SeatCheckContainer from "./SeatCheckContainer";
 import ClassDutySidebar from "./ClassDutySidebar";

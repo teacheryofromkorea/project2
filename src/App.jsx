@@ -1,9 +1,9 @@
 import { useState } from "react";
 import TopNav from "./components/TopNav";
-import RoutineSidebar from "./components/RoutineSidebar";
-import MissionSidebar from "./components/MissionSidebar";
-import AttendanceBoard from "./components/AttendanceBoard";
-import BreakTimeBoard from "./components/BreakTimeBoard";  // ✨ 새로 만들 파일
+import RoutineSidebar from "./components/Attendance/RoutineSidebar";
+import MissionSidebar from "./components/Attendance/MissionSidebar";
+import AttendanceBoard from "./components/Attendance/AttendanceBoard";
+import BreakTimeBoard from "./components/Break/BreakTimeBoard";  // ✨ 새로 만들 파일
 
 function App() {
   const [activeTab, setActiveTab] = useState("attendance");

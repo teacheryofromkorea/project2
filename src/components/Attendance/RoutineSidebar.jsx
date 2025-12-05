@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 
 function RoutineSidebar() {
   // 🗂 루틴 목록 (DB에서 불러옴)
