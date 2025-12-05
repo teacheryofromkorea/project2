@@ -12,6 +12,13 @@ const [routineTitle, setRoutineTitle] = useState("");
   const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
 const [editRoutine, setEditRoutine] = useState(null);
 const [editText, setEditText] = useState("");
+
+// 🟦 미완료 학생 계산에 필요한 state
+const [students, setStudents] = useState([]);
+const [missions, setMissions] = useState([]);
+const [missionStatus, setMissionStatus] = useState([]);
+
+
   // globally fixed routine (break-time)
   const ROUTINE_ID = "e2c703b6-e823-42ce-9373-9fb12a4cdbb1";
 
@@ -99,17 +106,61 @@ const updateRoutine = async () => {
   fetchRoutineItems();
 };
 
+// 🟦 학생 목록
+const fetchStudents = async () => {
+  const { data, error } = await supabase
+    .from("students")
+    .select("id, name, gender")
+    .order("name", { ascending: true });
+
+  if (!error) setStudents(data);
+};
+
+// 🟦 오늘 미션 목록
+const fetchMissions = async () => {
+  const { data, error } = await supabase
+    .from("missions")
+    .select("*")
+    .order("order_index", { ascending: true });
+
+  if (!error) setMissions(data);
+};
+
+// 🟦 오늘 미션 상태
+const fetchMissionStatus = async () => {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data, error } = await supabase
+    .from("student_mission_status")
+    .select("*")
+    .eq("date", today);
+
+  if (!error) setMissionStatus(data);
+};
+
 // AUTO FETCH
 useEffect(() => {
   fetchRoutineTitle();
   fetchRoutineItems();
+
+  // 🟦 추가 (오늘의 도전 계산용 데이터 모두 로딩)
+  fetchStudents();
+  fetchMissions();
+  fetchMissionStatus();
+  
 }, []);
 
   return (
     <div className="grid grid-cols-[260px,1fr,260px] gap-4 h-full">
 
       {/* 1. 좌측 오늘의 도전 */}
-<TodayChallengeSidebar />
+{/* 1. 좌측 오늘의 도전 */}
+<TodayChallengeSidebar
+  students={students}
+  missions={missions}
+  studentMissionStatus={missionStatus}
+  onOpenModal={(student) => console.log("modal open", student)}
+/>
 
       {/* 중앙 (상단 + 하단) */}
       <div className="flex flex-col gap-4">
