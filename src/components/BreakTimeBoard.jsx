@@ -7,6 +7,8 @@ const [routineTitle, setRoutineTitle] = useState("");
   const [tempTitle, setTempTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
+const [editRoutine, setEditRoutine] = useState(null);
+const [editText, setEditText] = useState("");
   // globally fixed routine (break-time)
   const ROUTINE_ID = "e2c703b6-e823-42ce-9373-9fb12a4cdbb1";
 
@@ -56,7 +58,45 @@ await supabase
     fetchRoutineItems()
   };
 
-  // AUTO FETCH
+const moveRoutine = async (index, direction) => {
+  const newList = [...routineItems];
+  if (direction === "up" && index === 0) return;
+  if (direction === "down" && index === newList.length - 1) return;
+
+  const target = newList[index];
+  const swapWith =
+    direction === "up" ? newList[index - 1] : newList[index + 1];
+
+  const tempOrder = target.order_index;
+  target.order_index = swapWith.order_index;
+  swapWith.order_index = tempOrder;
+
+  await supabase
+    .from("routine_items")
+    .update({ order_index: target.order_index })
+    .eq("id", target.id);
+
+  await supabase
+    .from("routine_items")
+    .update({ order_index: swapWith.order_index })
+    .eq("id", swapWith.id);
+
+  fetchRoutineItems();
+};
+
+const updateRoutine = async () => {
+  if (!editText.trim()) return;
+  await supabase
+    .from("routine_items")
+    .update({ content: editText })
+    .eq("id", editRoutine.id);
+
+  setEditRoutine(null);
+  setEditText("");
+  fetchRoutineItems();
+};
+
+// AUTO FETCH
 useEffect(() => {
   fetchRoutineTitle();
   fetchRoutineItems();
@@ -139,7 +179,49 @@ useEffect(() => {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
 
-            {/* ADD NEW ITEM */}
+            {/* LIST ITEMS */}
+            <ul className="max-h-48 overflow-y-auto mb-6 space-y-2">
+              {routineItems.map((item, index) => (
+  <li
+    key={item.id}
+    className="flex items-center justify-between bg-gray-100 rounded-lg px-3 py-2 text-sm"
+  >
+    <span className="flex-1">{item.content}</span>
+
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => moveRoutine(index, "up")}
+        className="text-gray-500 font-bold"
+      >
+        ▲
+      </button>
+      <button
+        onClick={() => moveRoutine(index, "down")}
+        className="text-gray-500 font-bold"
+      >
+        ▼
+      </button>
+      <button
+        onClick={() => {
+          setEditRoutine(item);
+          setEditText(item.content);
+        }}
+        className="text-blue-600 hover:text-blue-800 font-semibold"
+      >
+        수정
+      </button>
+      <button
+        onClick={() => deleteRoutineItem(item.id)}
+        className="text-red-600 hover:text-red-800 font-bold"
+      >
+        삭제
+      </button>
+    </div>
+  </li>
+))}
+            </ul>
+
+            {/* ADD NEW ITEM (moved below list) */}
             <label className="block text-sm font-medium text-gray-700 mb-2">새 루틴 항목</label>
             <div className="flex gap-2 mb-6">
               <input
@@ -155,21 +237,6 @@ useEffect(() => {
                 추가
               </button>
             </div>
-
-            {/* LIST ITEMS */}
-            <ul className="max-h-48 overflow-y-auto mb-6 space-y-2">
-              {routineItems.map(item => (
-                <li key={item.id} className="flex items-center justify-between bg-gray-100 rounded-lg px-3 py-2 text-sm">
-                  <span>{item.content}</span>
-                  <button
-                    onClick={() => deleteRoutineItem(item.id)}
-                    className="text-red-600 hover:text-red-800 font-bold"
-                  >
-                    삭제
-                  </button>
-                </li>
-              ))}
-            </ul>
 
 <button
   onClick={async () => {
@@ -199,6 +266,35 @@ useEffect(() => {
             >
               닫기
             </button>
+
+{editRoutine && (
+  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-2xl shadow-xl w-[300px]">
+      <h3 className="text-lg font-bold mb-4">루틴 수정</h3>
+      <input
+        value={editText}
+        onChange={(e) => setEditText(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <button
+        onClick={updateRoutine}
+        className="w-full bg-blue-600 text-white rounded-full py-2 mb-2 font-semibold"
+      >
+        저장
+      </button>
+      <button
+        onClick={() => {
+          setEditRoutine(null);
+          setEditText("");
+        }}
+        className="w-full bg-gray-300 rounded-full py-2 font-semibold"
+      >
+        취소
+      </button>
+    </div>
+  </div>
+)}
+
           </div>
         </div>
       )}
