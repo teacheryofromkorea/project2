@@ -163,6 +163,9 @@ useEffect(() => {
   missions={missions}
   studentMissionStatus={missionStatus}
   onOpenModal={setTargetStudent}
+  onSaved={async () => {
+    await fetchMissionStatus();   // ✔ 미션 상태 새로 불러오기
+  }}
 />
 
       {/* 중앙 (상단 + 하단) */}
@@ -351,12 +354,15 @@ useEffect(() => {
       )}
 
 {targetStudent && (
-<StudentTaskModal
-  student={targetStudent}
-  missions={missions}
-  showRoutines={false}
-  onClose={() => setTargetStudent(null)}
-/>
+  <StudentTaskModal
+    student={targetStudent}
+    missions={missions}
+    showRoutines={false}
+    onClose={() => setTargetStudent(null)}
+    onSaved={async () => {
+      await fetchMissionStatus();  // ✔ 저장 직후 상태 갱신
+    }}
+  />
 )}
 
     </div>

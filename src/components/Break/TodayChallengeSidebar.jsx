@@ -30,7 +30,7 @@ export default function TodayChallengeSidebar({
   }, [students, missions, studentMissionStatus]);
 
   return (
-    <div className="bg-white/70 rounded-2xl shadow p-4 flex flex-col gap-3">
+    <div className="bg-white/70 rounded-2xl shadow p-4 flex flex-col gap-3 max-h-[80vh] h-[80vh] overflow-hidden">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold text-gray-800">🚀 오늘의 도전</h3>
         <button
@@ -44,11 +44,8 @@ export default function TodayChallengeSidebar({
         </button>
       </div>
 
-      <p className="text-xs text-gray-500 mb-1">
-        아직 오늘의 미션을 다 끝내지 못한 친구들이에요.
-      </p>
 
-      <div className="space-y-2 h-auto overflow-y-auto">
+      <div className="space-y-2 flex-grow min-h-0 overflow-y-auto">
         {(showIncompleteOnly ? incompleteStudents : students).length === 0 ? (
           <div className="text-xs text-gray-400 text-center py-4">
             모두 완료했어요! 🎉
