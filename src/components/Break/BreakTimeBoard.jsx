@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import TodayChallengeSidebar from "./TodayChallengeSidebar";
 import SeatCheckContainer from "./SeatCheckContainer";
 import ClassDutySidebar from "./ClassDutySidebar";
+import StudentTaskModal from "../Attendance/StudentTaskModal";
 
 export default function BreakTimeBoard() {
   const [routineItems, setRoutineItems] = useState([]);
@@ -17,6 +18,9 @@ const [editText, setEditText] = useState("");
 const [students, setStudents] = useState([]);
 const [missions, setMissions] = useState([]);
 const [missionStatus, setMissionStatus] = useState([]);
+
+// 🟦 모달 제어용
+const [targetStudent, setTargetStudent] = useState(null);
 
 
   // globally fixed routine (break-time)
@@ -154,12 +158,11 @@ useEffect(() => {
     <div className="grid grid-cols-[260px,1fr,260px] gap-4 h-full">
 
       {/* 1. 좌측 오늘의 도전 */}
-{/* 1. 좌측 오늘의 도전 */}
 <TodayChallengeSidebar
   students={students}
   missions={missions}
   studentMissionStatus={missionStatus}
-  onOpenModal={(student) => console.log("modal open", student)}
+  onOpenModal={setTargetStudent}
 />
 
       {/* 중앙 (상단 + 하단) */}
@@ -346,6 +349,15 @@ useEffect(() => {
           </div>
         </div>
       )}
+
+{targetStudent && (
+<StudentTaskModal
+  student={targetStudent}
+  missions={missions}
+  showRoutines={false}
+  onClose={() => setTargetStudent(null)}
+/>
+)}
 
     </div>
   );

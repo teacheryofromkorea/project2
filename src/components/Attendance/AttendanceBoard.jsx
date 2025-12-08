@@ -293,7 +293,10 @@ const markPresent = async (id) => {
   isOpen={modalType === "task"}
   onClose={() => {
     setModalType(null);
+  }}
+  onSaved={() => {
     fetchStatus();
+    fetchAttendance();
   }}
   student={selectedStudent}
   routines={routines}   // 루틴 데이터 연결

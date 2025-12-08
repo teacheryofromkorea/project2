@@ -24,14 +24,25 @@ function StampButton({ completed, onToggle }) {
   );
 }
 
-function StudentTaskModal({ isOpen, onClose, student, routines, missions }) {
+function StudentTaskModal({
+  isOpen,
+  onClose,
+  onSaved,
+  student,
+  routines = [],
+  missions = [],
+  showRoutines = true
+}) {
+
   const [routineStatus, setRoutineStatus] = useState({});
   const [missionStatus, setMissionStatus] = useState({});
-
   const today = new Date().toISOString().slice(0, 10);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!isOpen || !student) return;
+      // Attendance 탭: isOpen === false → 실행 안 함
+      // Break 탭: isOpen undefined → 실행됨
+    if (isOpen === false || !student) return;
 
     const fetchStatus = async () => {
       const { data: routineRows } = await supabase
@@ -90,7 +101,11 @@ setMissionStatus(missionMap);
   }
 }, [routineStatus, missionStatus, routines, missions]);
 
-  if (!isOpen) return null;
+  // isOpen이 명시적으로 false이면 렌더링하지 않음 (Attendance 탭용)
+if (typeof isOpen !== "undefined" && !isOpen) return null;
+
+// student가 없으면 렌더링하지 않음 (공통 보호)
+if (!student) return null;
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -144,35 +159,37 @@ setMissionStatus(missionMap);
 
           {/* ---------------------- 좌측: 루틴 체크 ---------------------- */}
 
-
-
-          <div className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/60">
-            <h3 className="font-semibold mb-3 text-black-700">
-  🧭 {routines?.[0]?.routine_title || "등교 루틴"}
-</h3>
-
-            <ul className="space-y-2">
-              {routines.map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-2">
-                  <span
-                    className={`text-lg ${
-                      routineStatus[r.id]
-                        ? "text-emerald-700 font-semibold line-through"
-                        : "text-black-700"
-                    }`}
-                  >
-                    {r.text}
-                  </span>
-
-<StampButton
-  completed={routineStatus[r.id]}
-  onToggle={() => setRoutineStatus({ ...routineStatus, [r.id]: !routineStatus[r.id] })}
-/>
-                </li>
-              ))}
-
-            </ul>
-          </div>
+{showRoutines && (
+  <div className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/60">
+    <h3 className="font-semibold mb-3 text-black-700">
+      🧭 {routines?.[0]?.routine_title || "등교 루틴"}
+    </h3>
+    <ul className="space-y-2">
+      {routines.map((r) => (
+        <li key={r.id} className="flex items-center justify-between gap-2">
+          <span
+            className={`text-lg ${
+              routineStatus[r.id]
+                ? "text-emerald-700 font-semibold line-through"
+                : "text-black-700"
+            }`}
+          >
+            {r.text}
+          </span>
+          <StampButton
+            completed={routineStatus[r.id]}
+            onToggle={() =>
+              setRoutineStatus({
+                ...routineStatus,
+                [r.id]: !routineStatus[r.id]
+              })
+            }
+          />
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
 
           {/* ---------------------- 우측: 오늘의 미션 체크 ---------------------- */}
           <div className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/60">
@@ -212,57 +229,65 @@ setMissionStatus(missionMap);
           </button>
 
           <button
+          
             className="px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold shadow-md hover:shadow-lg hover:translate-y-0.5 transition"
+            disabled={saving}
             onClick={async () => {
-              // Save routines
-              for (const rid in routineStatus) {
-                const exists = await supabase
-                  .from("student_routine_status")
-                  .select("*")
-                  .eq("student_id", student.id)
-                  .eq("routine_id", rid)
-                  .eq("date", today);
+              if (saving) return;    // 중복 클릭 방지
+              setSaving(true);       // 저장 시작
+              // if showRoutines is false, skip routine save entirely
 
-                if (exists.data && exists.data.length > 0) {
-                  await supabase
-                    .from("student_routine_status")
-                    .update({ completed: routineStatus[rid] })
-                    .eq("id", exists.data[0].id);
-                } else {
-                  await supabase.from("student_routine_status").insert({
-                    student_id: student.id,
-                    routine_id: rid,
-                    completed: routineStatus[rid],
-                    date: today,
-                  });
-                }
-              }
+              if (!showRoutines) {
 
-              // Save missions
-              for (const mid in missionStatus) {
-                const exists = await supabase
+                // 1) delete today's mission rows for this student
+                await supabase
                   .from("student_mission_status")
-                  .select("*")
+                  .delete()
                   .eq("student_id", student.id)
-                  .eq("mission_id", mid)
                   .eq("date", today);
 
-                if (exists.data && exists.data.length > 0) {
-                  await supabase
-                    .from("student_mission_status")
-                    .update({ completed: missionStatus[mid] })
-                    .eq("id", exists.data[0].id);
-                } else {
-                  await supabase.from("student_mission_status").insert({
-                    student_id: student.id,
-                    mission_id: mid,
-                    completed: missionStatus[mid],
-                    date: today,
-                  });
+                // 2) insert current mission status
+                const inserts = Object.entries(missionStatus).map(([mid, completed]) => ({
+                  student_id: student.id,
+                  mission_id: mid,
+                  completed,
+                  date: today
+                }));
+
+                if (inserts.length > 0) {
+                  await supabase.from("student_mission_status").insert(inserts);
                 }
+
+                onClose();
+                if (onSaved) onSaved();
+                return;
               }
+
+              // Save routines (루틴 저장 로직)
+await supabase.from("student_routine_status").upsert(
+  Object.entries(routineStatus).map(([rid, completed]) => ({
+    student_id: student.id,
+    routine_id: rid,
+    completed,
+    date: today
+  }))
+);
+
+              // Save missions (미션 저장 로직)
+
+              // ------------------------ Save missions (Attendance tab) ------------------------
+await supabase.from("student_mission_status").upsert(
+  Object.entries(missionStatus).map(([mid, completed]) => ({
+    student_id: student.id,
+    mission_id: mid,
+    completed,
+    date: today
+  }))
+);
 
               onClose();
+              if (onSaved) onSaved();
+              setSaving(false);
             }}
           >
             저장
