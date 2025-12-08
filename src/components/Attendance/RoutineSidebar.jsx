@@ -6,6 +6,12 @@ function RoutineSidebar() {
   const [routineItems, setRoutineItems] = useState([]);
   const [routineTitle, setRoutineTitle] = useState("✏️ 등교시 루틴");
 
+  // 모든 모달 상태 useState
+  const [isEditing, setIsEditing] = useState(false);
+  const [newRoutine, setNewRoutine] = useState("");
+  const [editRoutineIndex, setEditRoutineIndex] = useState(null);
+  const [editText, setEditText] = useState("");
+
   // 📌 Supabase에서 루틴 불러오기
 useEffect(() => {
   const fetchRoutines = async () => {
@@ -27,10 +33,31 @@ useEffect(() => {
   fetchRoutines();
 }, []);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [newRoutine, setNewRoutine] = useState("");
-  const [editRoutineIndex, setEditRoutineIndex] = useState(null);
-  const [editText, setEditText] = useState("");
+// ESC 닫기
+// ESC 닫기
+useEffect(() => {
+  const handleKey = (e) => {
+    if (e.key === "Escape") {
+
+      // 🔹 작은 모달 우선 닫기
+      if (editRoutineIndex !== null) {
+        setEditRoutineIndex(null);
+        setEditText("");
+        return;
+      }
+
+      // 🔹 그 다음 큰 모달 닫기
+      if (isEditing) {
+        setIsEditing(false);
+      }
+    }
+  };
+
+  window.addEventListener("keydown", handleKey);
+  return () => window.removeEventListener("keydown", handleKey);
+}, [isEditing, editRoutineIndex]);
+
+
 
   const addRoutine = async () => {
     if (newRoutine.trim() === "") return;
@@ -130,7 +157,14 @@ useEffect(() => {
       </aside>
 
       {isEditing && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsEditing(false);
+            }
+          }}
+        >
           <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
             <h3 className="text-lg font-bold mb-4">루틴 편집</h3>
 
@@ -212,7 +246,15 @@ useEffect(() => {
           </div>
 
           {editRoutineIndex !== null && (
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setEditRoutineIndex(null);
+                  setEditText("");
+                }
+              }}
+            >
               <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
                 <h3 className="text-lg font-bold mb-4">루틴 수정</h3>
 

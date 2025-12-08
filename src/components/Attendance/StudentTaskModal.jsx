@@ -83,6 +83,17 @@ setMissionStatus(missionMap);
     fetchStatus();
   }, [isOpen, student]);
 
+  // ESC key to close modal
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
 // 축하 폭죽 모션
 
   useEffect(() => {
@@ -108,7 +119,15 @@ if (typeof isOpen !== "undefined" && !isOpen) return null;
 if (!student) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={(e) => {
+        // 배경(오버레이) 영역을 클릭했을 때만 닫기
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-3xl p-8 border border-white/60">
 
         {/* 제목 */}
