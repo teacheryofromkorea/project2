@@ -128,7 +128,16 @@ if (!student) return null;
         }
       }}
     >
-      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-3xl p-8 border border-white/60">
+      <div
+        className="
+          bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl
+          w-full max-w-3xl
+          max-h-[80vh] h-[80vh]
+          flex flex-col
+          overflow-hidden
+          p-8 border border-white/60
+        "
+      >
 
         {/* 제목 */}
         <h2 className="text-xl font-bold mb-2 flex items-center justify-between">
@@ -174,7 +183,7 @@ if (!student) return null;
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="flex-grow min-h-0 overflow-y-auto pr-2 grid grid-cols-2 gap-6">
 
           {/* ---------------------- 좌측: 루틴 체크 ---------------------- */}
 
@@ -278,34 +287,52 @@ if (!student) return null;
                 }
 
                 onClose();
-                if (onSaved) onSaved();
+                if (onSaved) await onSaved();
                 return;
               }
 
               // Save routines (루틴 저장 로직)
-await supabase.from("student_routine_status").upsert(
-  Object.entries(routineStatus).map(([rid, completed]) => ({
-    student_id: student.id,
-    routine_id: rid,
-    completed,
-    date: today
-  }))
-);
+// 0) delete today's routine rows
+await supabase
+  .from("student_routine_status")
+  .delete()
+  .eq("student_id", student.id)
+  .eq("date", today);
+
+// 1) insert all rows fresh
+await supabase
+  .from("student_routine_status")
+  .insert(
+    Object.entries(routineStatus).map(([rid, completed]) => ({
+      student_id: student.id,
+      routine_id: rid,
+      completed,
+      date: today
+    }))
+  );
 
               // Save missions (미션 저장 로직)
 
               // ------------------------ Save missions (Attendance tab) ------------------------
-await supabase.from("student_mission_status").upsert(
-  Object.entries(missionStatus).map(([mid, completed]) => ({
-    student_id: student.id,
-    mission_id: mid,
-    completed,
-    date: today
-  }))
-);
+await supabase
+  .from("student_mission_status")
+  .delete()
+  .eq("student_id", student.id)
+  .eq("date", today);
+
+await supabase
+  .from("student_mission_status")
+  .insert(
+    Object.entries(missionStatus).map(([mid, completed]) => ({
+      student_id: student.id,
+      mission_id: mid,
+      completed,
+      date: today
+    }))
+  );
 
               onClose();
-              if (onSaved) onSaved();
+              if (onSaved) await onSaved();
               setSaving(false);
             }}
           >
