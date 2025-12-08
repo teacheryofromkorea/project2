@@ -248,6 +248,31 @@ useEffect(() => {
           {editRoutineIndex !== null && (
             <div
               className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+              tabIndex={0}
+              onKeyDown={async (e) => {
+                if (e.key === "Escape") {
+                  setEditRoutineIndex(null);
+                  setEditText("");
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (editRoutineIndex !== null) {
+                    const id = routineItems[editRoutineIndex].id;
+
+                    await supabase
+                      .from("routines")
+                      .update({ text: editText })
+                      .eq("id", id);
+
+                    const updated = [...routineItems];
+                    updated[editRoutineIndex].text = editText;
+
+                    setRoutineItems(updated);
+                    setEditRoutineIndex(null);
+                    setEditText("");
+                  }
+                }
+              }}
               onClick={(e) => {
                 if (e.target === e.currentTarget) {
                   setEditRoutineIndex(null);

@@ -35,6 +35,29 @@ if (data && data.length > 0) {
     fetchMissions();
   }, []);
 
+  // ESC 닫기
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "Escape") {
+
+        // 작은 모달 우선 닫기
+        if (editMission) {
+          setEditMission(null);
+          setEditText("");
+          return;
+        }
+
+        // 작은 모달 없을 때만 큰 모달 닫기
+        if (isEditing) {
+          setIsEditing(false);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isEditing, editMission]);
+
   // -------------------------
   // 2) SUPABASE: 미션 추가
   // -------------------------
@@ -163,7 +186,14 @@ if (data && data.length > 0) {
       </aside>
 
       {isEditing && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsEditing(false);
+            }
+          }}
+        >
           <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
             <h3 className="text-lg font-bold mb-4">미션 편집</h3>
             {/* 제목 수정 입력 */}
@@ -262,7 +292,25 @@ if (data && data.length > 0) {
           </div>
 
           {editMission && (
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setEditMission(null);
+                  setEditText("");
+                }
+                if (e.key === "Enter") {
+                  updateMission();
+                }
+              }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setEditMission(null);
+                  setEditText("");
+                }
+              }}
+            >
               <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
                 <h3 className="text-lg font-bold mb-4">미션 수정</h3>
 
