@@ -17,10 +17,12 @@ export default function BreakTimeBoard() {
   const [students, setStudents] = useState([]);
   const [missions, setMissions] = useState([]);
   const [missionStatus, setMissionStatus] = useState([]);
+  const [routineStatus, setRoutineStatus] = useState([]);
 
   const [targetStudent, setTargetStudent] = useState(null);
 
   const ROUTINE_ID = "e2c703b6-e823-42ce-9373-9fb12a4cdbb1";
+  
   // useMemo를 사용하여 오늘 날짜를 한 번만 계산
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -131,6 +133,15 @@ export default function BreakTimeBoard() {
     if (!error) setMissionStatus(data || []);
   }, [today]);
 
+  const fetchRoutineStatus = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("student_break_routine_status")
+      .select("*")
+      .eq("date", today);
+
+    if (!error) setRoutineStatus(data || []);
+  }, [today]);
+
   // AUTO FETCH - 의존성 배열에 useCallback 함수 포함
   useEffect(() => {
     (async ()=> {
@@ -140,9 +151,10 @@ export default function BreakTimeBoard() {
         fetchStudents(),
         fetchMissions(),
         fetchMissionStatus(),
+        fetchRoutineStatus(),
       ]);
     })();
-  }, [fetchRoutineTitle, fetchRoutineItems, fetchStudents, fetchMissions, fetchMissionStatus]);
+  }, [fetchRoutineTitle, fetchRoutineItems, fetchStudents, fetchMissions, fetchMissionStatus, fetchRoutineStatus]);
 
   // 루틴 제목 저장 핸들러
   const handleSaveRoutineTitleAndClose = async () => {
@@ -165,8 +177,13 @@ export default function BreakTimeBoard() {
         students={students}
         missions={missions}
         studentMissionStatus={missionStatus}
+        routineItems={routineItems}
+        studentBreakRoutineStatus={routineStatus}
         onOpenModal={setTargetStudent}
-        onSaved={fetchMissionStatus}
+        onSaved={async () => {
+          await fetchMissionStatus();
+          await fetchRoutineStatus();
+        }}
       />
 
       {/* 중앙 (상단 + 하단) */}
@@ -365,6 +382,7 @@ export default function BreakTimeBoard() {
           onSaved={async () => {
             await fetchMissionStatus();
             await fetchRoutineItems();
+            await fetchRoutineStatus();
           }}
         />
       )}

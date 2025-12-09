@@ -5,6 +5,8 @@ export default function TodayChallengeSidebar({
   students = [],
   missions = [],
   studentMissionStatus = [],
+  routineItems = [],
+  studentBreakRoutineStatus = [],
   onOpenModal,
 }) {
   const [incompleteStudents, setIncompleteStudents] = useState([]);
@@ -12,22 +14,39 @@ export default function TodayChallengeSidebar({
 
   useEffect(() => {
     // 미완료 기준: 미션을 하나라도 미완료한 학생
-    const allMissionIds = missions.map((m) => m.id);
-
     const calc = students.filter((student) => {
-      // 오늘 완료한 미션들
-      const done = studentMissionStatus
-        .filter(
-          (row) => row.student_id === student.id && row.completed === true
-        )
-        .map((row) => row.mission_id);
+      const today = new Date().toISOString().slice(0, 10);
 
-      // 하나라도 미완료(true)면 포함
-      return allMissionIds.some((id) => !done.includes(id));
+      // ⭐ 미완료 미션
+      const incompleteMissions = missions.some((m) => {
+        const done = studentMissionStatus.some(
+          (row) =>
+            row.student_id === student.id &&
+            row.mission_id === m.id &&
+            row.date === today &&
+            row.completed === true
+        );
+        return !done;
+      });
+
+      // ⭐ 미완료 쉬는시간 루틴
+      const incompleteBreakRoutines = routineItems.some((r) => {
+        const done = studentBreakRoutineStatus.some(
+          (row) =>
+            row.student_id === student.id &&
+            row.routine_id === r.id &&
+            row.date === today &&
+            row.completed === true
+        );
+        return !done;
+      });
+
+      // ⭐ 둘 중 하나라도 미완료면 "미실시자"
+      return incompleteMissions || incompleteBreakRoutines;
     });
 
     setIncompleteStudents(calc);
-  }, [students, missions, studentMissionStatus]);
+  }, [students, missions, studentMissionStatus, routineItems, studentBreakRoutineStatus]);
 
   return (
     <div className="bg-white/70 rounded-2xl shadow p-4 flex flex-col gap-3 max-h-[80vh] h-[80vh] overflow-hidden">
@@ -60,19 +79,39 @@ export default function TodayChallengeSidebar({
               <span className="font-semibold text-gray-800 flex items-center gap-2">
                 {student.name}
                 {showIncompleteOnly && (
-                  <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">
-                    {
-                      missions.filter((m) => {
-                        const done = studentMissionStatus.some(
-                          (row) =>
-                            row.student_id === student.id &&
-                            row.mission_id === m.id &&
-                            row.completed === true
-                        );
-                        return !done;
-                      }).length
-                    }
-                  </span>
+<span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">
+  {
+    (() => {
+      const today = new Date().toISOString().slice(0, 10);
+
+      // ⭐ 미완료 미션
+      const incompleteMissions = missions.filter((m) => {
+        const done = studentMissionStatus.some(
+          (row) =>
+            row.student_id === student.id &&
+            row.mission_id === m.id &&
+            row.completed === true &&
+            row.date === today
+        );
+        return !done;
+      }).length;
+
+      // ⭐ 미완료 쉬는시간 루틴 (오늘 날짜 기준)
+      const incompleteRoutines = routineItems.filter((r) => {
+        const done = studentBreakRoutineStatus.some(
+          (row) =>
+            row.student_id === student.id &&
+            row.routine_id === r.id &&
+            row.completed === true &&
+            row.date === today
+        );
+        return !done;
+      }).length;
+
+      return incompleteMissions + incompleteRoutines;
+    })()
+  }
+</span>
                 )}
               </span>
               <button className="px-2 py-1 rounded-full bg-blue-500 text-white text-xs">
