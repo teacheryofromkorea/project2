@@ -144,14 +144,14 @@ const fetchMissionStatus = async () => {
 
 // AUTO FETCH
 useEffect(() => {
+  (async ()=> {
   fetchRoutineTitle();
   fetchRoutineItems();
-
   // 🟦 추가 (오늘의 도전 계산용 데이터 모두 로딩)
   fetchStudents();
   fetchMissions();
   fetchMissionStatus();
-  
+  })()
 }, []);
 
   return (
@@ -355,12 +355,16 @@ useEffect(() => {
 
 {targetStudent && (
   <StudentTaskModal
+    isOpen={!!targetStudent}
     student={targetStudent}
     missions={missions}
-    showRoutines={false}
+    routines={routineItems}
+    routineStatusTable="student_break_routine_status"
+    showRoutines={true}
     onClose={() => setTargetStudent(null)}
     onSaved={async () => {
       await fetchMissionStatus();  // ✔ 저장 직후 상태 갱신
+      await fetchRoutineItems();
     }}
   />
 )}

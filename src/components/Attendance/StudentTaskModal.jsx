@@ -1,6 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import confetti from "canvas-confetti";
-import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 
 // 🔥 도장 버튼 컴포넌트
@@ -31,53 +30,71 @@ function StudentTaskModal({
   student,
   routines = [],
   missions = [],
-  showRoutines = true
+  showRoutines = true,
+  // ✅ 루틴 상태를 저장할 테이블 이름 (기본값: 등교 루틴용)
+  routineStatusTable = "student_routine_status",
 }) {
-
   const [routineStatus, setRoutineStatus] = useState({});
   const [missionStatus, setMissionStatus] = useState({});
-  const today = new Date().toISOString().slice(0, 10);
   const [saving, setSaving] = useState(false);
 
+  const today = new Date().toISOString().slice(0, 10);
+
+  // ✅ 루틴/미션 상태 불러오기
   useEffect(() => {
-      // Attendance 탭: isOpen === false → 실행 안 함
-      // Break 탭: isOpen undefined → 실행됨
+    // Attendance 탭: isOpen === false → 실행 안 함
+    // Break 탭: isOpen undefined → 실행됨
     if (isOpen === false || !student) return;
 
     const fetchStatus = async () => {
-      const { data: routineRows } = await supabase
-        .from("student_routine_status")
+      // ------------------------------
+      // 1) 루틴 상태 불러오기 (옵션)
+      // ------------------------------
+      let routineMap = {};
+
+      if (showRoutines && routines.length > 0) {
+        const { data: routineRows } = await supabase
+          .from(routineStatusTable)
+          .select("*")
+          .eq("student_id", student.id)
+          .eq("date", today);
+
+        // 화면에 있는 루틴들을 먼저 모두 false 로 초기화
+        routines.forEach((r) => {
+          routineMap[r.id] = false;
+        });
+
+        // DB에 저장된 상태 반영 (routine_id 컬럼이 r.id 값이라고 가정)
+        routineRows?.forEach((row) => {
+          routineMap[row.routine_id] = row.completed;
+        });
+      } else {
+        // 루틴 안 쓰는 경우도 형식만 맞춰서 초기화
+        routines.forEach((r) => {
+          routineMap[r.id] = false;
+        });
+      }
+
+      setRoutineStatus(routineMap);
+
+      // ------------------------------
+      // 2) 미션 상태 불러오기 (공통)
+      // ------------------------------
+      const { data: missionRows } = await supabase
+        .from("student_mission_status")
         .select("*")
         .eq("student_id", student.id)
         .eq("date", today);
 
-// ---- 루틴 상태 불러오기 (기본값 false 강제) ----
-// ---- 루틴 상태 불러오기 ----
-const routineMap = {};
-routines.forEach((r) => {
-  routineMap[r.id] = false;
-});
-routineRows?.forEach((row) => {
-  routineMap[row.routine_id] = row.completed;
-});
-setRoutineStatus(routineMap);
+      const missionMap = {};
+      missions.forEach((m) => {
+        missionMap[m.id] = false;
+      });
+      missionRows?.forEach((row) => {
+        missionMap[row.mission_id] = row.completed;
+      });
 
-// ---- ✨ 미션 SELECT 추가 ----
-const { data: missionRows } = await supabase
-  .from("student_mission_status")
-  .select("*")
-  .eq("student_id", student.id)
-  .eq("date", today);
-
-// ---- 미션 상태 불러오기 ----
-const missionMap = {};
-missions.forEach((m) => {
-  missionMap[m.id] = false;
-});
-missionRows?.forEach((row) => {
-  missionMap[row.mission_id] = row.completed;
-});
-setMissionStatus(missionMap);
+      setMissionStatus(missionMap);
     };
 
     fetchStatus();
@@ -94,29 +111,33 @@ setMissionStatus(missionMap);
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-// 축하 폭죽 모션
-
+  // 🎉 모든 루틴+미션 완료 시 폭죽 효과
   useEffect(() => {
-  const total = routines.length + missions.length;
+    const total = routines.length + missions.length;
 
-  const completed =
-    Object.values(routineStatus).filter(Boolean).length +
-    Object.values(missionStatus).filter(Boolean).length;
+    const completed =
+      Object.values(routineStatus).filter(Boolean).length +
+      Object.values(missionStatus).filter(Boolean).length;
 
-  if (total > 0 && completed === total) {
-    confetti({
-      particleCount: 120,
-      spread: 80,
-      origin: { y: 0.7 },
-    });
-  }
-}, [routineStatus, missionStatus, routines, missions]);
+    if (total > 0 && completed === total) {
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.7 },
+      });
+    }
+  }, [routineStatus, missionStatus, routines, missions]);
 
   // isOpen이 명시적으로 false이면 렌더링하지 않음 (Attendance 탭용)
-if (typeof isOpen !== "undefined" && !isOpen) return null;
+  if (typeof isOpen !== "undefined" && !isOpen) return null;
 
-// student가 없으면 렌더링하지 않음 (공통 보호)
-if (!student) return null;
+  // student가 없으면 렌더링하지 않음 (공통 보호)
+  if (!student) return null;
+
+  const totalCount = routines.length + missions.length;
+  const completedCount =
+    Object.values(routineStatus).filter(Boolean).length +
+    Object.values(missionStatus).filter(Boolean).length;
 
   return (
     <div
@@ -138,15 +159,10 @@ if (!student) return null;
           p-8 border border-white/60
         "
       >
-
         {/* 제목 */}
         <h2 className="text-xl font-bold mb-2 flex items-center justify-between">
           <span>🎯 {student.name} 학생 오늘의 도전상황</span>
-          {(
-            (Object.values(routineStatus).filter(Boolean).length +
-              Object.values(missionStatus).filter(Boolean).length) ===
-            (routines.length + missions.length)
-          ) && (
+          {totalCount > 0 && completedCount === totalCount && (
             <span className="px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full text-sm animate-bounce">
               🏅 완료!
             </span>
@@ -161,21 +177,14 @@ if (!student) return null;
           <div
             className="bg-gradient-to-r from-emerald-400 via-sky-400 to-indigo-400 h-3 rounded-full transition-all duration-500"
             style={{
-              width: `${(
-                ((Object.values(routineStatus).filter(Boolean).length +
-                  Object.values(missionStatus).filter(Boolean).length) /
-                  (routines.length + missions.length || 1)) *
-                100
-              ).toFixed(0)}%`,
+              width: `${
+                totalCount === 0 ? 0 : ((completedCount / totalCount) * 100).toFixed(0)
+              }%`,
             }}
           ></div>
         </div>
 
-        {(
-          (Object.values(routineStatus).filter(Boolean).length +
-            Object.values(missionStatus).filter(Boolean).length) ===
-          (routines.length + missions.length)
-        ) && (
+        {totalCount > 0 && completedCount === totalCount && (
           <div className="mb-4 p-3 rounded-2xl bg-green-100 text-green-700 font-semibold flex items-center space-x-2 animate-pulse">
             <span>🎉</span>
             <span>오늘 할 일을 모두 완료했어요!</span>
@@ -184,13 +193,11 @@ if (!student) return null;
         )}
 
         <div className="flex-grow min-h-0 overflow-y-auto pr-2 grid grid-cols-2 gap-6">
-
           {/* ---------------------- 좌측: 루틴 체크 ---------------------- */}
-
-{showRoutines && (
+ {showRoutines && (
   <div className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/60">
     <h3 className="font-semibold mb-3 text-black-700">
-      🧭 {routines?.[0]?.routine_title || "등교 루틴"}
+      🧭 {routines?.[0]?.routine_title || "쉬는시간 루틴"}
     </h3>
     <ul className="space-y-2">
       {routines.map((r) => (
@@ -202,15 +209,16 @@ if (!student) return null;
                 : "text-black-700"
             }`}
           >
-            {r.text}
+            {/* 등교 루틴(routines.table)은 text, 쉬는시간 루틴(routine_items)은 content라서 둘 다 지원 */}
+            {r.text ?? r.content}
           </span>
           <StampButton
-            completed={routineStatus[r.id]}
+            completed={!!routineStatus[r.id]}
             onToggle={() =>
-              setRoutineStatus({
-                ...routineStatus,
-                [r.id]: !routineStatus[r.id]
-              })
+              setRoutineStatus((prev) => ({
+                ...prev,
+                [r.id]: !prev[r.id],
+              }))
             }
           />
         </li>
@@ -222,8 +230,8 @@ if (!student) return null;
           {/* ---------------------- 우측: 오늘의 미션 체크 ---------------------- */}
           <div className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/60">
             <h3 className="font-semibold mb-3 text-black-700">
-  🔥 {missions?.[0]?.mission_title || "오늘의 미션"}
-</h3>
+              🔥 {missions?.[0]?.mission_title || "오늘의 미션"}
+            </h3>
 
             <ul className="space-y-2">
               {missions.map((m) => (
@@ -237,10 +245,15 @@ if (!student) return null;
                   >
                     {m.text}
                   </span>
-<StampButton
-  completed={missionStatus[m.id]}
-  onToggle={() => setMissionStatus({ ...missionStatus, [m.id]: !missionStatus[m.id] })}
-/>
+                  <StampButton
+                    completed={!!missionStatus[m.id]}
+                    onToggle={() =>
+                      setMissionStatus((prev) => ({
+                        ...prev,
+                        [m.id]: !prev[m.id],
+                      }))
+                    }
+                  />
                 </li>
               ))}
             </ul>
@@ -257,79 +270,58 @@ if (!student) return null;
           </button>
 
           <button
-          
             className="px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold shadow-md hover:shadow-lg hover:translate-y-0.5 transition"
             disabled={saving}
             onClick={async () => {
-              if (saving) return;    // 중복 클릭 방지
-              setSaving(true);       // 저장 시작
-              // if showRoutines is false, skip routine save entirely
+              if (saving) return; // 중복 클릭 방지
+              setSaving(true); // 저장 시작
 
-              if (!showRoutines) {
-
-                // 1) delete today's mission rows for this student
+              // -----------------------------
+              // 1) 루틴 저장 (옵션)
+              // -----------------------------
+              if (showRoutines && routines.length > 0) {
+                // 오늘 이 학생의 루틴 상태 모두 삭제 후 재삽입
                 await supabase
-                  .from("student_mission_status")
+                  .from(routineStatusTable)
                   .delete()
                   .eq("student_id", student.id)
                   .eq("date", today);
 
-                // 2) insert current mission status
-                const inserts = Object.entries(missionStatus).map(([mid, completed]) => ({
+                const routineInserts = Object.entries(routineStatus).map(
+                  ([rid, completed]) => ({
+                    student_id: student.id,
+                    routine_id: rid,
+                    completed,
+                    date: today,
+                  })
+                );
+
+                if (routineInserts.length > 0) {
+                  await supabase.from(routineStatusTable).insert(routineInserts);
+                }
+              }
+
+              // -----------------------------
+              // 2) 미션 저장 (공통)
+              // -----------------------------
+              await supabase
+                .from("student_mission_status")
+                .delete()
+                .eq("student_id", student.id)
+                .eq("date", today);
+
+              const missionInserts = Object.entries(missionStatus).map(
+                ([mid, completed]) => ({
                   student_id: student.id,
                   mission_id: mid,
                   completed,
-                  date: today
-                }));
+                  date: today,
+                })
+              );
 
-                if (inserts.length > 0) {
-                  await supabase.from("student_mission_status").insert(inserts);
-                }
-
-                onClose();
-                if (onSaved) await onSaved();
-                return;
+              if (missionInserts.length > 0) {
+                await supabase.from("student_mission_status").insert(missionInserts);
               }
-
-              // Save routines (루틴 저장 로직)
-// 0) delete today's routine rows
-await supabase
-  .from("student_routine_status")
-  .delete()
-  .eq("student_id", student.id)
-  .eq("date", today);
-
-// 1) insert all rows fresh
-await supabase
-  .from("student_routine_status")
-  .insert(
-    Object.entries(routineStatus).map(([rid, completed]) => ({
-      student_id: student.id,
-      routine_id: rid,
-      completed,
-      date: today
-    }))
-  );
-
-              // Save missions (미션 저장 로직)
-
-              // ------------------------ Save missions (Attendance tab) ------------------------
-await supabase
-  .from("student_mission_status")
-  .delete()
-  .eq("student_id", student.id)
-  .eq("date", today);
-
-await supabase
-  .from("student_mission_status")
-  .insert(
-    Object.entries(missionStatus).map(([mid, completed]) => ({
-      student_id: student.id,
-      mission_id: mid,
-      completed,
-      date: today
-    }))
-  );
 
               onClose();
               if (onSaved) await onSaved();
