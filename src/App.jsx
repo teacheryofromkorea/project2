@@ -7,17 +7,17 @@ import AttendanceBoard from "./components/Attendance/AttendanceBoard";
 
 import BreakTimeBoard from "./components/Break/BreakTimeBoard";
 
-import SettingsBoard from "./components/Settings/SettingsBoard";
-import StudentsManage from "./components/Settings/StudentsManage";
-import TimeTable from "./components/Settings/TimeTable";
-import GeneralSettings from "./components/Settings/GeneralSettings";
-
 import LunchPage from "./components/Lunch/LunchPage";
 import ClassPage from "./components/Class/ClassPage";
 import EndPage from "./components/End/EndPage";
 import StatsPage from "./components/Stats/StatsPage";
 import OverviewPage from "./components/Overview/OverviewPage";
 import ToolsPage from "./components/Tools/ToolsPage";
+
+import SettingsLayout from "./components/Settings/SettingsLayout";
+import StudentsPage from "./components/Settings/Students/StudentsPage";
+import TimeTablePage from "./components/Settings/TimeTable/TimeTablePage";
+import GeneralPage from "./components/Settings/General/GeneralPage";
 
 function AttendanceLayout() {
   return (
@@ -47,15 +47,13 @@ function App() {
             {/* 쉬는시간 */}
             <Route path="/break" element={<BreakTimeBoard />} />
 
-            {/* 설정 (중첩 라우팅) */}
-            <Route path="/settings" element={<SettingsBoard />}>
-              <Route path="students" element={<StudentsManage />} />
-              <Route path="timetable" element={<TimeTable />} />
-              <Route path="general" element={<GeneralSettings />} />
 
-              {/* /settings 접속 시 기본 값 */}
-              <Route index element={<Navigate to="students" replace />} />
-            </Route>
+<Route path="/settings" element={<SettingsLayout />}>
+  <Route path="students" element={<StudentsPage />} />
+  <Route path="timetable" element={<TimeTablePage />} />
+  <Route path="general" element={<GeneralPage />} />
+</Route>
+
 
                         <Route path="/lunch" element={<LunchPage />} />
 <Route path="/class" element={<ClassPage />} />
