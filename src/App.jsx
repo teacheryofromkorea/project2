@@ -12,6 +12,13 @@ import StudentsManage from "./components/Settings/StudentsManage";
 import TimeTable from "./components/Settings/TimeTable";
 import GeneralSettings from "./components/Settings/GeneralSettings";
 
+import LunchPage from "./components/Lunch/LunchPage";
+import ClassPage from "./components/Class/ClassPage";
+import EndPage from "./components/End/EndPage";
+import StatsPage from "./components/Stats/StatsPage";
+import OverviewPage from "./components/Overview/OverviewPage";
+import ToolsPage from "./components/Tools/ToolsPage";
+
 function AttendanceLayout() {
   return (
     <div className="grid grid-cols-[260px,1fr,260px] gap-4">
@@ -50,8 +57,17 @@ function App() {
               <Route index element={<Navigate to="students" replace />} />
             </Route>
 
+                        <Route path="/lunch" element={<LunchPage />} />
+<Route path="/class" element={<ClassPage />} />
+<Route path="/end" element={<EndPage />} />
+<Route path="/stats" element={<StatsPage />} />
+<Route path="/overview" element={<OverviewPage />} />
+<Route path="/tools" element={<ToolsPage />} />
+
             {/* 존재하지 않는 경로 → 출석 */}
             <Route path="*" element={<Navigate to="/attendance" replace />} />
+
+
           </Routes>
         </main>
       </div>
