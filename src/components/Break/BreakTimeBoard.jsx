@@ -220,37 +220,57 @@ export default function BreakTimeBoard() {
         {/* 2. 상단 쉬는시간 루틴 */}
         <div className="bg-white/70 rounded-3xl shadow p-8 flex flex-col gap-6">
           {/* ... (UI 동일) ... */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-800 flex items-center gap-2">
-              📝 {routineTitle}
-            </h2>
-            <div className="flex items-center gap-3">
-              {breakBlocks.length > 0 && (
-                <select
-                  value={selectedBlockId || ""}
-                  onChange={(e) => setSelectedBlockId(e.target.value || null)}
-                  className="px-3 py-2 rounded-full border border-gray-300 bg-white text-sm shadow-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                  {breakBlocks.map((block) => (
-                    <option key={block.id} value={block.id}>
-                      {block.name} ({block.start_time?.slice(0, 5)} ~ {block.end_time?.slice(0, 5)})
-                    </option>
-                  ))}
-                </select>
-              )}
-              <button
-                onClick={() => {
-                  setTempTitle(routineTitle);
-                  setNewContent("");
-                  setIsRoutineModalOpen(true);
-                }}
-                className="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow text-sm font-semibold"
-              >
-                편집
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-4 text-lg font-semibold text-gray-900">
+<div className="flex items-center justify-between">
+
+  {/* 제목(클릭 = 편집) */}
+  <div className="relative group">
+    <h2
+      onClick={() => {
+        setTempTitle(routineTitle);
+        setNewContent("");
+        setIsRoutineModalOpen(true);
+      }}
+      className="text-3xl font-extrabold tracking-tight text-gray-800 cursor-pointer
+                 hover:text-blue-600 transition-colors"
+    >
+      📝 {routineTitle}
+    </h2>
+    <div className="
+      absolute left-0 top-full mt-1 px-2 py-1 rounded-md text-xs
+      bg-gray-800 text-white opacity-0 group-hover:opacity-100
+      transition-opacity pointer-events-none
+    ">
+      클릭하여 루틴을 편집합니다
+    </div>
+  </div>
+
+  {/* 오른쪽: 드롭다운 */}
+  <div className="flex items-center gap-3">
+    {breakBlocks.length > 0 && (
+      <select
+        value={selectedBlockId || ""}
+        onChange={(e) => setSelectedBlockId(e.target.value || null)}
+        className="px-3 py-2 rounded-full border border-gray-300 bg-white text-sm shadow-sm text-gray-700 
+                   focus:outline-none focus:ring-2 focus:ring-blue-400"
+      >
+        {breakBlocks.map((block) => (
+          <option key={block.id} value={block.id}>
+            {block.name} ({block.start_time?.slice(0, 5)} ~ {block.end_time?.slice(0, 5)})
+          </option>
+        ))}
+      </select>
+    )}
+  </div>
+
+</div>
+          <div
+            className="flex flex-wrap items-center gap-4 text-lg font-semibold text-gray-900 cursor-pointer hover:opacity-80 transition"
+            onClick={() => {
+              setTempTitle(routineTitle);
+              setNewContent("");
+              setIsRoutineModalOpen(true);
+            }}
+          >
             {routineItems.map((item, index) => (
               <div key={item.id} className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-sm font-bold">
