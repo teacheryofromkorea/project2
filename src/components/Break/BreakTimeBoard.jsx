@@ -288,7 +288,9 @@ export default function BreakTimeBoard() {
         </div>
 
         {/* 3. 하단 착석 체크 */}
-        <SeatCheckContainer blockId={selectedBlockId} />
+        {selectedBlockId && (
+  <SeatCheckContainer blockId={selectedBlockId} />
+)}
       </div>
 
       {/* 4. 우측 역할 사이드바 */}

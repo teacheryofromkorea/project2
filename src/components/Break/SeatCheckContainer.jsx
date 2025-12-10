@@ -55,6 +55,7 @@ export default function SeatCheckContainer({ blockId }) {
 
   // 2) 오늘자 착석 상태 불러오기
   const fetchSeatStatus = async () => {
+    if (!blockId) return;
     const { data, error } = await supabase
       .from("break_seat_status")
       .select("*")
@@ -81,6 +82,7 @@ export default function SeatCheckContainer({ blockId }) {
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
+      setSeatStatus({});
       await fetchStudents();
       const attendedIds = await fetchTodayAttendance();
       await fetchSeatStatus();

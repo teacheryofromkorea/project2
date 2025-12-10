@@ -5,6 +5,10 @@ import MissionSidebar from "./components/Attendance/MissionSidebar";
 import AttendanceBoard from "./components/Attendance/AttendanceBoard";
 import BreakTimeBoard from "./components/Break/BreakTimeBoard";  // ✨ 새로 만들 파일
 import { useState, useEffect } from "react";
+import SettingsBoard from "./components/Settings/SettingsBoard";
+import StudentsManage from "./components/Settings/StudentsManage";
+import TimeTable from "./components/Settings/TimeTable";
+import GeneralSettings from "./components/Settings/GeneralSettings";
 
 function App() {
   const [activeTab, setActiveTab] = useState("attendance");
@@ -33,6 +37,8 @@ function App() {
         {activeTab === "break" && (
           <BreakTimeBoard />
         )}
+
+        {activeTab === "settings" && <SettingsBoard />}
 
       </main>
     </div>
