@@ -1,16 +1,28 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 
+// 간단한 fade-in 애니메이션용 스타일
+// modal pop animation (CSS should exist globally or via Tailwind plugin)
+
 export default function SeatCheckContainer() {
   // 학생 목록
   const [students, setStudents] = useState([]);
-  // 학생별 착석 여부: { [studentId]: true/false }
+  // 학생별 착석 여부: { [studentId]: { seated: true/false, time: string } }
   const [seatStatus, setSeatStatus] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  // 착석/해제 모달 상태
+  const [modalStudent, setModalStudent] = useState(null);
+  const [modalType, setModalType] = useState(null); // "seat" or "unseat"
 
-  // 오늘 날짜 "YYYY-MM-DD" 형식으로 만들기
-  const getToday = () => new Date().toISOString().slice(0, 10);
+  // 오늘 날짜 "YYYY-MM-DD" 형식으로 만들기 (로컬 시간 기준)
+  const getToday = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
   const today = getToday();
 
   // 1) 학생 목록 불러오기
@@ -28,6 +40,22 @@ export default function SeatCheckContainer() {
     setStudents(data || []);
   };
 
+  // 1-2) 오늘 출석 학생 목록 가져오기
+  const fetchTodayAttendance = async () => {
+    const { data, error } = await supabase
+      .from("student_attendance_status")
+      .select("student_id")
+      .eq("date", today)
+      .eq("present", true);
+
+    if (error) {
+      console.error("출석 데이터 불러오기 에러:", error);
+      return [];
+    }
+
+    return data.map((row) => row.student_id);
+  };
+
   // 2) 오늘자 착석 상태 불러오기
   const fetchSeatStatus = async () => {
     const { data, error } = await supabase
@@ -42,7 +70,10 @@ export default function SeatCheckContainer() {
 
     const statusMap = {};
     (data || []).forEach((row) => {
-      statusMap[row.student_id] = row.is_seated;
+      statusMap[row.student_id] = {
+        seated: row.is_seated,
+        time: row.inserted_at
+      };
     });
 
     setSeatStatus(statusMap);
@@ -53,7 +84,12 @@ export default function SeatCheckContainer() {
     const init = async () => {
       setIsLoading(true);
       await fetchStudents();
+      const attendedIds = await fetchTodayAttendance();
       await fetchSeatStatus();
+
+      // 출석한 학생만 필터링
+      setStudents((prev) => prev.filter((s) => attendedIds.includes(s.id)));
+
       setIsLoading(false);
     };
 
@@ -61,15 +97,28 @@ export default function SeatCheckContainer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ESC key listener to close modal
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        setModalStudent(null);
+        setModalType(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [modalStudent]);
+
   // 4) 학생 한 명의 착석 상태 토글
   const toggleSeat = async (studentId) => {
-    const current = !!seatStatus[studentId];
+    const current = !!seatStatus[studentId]?.seated;
     const next = !current;
 
     // 낙관적 업데이트 (UI 먼저 반영)
     setSeatStatus((prev) => ({
       ...prev,
-      [studentId]: next,
+      [studentId]: { seated: next, time: new Date().toISOString() },
     }));
 
     setIsSaving(true);
@@ -89,7 +138,7 @@ export default function SeatCheckContainer() {
       // 실패 시 UI 되돌리기
       setSeatStatus((prev) => ({
         ...prev,
-        [studentId]: current,
+        [studentId]: { seated: current, time: prev[studentId]?.time || null },
       }));
       alert("저장 중 오류가 발생했어요. 다시 시도해 주세요.");
     }
@@ -128,20 +177,34 @@ export default function SeatCheckContainer() {
           </h4>
           <div className="flex flex-wrap gap-2">
             {girls.map((student) => {
-              const seated = !!seatStatus[student.id];
+              const seated = !!seatStatus[student.id]?.seated;
               return (
                 <button
                   key={student.id}
-                  onClick={() => toggleSeat(student.id)}
+                  onClick={() => {
+                    const seated = !!seatStatus[student.id]?.seated;
+                    setModalStudent(student);
+                    setModalType(seated ? "unseat" : "seat");
+                  }}
+                  disabled={isSaving}
                   className={`px-3 py-2 rounded-full text-sm font-semibold shadow-sm transition
                     ${
                       seated
                         ? "bg-emerald-500 text-white"
                         : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
-                    }`}
+                    }${isSaving ? " opacity-60 cursor-not-allowed" : ""}`}
                 >
                   {student.name}
-
+                  {seatStatus[student.id]?.time && (
+                    <div className="text-[10px] text-gray-500 mt-0.5">
+                      {seatStatus[student.id]?.seated ? "착석: " : "취소: "}
+                      {new Date(seatStatus[student.id].time).toLocaleTimeString("ko-KR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false
+                      })}
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -155,25 +218,105 @@ export default function SeatCheckContainer() {
           </h4>
           <div className="flex flex-wrap gap-2">
             {boys.map((student) => {
-              const seated = !!seatStatus[student.id];
+              const seated = !!seatStatus[student.id]?.seated;
               return (
                 <button
                   key={student.id}
-                  onClick={() => toggleSeat(student.id)}
+                  onClick={() => {
+                    const seated = !!seatStatus[student.id]?.seated;
+                    setModalStudent(student);
+                    setModalType(seated ? "unseat" : "seat");
+                  }}
+                  disabled={isSaving}
                   className={`px-3 py-2 rounded-full text-sm font-semibold shadow-sm transition
                     ${
                       seated
                         ? "bg-emerald-500 text-white"
                         : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
-                    }`}
+                    }${isSaving ? " opacity-60 cursor-not-allowed" : ""}`}
                 >
                   {student.name}
+                  {seatStatus[student.id]?.time && (
+                    <div className="text-[10px] text-gray-500 mt-0.5">
+                      {seatStatus[student.id]?.seated ? "착석: " : "취소: "}
+                      {new Date(seatStatus[student.id].time).toLocaleTimeString("ko-KR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false
+                      })}
+                    </div>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
       </div>
+
+      {/* 착석/해제 확인 모달 */}
+      {modalStudent && (
+        <div
+          className="fixed inset-0 bg-white/20 backdrop-blur-lg flex items-center justify-center z-50 transition-opacity"
+          onClick={() => {
+            setModalStudent(null);
+            setModalType(null);
+          }}
+        >
+          <div
+            className="bg-gradient-to-br from-white/90 to-blue-50/80 backdrop-blur-2xl p-8 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] w-[360px] border border-white/60 animate-fadeIn scale-95 animate-modalPop"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex justify-center mb-4">
+              {modalType === "seat" ? (
+                <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center shadow-inner">
+                  <span className="text-3xl">✅</span>
+                </div>
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center shadow-inner">
+                  <span className="text-3xl">❌</span>
+                </div>
+              )}
+            </div>
+            <h3 className="text-xl font-extrabold mb-5 text-gray-700 text-center drop-shadow-sm">
+              {modalType === "seat" ? (
+                <>
+                  <span className="text-2xl font-black text-blue-600">{modalStudent.name}</span>
+                  <span className="text-gray-700"> <br/>착석 처리할까요?</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-2xl font-black text-blue-600">{modalStudent.name}</span>
+                  <span className="text-gray-700"> <br/>착석 취소할까요?</span>
+                </>
+              )}
+            </h3>
+
+            <div className="mt-8 flex flex-col gap-3 w-full">
+              <button
+                onClick={() => {
+                  setModalStudent(null);
+                  setModalType(null);
+                }}
+                className="w-full py-3 rounded-2xl bg-white/70 hover:bg-white text-gray-700 border border-gray-200 shadow-sm text-sm font-semibold"
+              >
+                취소
+              </button>
+
+              <button
+                onClick={async () => {
+                  await toggleSeat(modalStudent.id);
+                  setModalStudent(null);
+                  setModalType(null);
+                }}
+                className={`w-full py-3 rounded-2xl text-white shadow-md text-sm font-semibold
+      ${modalType === "seat" ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"}`}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
