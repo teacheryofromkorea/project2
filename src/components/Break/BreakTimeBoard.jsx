@@ -21,6 +21,9 @@ export default function BreakTimeBoard() {
 
   const [targetStudent, setTargetStudent] = useState(null);
 
+  const [breakBlocks, setBreakBlocks] = useState([]);
+  const [selectedBlockId, setSelectedBlockId] = useState(null);
+
   const ROUTINE_ID = "e2c703b6-e823-42ce-9373-9fb12a4cdbb1";
   
   // useMemo를 사용하여 오늘 날짜를 한 번만 계산
@@ -142,6 +145,22 @@ export default function BreakTimeBoard() {
     if (!error) setRoutineStatus(data || []);
   }, [today]);
 
+  const fetchBreakBlocks = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("time_blocks")
+      .select("id, name, block_type, order_index, start_time, end_time")
+      .eq("block_type", "break")
+      .order("order_index", { ascending: true });
+
+    if (!error && data) {
+      setBreakBlocks(data);
+      // 기본 선택값이 아직 없다면 첫 번째 쉬는시간 블록을 선택
+      if (!selectedBlockId && data.length > 0) {
+        setSelectedBlockId(data[0].id);
+      }
+    }
+  }, [selectedBlockId]);
+
   // AUTO FETCH - 의존성 배열에 useCallback 함수 포함
   useEffect(() => {
     (async ()=> {
@@ -152,9 +171,18 @@ export default function BreakTimeBoard() {
         fetchMissions(),
         fetchMissionStatus(),
         fetchRoutineStatus(),
+        fetchBreakBlocks(),
       ]);
     })();
-  }, [fetchRoutineTitle, fetchRoutineItems, fetchStudents, fetchMissions, fetchMissionStatus, fetchRoutineStatus]);
+  }, [
+    fetchRoutineTitle,
+    fetchRoutineItems,
+    fetchStudents,
+    fetchMissions,
+    fetchMissionStatus,
+    fetchRoutineStatus,
+    fetchBreakBlocks,
+  ]);
 
   // 루틴 제목 저장 핸들러
   const handleSaveRoutineTitleAndClose = async () => {
@@ -196,16 +224,31 @@ export default function BreakTimeBoard() {
             <h2 className="text-3xl font-extrabold tracking-tight text-gray-800 flex items-center gap-2">
               📝 {routineTitle}
             </h2>
-            <button
-              onClick={() => {
-                setTempTitle(routineTitle);
-                setNewContent("");
-                setIsRoutineModalOpen(true);
-              }}
-              className="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow text-sm font-semibold"
-            >
-              ✏️ 루틴 편집
-            </button>
+            <div className="flex items-center gap-3">
+              {breakBlocks.length > 0 && (
+                <select
+                  value={selectedBlockId || ""}
+                  onChange={(e) => setSelectedBlockId(e.target.value || null)}
+                  className="px-3 py-2 rounded-full border border-gray-300 bg-white text-sm shadow-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  {breakBlocks.map((block) => (
+                    <option key={block.id} value={block.id}>
+                      {block.name} ({block.start_time?.slice(0, 5)} ~ {block.end_time?.slice(0, 5)})
+                    </option>
+                  ))}
+                </select>
+              )}
+              <button
+                onClick={() => {
+                  setTempTitle(routineTitle);
+                  setNewContent("");
+                  setIsRoutineModalOpen(true);
+                }}
+                className="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow text-sm font-semibold"
+              >
+                편집
+              </button>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-lg font-semibold text-gray-900">
             {routineItems.map((item, index) => (
@@ -225,7 +268,7 @@ export default function BreakTimeBoard() {
         </div>
 
         {/* 3. 하단 착석 체크 */}
-        <SeatCheckContainer />
+        <SeatCheckContainer blockId={selectedBlockId} />
       </div>
 
       {/* 4. 우측 역할 사이드바 */}

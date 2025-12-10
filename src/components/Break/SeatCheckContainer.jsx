@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 
-// 간단한 fade-in 애니메이션용 스타일
-// modal pop animation (CSS should exist globally or via Tailwind plugin)
-
-export default function SeatCheckContainer() {
+export default function SeatCheckContainer({ blockId }) {
   // 학생 목록
   const [students, setStudents] = useState([]);
   // 학생별 착석 여부: { [studentId]: { seated: true/false, time: string } }
@@ -61,7 +58,8 @@ export default function SeatCheckContainer() {
     const { data, error } = await supabase
       .from("break_seat_status")
       .select("*")
-      .eq("date", today);
+      .eq("date", today)
+      .eq("block_id", blockId)
 
     if (error) {
       console.error("착석 상태 불러오기 에러:", error);
@@ -87,15 +85,13 @@ export default function SeatCheckContainer() {
       const attendedIds = await fetchTodayAttendance();
       await fetchSeatStatus();
 
-      // 출석한 학생만 필터링
       setStudents((prev) => prev.filter((s) => attendedIds.includes(s.id)));
 
       setIsLoading(false);
     };
 
     init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [blockId]);
 
   // ESC key listener to close modal
   useEffect(() => {
@@ -128,6 +124,7 @@ export default function SeatCheckContainer() {
       .upsert({
         student_id: studentId,
         date: today,
+        block_id: blockId,
         is_seated: next,
       });
 
