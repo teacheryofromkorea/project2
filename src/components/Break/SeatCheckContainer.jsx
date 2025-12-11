@@ -167,15 +167,16 @@ export default function SeatCheckContainer({ blockId }) {
         )}
       </div>
 
-      {/* 학생 리스트 영역 */}
+      {/* 학생 리스트 영역: 남자/여자 위치 변경됨 */}
       <div className="grid grid-cols-2 gap-4">
-        {/* 여학생 */}
+
+        {/* 🛑 남학생 (왼쪽으로 이동) */}
         <div>
-          <h4 className="text-sm font-semibold text-pink-600 mb-2">
-            여학생
+          <h4 className="text-sm font-semibold text-blue-600 mb-2">
+            남학생
           </h4>
           <div className="flex flex-wrap gap-2">
-            {girls.map((student) => {
+            {boys.map((student) => {
               const seated = !!seatStatus[student.id]?.seated;
               return (
                 <button
@@ -209,14 +210,14 @@ export default function SeatCheckContainer({ blockId }) {
             })}
           </div>
         </div>
-
-        {/* 남학생 */}
+        
+        {/* 🛑 여학생 (오른쪽으로 이동) */}
         <div>
-          <h4 className="text-sm font-semibold text-blue-600 mb-2">
-            남학생
+          <h4 className="text-sm font-semibold text-pink-600 mb-2">
+            여학생
           </h4>
           <div className="flex flex-wrap gap-2">
-            {boys.map((student) => {
+            {girls.map((student) => {
               const seated = !!seatStatus[student.id]?.seated;
               return (
                 <button
