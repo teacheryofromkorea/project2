@@ -11,16 +11,13 @@ export default function StudentsPage() {
   const [newName, setNewName] = useState("");
   const [newGender, setNewGender] = useState("female");
   const [newNumber, setNewNumber] = useState("");
+  const [newDuty, setNewDuty] = useState("");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const nameInputRef = useRef(null);
 
-  // ✏️ 수정 모달
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editId, setEditId] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [editGender, setEditGender] = useState("female");
-  const [editNumber, setEditNumber] = useState("");
+  // ✏️ 인라인 수정 상태
+  const [editingId, setEditingId] = useState(null);
 
   // 삭제 중 상태
   const [deletingId, setDeletingId] = useState(null);
@@ -79,6 +76,7 @@ const fetchStudents = async () => {
     setNewName("");
     setNewGender("female");
     setNewNumber("");
+    setNewDuty("");
     setFormError("");
     setIsAddOpen(true);
   }
@@ -90,19 +88,6 @@ const fetchStudents = async () => {
     setFormError("");
   }
 
-  // ✏️ 수정 모달 열기
-  function openEditModal(stu) {
-    setEditId(stu.id);
-    setEditName(stu.name);
-    setEditGender(stu.gender);
-    setEditNumber(stu.number ?? "");
-    setIsEditOpen(true);
-  }
-
-  // ✏️ 수정 모달 닫기
-  function closeEditModal() {
-    setIsEditOpen(false);
-  }
 
   // 📝 학생 추가 처리
   async function handleAddStudent(e) {
@@ -121,11 +106,12 @@ const fetchStudents = async () => {
 
     setSaving(true);
 
-    const { error } = await supabase.from("students").insert({
-      name: trimmedName,
-      gender: newGender,
-      number: parsedNumber,
-    });
+const { error } = await supabase.from("students").insert({
+  name: trimmedName,
+  gender: newGender,
+  number: parsedNumber,
+  duty: newDuty || null,
+});
 
     if (error) {
       console.error("학생 추가 오류:", error);
@@ -137,38 +123,6 @@ const fetchStudents = async () => {
     closeAddModal();
   }
 
-  // ✏️ 학생 수정 처리
-  async function handleEditStudent(e) {
-    e.preventDefault();
-
-    const trimmedName = editName.trim();
-    if (!trimmedName) {
-      alert("이름을 입력해주세요.");
-      return;
-    }
-
-    const numberValue = editNumber.trim();
-    const parsedNumber =
-      numberValue === "" ? null : Number.isNaN(Number(numberValue)) ? null : Number(numberValue);
-
-    const { error } = await supabase
-      .from("students")
-      .update({
-        name: trimmedName,
-        gender: editGender,
-        number: parsedNumber,
-      })
-      .eq("id", editId);
-
-    if (error) {
-      console.error("학생 수정 오류:", error);
-      alert("수정 중 오류가 발생했습니다.");
-      return;
-    }
-
-    await fetchStudents();
-    closeEditModal();
-  }
 
   // 🗑️ 학생 삭제
   async function handleDeleteStudent(id) {
@@ -228,44 +182,139 @@ const fetchStudents = async () => {
 
       {/* 학생 리스트 */}
       
-{/* 학생 리스트 2열 분리 */}
-<div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 min-h-0">
+{/* 학생 리스트 3열 분리 */}
+<div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
 
     
 
   {/* 왼쪽: 여학생 */}
   <div className="relative overflow-hidden backdrop-blur-2xl bg-white/10 border border-white/30 rounded-3xl shadow-[0_8px_25px_rgba(0,0,0,0.08)] p-6 break-inside-avoid flex flex-col min-h-0">
     <div className="absolute inset-0 pointer-events-none rounded-3xl bg-gradient-to-br from-white/20 via-transparent to-white/5"></div>
-<h3 className="text-lg font-semibold mb-3 text-pink-600">여학생</h3>
+    <h3 className="text-lg font-semibold mb-3 text-pink-600">여학생</h3>
 
-{/* 리스트 스크롤 영역 */}
-<div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
+    {/* 리스트 스크롤 영역 */}
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
       {femaleStudents.map((stu) => (
         <div
           key={stu.id}
-          onClick={() => openEditModal(stu)}
           className="relative p-4 rounded-2xl backdrop-blur-xl bg-pink-200/20 border border-white/40 shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:shadow-lg transition cursor-pointer"
         >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteStudent(stu.id);
-            }}
-            disabled={deletingId === stu.id}
-            className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-lg"
-          >
-            {deletingId === stu.id ? "..." : "🗑️"}
-          </button>
 
-          <div className="flex items-center gap-2">
-            {stu.number && (
-              <span className="text-xs px-3 py-1.5 rounded-xl bg-gradient-to-br from-white/80 to-white/40
-                   text-gray-800 font-semibold shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),
-                   inset_-2px_-2px_4px_rgba(0,0,0,0.08)] border border-white/50 backdrop-blur-md">
-                {stu.number}
-              </span>
-            )}
-            <p className="font-semibold text-gray-800">{stu.name}</p>
+          <div className="flex items-center justify-between w-full">
+<div className="flex items-center gap-2 min-w-0 flex-grow">
+              {editingId === stu.id ? (
+                <>
+<div className="flex flex-col gap-2 w-full">
+  {/* 번호 + 이름 1줄 */}
+  <div className="flex items-center gap-2 w-full">
+    <input
+      type="number"
+      value={stu.number ?? ""}
+      onChange={async (e) => {
+        const newNum = e.target.value === "" ? null : Number(e.target.value);
+        await supabase.from("students").update({ number: newNum }).eq("id", stu.id);
+        fetchStudents();
+      }}
+      className="w-20 px-2 py-1 rounded-lg bg-white/70 border border-white/40 shadow-inner text-sm"
+    />
+
+    <input
+      type="text"
+      value={stu.name}
+      onChange={async (e) => {
+        await supabase.from("students").update({ name: e.target.value }).eq("id", stu.id);
+        fetchStudents();
+      }}
+      className="flex-1 px-3 py-1 rounded-lg bg-white/70 border border-white/40 shadow-inner text-sm"
+    />
+  </div>
+
+  {/* duty 전체 폭 */}
+  <input
+    type="text"
+    value={stu.duty || ""}
+    onChange={async (e) => {
+      await supabase
+        .from("students")
+        .update({ duty: e.target.value })
+        .eq("id", stu.id);
+      fetchStudents();
+    }}
+    placeholder="1인1역"
+    className="w-full px-3 py-1 rounded-lg bg-white/70 border border-white/40 shadow-inner text-sm"
+  />
+  {/* icons row for edit/delete */}
+  <div className="flex items-center justify-end gap-3 pr-1 mt-1">
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setEditingId(editingId === stu.id ? null : stu.id);
+      }}
+      className="text-blue-600 hover:text-blue-800 transition text-lg"
+    >
+      ✏️
+    </button>
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDeleteStudent(stu.id);
+      }}
+      disabled={deletingId === stu.id}
+      className="text-red-500 hover:text-red-700 transition text-lg"
+    >
+      {deletingId === stu.id ? "…" : "🗑️"}
+    </button>
+  </div>
+</div>
+                </>
+              ) : (
+                <>
+                  {stu.number && (
+                    <span className="text-xs px-3 py-1.5 rounded-xl bg-gradient-to-br from-white/80 to-white/40 text-gray-800 font-semibold shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_4px_rgba(0,0,0,0.08)] border border-white/50 backdrop-blur-md">
+                      {stu.number}
+                    </span>
+                  )}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="font-semibold text-gray-800 truncate">{stu.name}</p>
+                    {stu.duty && (
+                      <span className="text-xs text-gray-600 ml-1 truncate">
+                        {stu.duty}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {editingId !== stu.id && (
+                <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingId(stu.id);
+                    }}
+                    className="text-blue-600 hover:text-blue-800 transition text-lg"
+                  >
+                    ✏️
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteStudent(stu.id);
+                    }}
+                    disabled={deletingId === stu.id}
+                    className="text-red-500 hover:text-red-700 transition text-lg"
+                  >
+                    {deletingId === stu.id ? "…" : "🗑️"}
+                  </button>
+                </div>
+              )}
+
+
+            </div>
+
+            {/* 수정 / 삭제 버튼 */}
           </div>
         </div>
       ))}
@@ -276,39 +325,208 @@ const fetchStudents = async () => {
     </div>
   </div>
 
+  {/* 중앙: 학생 추가 패널 */}
+  <div className="relative overflow-hidden backdrop-blur-2xl bg-white/10 border border-white/30 rounded-3xl shadow-[0_8px_25px_rgba(0,0,0,0.08)] p-6 flex flex-col min-h-0">
+    <div className="absolute inset-0 pointer-events-none rounded-3xl bg-gradient-to-br from-white/20 via-transparent to-white/5"></div>
+
+    <h3 className="text-lg font-semibold mb-4 text-gray-700">학생 추가</h3>
+
+    <form
+      onSubmit={handleAddStudent}
+      className="flex flex-col gap-3 relative z-10"
+    >
+      {/* 이름 */}
+      <input
+        type="text"
+        placeholder="이름"
+        value={newName}
+        onChange={(e) => setNewName(e.target.value)}
+        className="w-full px-3 py-2 rounded-lg bg-white/60 border border-white/40 shadow-inner text-sm"
+      />
+
+      {/* 성별 */}
+      <div className="flex gap-3">
+        <label className="flex items-center gap-1 text-sm">
+          <input
+            type="radio"
+            name="gender"
+            checked={newGender === 'female'}
+            onChange={() => setNewGender('female')}
+          />
+          여학생
+        </label>
+        <label className="flex items-center gap-1 text-sm">
+          <input
+            type="radio"
+            name="gender"
+            checked={newGender === 'male'}
+            onChange={() => setNewGender('male')}
+          />
+          남학생
+        </label>
+      </div>
+
+      {/* 번호 */}
+      <input
+        type="number"
+        min="1"
+        placeholder="번호 (선택)"
+        value={newNumber}
+        onChange={(e) => setNewNumber(e.target.value)}
+        className="w-full px-3 py-2 rounded-lg bg-white/60 border border-white/40 shadow-inner text-sm"
+      />
+
+      {/* 1인 1역 */}
+<input
+  type="text"
+  placeholder="1인 1역 (선택)"
+  value={newDuty}
+  onChange={(e) => setNewDuty(e.target.value)}
+  className="w-full px-3 py-2 rounded-lg bg-white/60 border border-white/40 shadow-inner text-sm"
+/>
+
+      {/* 오류 */}
+      {formError && (
+        <p className="text-sm text-red-500">{formError}</p>
+      )}
+
+      {/* 추가 버튼 */}
+      <button
+        type="submit"
+        disabled={saving}
+        className="mt-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+      >
+        {saving ? '추가 중...' : '학생 추가'}
+      </button>
+    </form>
+  </div>
+
   {/* 오른쪽: 남학생 */}
   <div className="relative overflow-hidden backdrop-blur-2xl bg-white/10 border border-white/30 rounded-3xl shadow-[0_8px_25px_rgba(0,0,0,0.08)] p-6 break-inside-avoid flex flex-col min-h-0">
     <div className="absolute inset-0 pointer-events-none rounded-3xl bg-gradient-to-br from-white/20 via-transparent to-white/5"></div>
-<h3 className="text-lg font-semibold mb-3 text-blue-600">남학생</h3>
+    <h3 className="text-lg font-semibold mb-3 text-blue-600">남학생</h3>
 
-{/* 리스트 스크롤 영역 */}
-<div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
+    {/* 리스트 스크롤 영역 */}
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
       {maleStudents.map((stu) => (
         <div
           key={stu.id}
-          onClick={() => openEditModal(stu)}
           className="relative p-4 rounded-2xl backdrop-blur-xl bg-blue-200/20 border border-white/40 shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:shadow-lg transition cursor-pointer"
         >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteStudent(stu.id);
-            }}
-            disabled={deletingId === stu.id}
-            className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-lg"
-          >
-            {deletingId === stu.id ? "..." : "🗑️"}
-          </button>
 
-          <div className="flex items-center gap-2">
-            {stu.number && (
-              <span className="text-xs px-3 py-1.5 rounded-xl bg-gradient-to-br from-white/80 to-white/40
-                   text-gray-800 font-semibold shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),
-                   inset_-2px_-2px_4px_rgba(0,0,0,0.08)] border border-white/50 backdrop-blur-md">
-                {stu.number}
-              </span>
-            )}
-            <p className="font-semibold text-gray-800">{stu.name}</p>
+          <div className="flex items-center justify-between w-full">
+<div className="flex items-center gap-2 min-w-0 flex-grow">
+              {editingId === stu.id ? (
+                <>
+<div className="flex flex-col gap-2 w-full">
+  {/* 번호 + 이름 1줄 */}
+  <div className="flex items-center gap-2 w-full">
+    <input
+      type="number"
+      value={stu.number ?? ""}
+      onChange={async (e) => {
+        const newNum = e.target.value === "" ? null : Number(e.target.value);
+        await supabase.from("students").update({ number: newNum }).eq("id", stu.id);
+        fetchStudents();
+      }}
+      className="w-20 px-2 py-1 rounded-lg bg-white/70 border border-white/40 shadow-inner text-sm"
+    />
+
+    <input
+      type="text"
+      value={stu.name}
+      onChange={async (e) => {
+        await supabase.from("students").update({ name: e.target.value }).eq("id", stu.id);
+        fetchStudents();
+      }}
+      className="flex-1 px-3 py-1 rounded-lg bg-white/70 border border-white/40 shadow-inner text-sm"
+    />
+  </div>
+
+  {/* duty 전체 폭 */}
+  <input
+    type="text"
+    value={stu.duty || ""}
+    onChange={async (e) => {
+      await supabase
+        .from("students")
+        .update({ duty: e.target.value })
+        .eq("id", stu.id);
+      fetchStudents();
+    }}
+    placeholder="1인1역"
+    className="w-full px-3 py-1 rounded-lg bg-white/70 border border-white/40 shadow-inner text-sm"
+  />
+  {/* icons row for edit/delete */}
+  <div className="flex items-center justify-end gap-3 pr-1 mt-1">
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setEditingId(editingId === stu.id ? null : stu.id);
+      }}
+      className="text-blue-600 hover:text-blue-800 transition text-lg"
+    >
+      ✏️
+    </button>
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDeleteStudent(stu.id);
+      }}
+      disabled={deletingId === stu.id}
+      className="text-red-500 hover:text-red-700 transition text-lg"
+    >
+      {deletingId === stu.id ? "…" : "🗑️"}
+    </button>
+  </div>
+</div>
+                </>
+              ) : (
+                <>
+                  {stu.number && (
+                    <span className="text-xs px-3 py-1.5 rounded-xl bg-gradient-to-br from-white/80 to-white/40 text-gray-800 font-semibold shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_4px_rgba(0,0,0,0.08)] border border-white/50 backdrop-blur-md">
+                      {stu.number}
+                    </span>
+                  )}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="font-semibold text-gray-800 truncate">{stu.name}</p>
+                    {stu.duty && (
+                      <span className="text-xs text-gray-600 ml-1 truncate">
+                        {stu.duty}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+
+{editingId !== stu.id && (
+  <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setEditingId(stu.id);
+      }}
+      className="text-blue-600 hover:text-blue-800 transition text-lg"
+    >
+      ✏️
+    </button>
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDeleteStudent(stu.id);
+      }}
+      disabled={deletingId === stu.id}
+      className="text-red-500 hover:text-red-700 transition text-lg"
+    >
+      {deletingId === stu.id ? "…" : "🗑️"}
+    </button>
+  </div>
+)}
+            </div>
+
+            {/* 수정 / 삭제 버튼 */}
           </div>
         </div>
       ))}
@@ -321,81 +539,6 @@ const fetchStudents = async () => {
 
 </div>
 
-      {/* ✏️ 수정 모달 */}
-      {isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div
-            className="bg-white rounded-xl shadow-lg w-full max-w-md p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-bold mb-4">학생 정보 수정</h3>
-
-            <form onSubmit={handleEditStudent} className="space-y-4">
-              {/* 이름 */}
-              <div>
-                <label className="block text-sm font-medium mb-1">이름</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
-
-              {/* 성별 */}
-              <div>
-                <label className="block text-sm font-medium mb-1">성별</label>
-                <div className="flex gap-3">
-                  <label className="flex items-center gap-1 text-sm">
-                    <input
-                      type="radio"
-                      checked={editGender === "female"}
-                      onChange={() => setEditGender("female")}
-                    />
-                    여학생
-                  </label>
-                  <label className="flex items-center gap-1 text-sm">
-                    <input
-                      type="radio"
-                      checked={editGender === "male"}
-                      onChange={() => setEditGender("male")}
-                    />
-                    남학생
-                  </label>
-                </div>
-              </div>
-
-              {/* 번호 */}
-              <div>
-                <label className="block text-sm font-medium mb-1">번호 (선택)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={editNumber}
-                  onChange={(e) => setEditNumber(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeEditModal}
-                  className="px-3 py-2 rounded-lg border text-sm"
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold"
-                >
-                  수정하기
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ➕ 추가 모달 */}
       {isAddOpen && (
