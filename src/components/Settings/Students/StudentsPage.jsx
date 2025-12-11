@@ -4,6 +4,7 @@ import { supabase } from "../../../lib/supabaseClient";
 export default function StudentsPage() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // ➕ 추가 모달
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -188,12 +189,17 @@ const fetchStudents = async () => {
     setDeletingId(null);
   }
 
-  const femaleStudents = students.filter((stu) => stu.gender === "female");
-const maleStudents = students.filter((stu) => stu.gender === "male");
+  {/* 검색창 */}
+  const filteredStudents = students.filter((stu) =>
+    stu.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const femaleStudents = filteredStudents.filter((stu) => stu.gender === "female");
+  const maleStudents = filteredStudents.filter((stu) => stu.gender === "male");
 
   return (
 
-    <div>
+    <div className="h-full flex flex-col">
       {/* 제목 + 추가 버튼 */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold">학생 명단 관리</h2>
@@ -206,25 +212,39 @@ const maleStudents = students.filter((stu) => stu.gender === "male");
         </button>
       </div>
 
+      {/* 검색창 */}
+      <div className="mb-4">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="학생 이름 검색..."
+          className="w-full px-4 py-2 rounded-xl bg-white/40 backdrop-blur-md border border-white/30 shadow-sm focus:ring-2 focus:ring-blue-300"
+        />
+      </div>
+
       {/* 로딩 */}
       {loading && <p className="text-gray-600">불러오는 중...</p>}
 
       {/* 학생 리스트 */}
       
 {/* 학생 리스트 2열 분리 */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+<div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 min-h-0">
 
     
 
   {/* 왼쪽: 여학생 */}
-  <div>
-    <h3 className="text-lg font-semibold mb-3 text-pink-600">여학생</h3>
-    <div className="flex flex-col gap-3">
+  <div className="relative overflow-hidden backdrop-blur-2xl bg-white/10 border border-white/30 rounded-3xl shadow-[0_8px_25px_rgba(0,0,0,0.08)] p-6 break-inside-avoid flex flex-col min-h-0">
+    <div className="absolute inset-0 pointer-events-none rounded-3xl bg-gradient-to-br from-white/20 via-transparent to-white/5"></div>
+<h3 className="text-lg font-semibold mb-3 text-pink-600">여학생</h3>
+
+{/* 리스트 스크롤 영역 */}
+<div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
       {femaleStudents.map((stu) => (
         <div
           key={stu.id}
           onClick={() => openEditModal(stu)}
-          className="relative p-4 bg-pink-50 rounded-xl shadow hover:shadow-md transition cursor-pointer"
+          className="relative p-4 rounded-2xl backdrop-blur-xl bg-pink-200/20 border border-white/40 shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:shadow-lg transition cursor-pointer"
         >
           <button
             onClick={(e) => {
@@ -237,10 +257,16 @@ const maleStudents = students.filter((stu) => stu.gender === "male");
             {deletingId === stu.id ? "..." : "🗑️"}
           </button>
 
-          <p className="font-semibold">{stu.name}</p>
-          {stu.number && (
-            <p className="text-sm text-gray-600">번호: {stu.number}</p>
-          )}
+          <div className="flex items-center gap-2">
+            {stu.number && (
+              <span className="text-xs px-3 py-1.5 rounded-xl bg-gradient-to-br from-white/80 to-white/40
+                   text-gray-800 font-semibold shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),
+                   inset_-2px_-2px_4px_rgba(0,0,0,0.08)] border border-white/50 backdrop-blur-md">
+                {stu.number}
+              </span>
+            )}
+            <p className="font-semibold text-gray-800">{stu.name}</p>
+          </div>
         </div>
       ))}
 
@@ -251,14 +277,17 @@ const maleStudents = students.filter((stu) => stu.gender === "male");
   </div>
 
   {/* 오른쪽: 남학생 */}
-  <div>
-    <h3 className="text-lg font-semibold mb-3 text-blue-600">남학생</h3>
-    <div className="flex flex-col gap-3">
+  <div className="relative overflow-hidden backdrop-blur-2xl bg-white/10 border border-white/30 rounded-3xl shadow-[0_8px_25px_rgba(0,0,0,0.08)] p-6 break-inside-avoid flex flex-col min-h-0">
+    <div className="absolute inset-0 pointer-events-none rounded-3xl bg-gradient-to-br from-white/20 via-transparent to-white/5"></div>
+<h3 className="text-lg font-semibold mb-3 text-blue-600">남학생</h3>
+
+{/* 리스트 스크롤 영역 */}
+<div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
       {maleStudents.map((stu) => (
         <div
           key={stu.id}
           onClick={() => openEditModal(stu)}
-          className="relative p-4 bg-blue-50 rounded-xl shadow hover:shadow-md transition cursor-pointer"
+          className="relative p-4 rounded-2xl backdrop-blur-xl bg-blue-200/20 border border-white/40 shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:shadow-lg transition cursor-pointer"
         >
           <button
             onClick={(e) => {
@@ -271,10 +300,16 @@ const maleStudents = students.filter((stu) => stu.gender === "male");
             {deletingId === stu.id ? "..." : "🗑️"}
           </button>
 
-          <p className="font-semibold">{stu.name}</p>
-          {stu.number && (
-            <p className="text-sm text-gray-600">번호: {stu.number}</p>
-          )}
+          <div className="flex items-center gap-2">
+            {stu.number && (
+              <span className="text-xs px-3 py-1.5 rounded-xl bg-gradient-to-br from-white/80 to-white/40
+                   text-gray-800 font-semibold shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),
+                   inset_-2px_-2px_4px_rgba(0,0,0,0.08)] border border-white/50 backdrop-blur-md">
+                {stu.number}
+              </span>
+            )}
+            <p className="font-semibold text-gray-800">{stu.name}</p>
+          </div>
         </div>
       ))}
 
@@ -285,11 +320,6 @@ const maleStudents = students.filter((stu) => stu.gender === "male");
   </div>
 
 </div>
-
-      {/* 학생 없음 */}
-      {!loading && students.length === 0 && (
-        <p className="text-gray-500 mt-4">등록된 학생이 없습니다.</p>
-      )}
 
       {/* ✏️ 수정 모달 */}
       {isEditOpen && (
