@@ -1,36 +1,41 @@
 import StudentCard from "./StudentCard";
 import AddStudentPanel from "./AddStudentPanel";
 
-export default function StudentsList({
-  femaleStudents,
-  maleStudents,
-  editingId,
-  tempNumber,
-  tempName,
-  tempDuty,
-  onStartEdit,
-  onSave,
-  onCancel,
-  onDelete,
-  deletingId,
-  newName,
-  setNewName,
-  newGender,
-  setNewGender,
-  newNumber,
-  setNewNumber,
-  newDuty,
-  setNewDuty,
-  formError,
-  saving,
-  handleAddStudent,
-}) {
+export default function StudentsList({ data, edit, add, remove }) {
+  const { femaleStudents, maleStudents } = data;
+  const {
+    editingId,
+    tempNumber,
+    tempName,
+    tempDuty,
+    startEditStudent,
+    saveEditingStudent,
+    cancelEditStudent,
+    setTempNumber,
+    setTempName,
+    setTempDuty,
+  } = edit;
+  const {
+    newName,
+    setNewName,
+    newGender,
+    setNewGender,
+    newNumber,
+    setNewNumber,
+    newDuty,
+    setNewDuty,
+    formError,
+    saving,
+    handleAddStudent,
+  } = add;
+  const { handleDeleteStudent, deletingId } = remove;
+
   return (
     <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
 
       {/* 남학생 */}
       <div className="relative overflow-hidden backdrop-blur-2xl bg-white/10 border border-white/30 rounded-3xl shadow-[0_8px_25px_rgba(0,0,0,0.08)] p-6 flex flex-col min-h-0">
-        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/20 via-transparent to-white/5 pointer-events-none"></div>
+        {/* ... (디자인 요소 생략) ... */}
         <h3 className="text-lg font-semibold mb-3 text-blue-600">남학생</h3>
 
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
@@ -39,18 +44,22 @@ export default function StudentsList({
               key={stu.id}
               stu={stu}
               variant="male"
-              isEditing={editingId === stu.id}
-              tempNumber={tempNumber}
-              tempName={tempName}
-              tempDuty={tempDuty}
-              onStartEdit={onStartEdit}
-              onSave={onSave}
-              onCancel={onCancel}
-              onChangeNumber={v => tempNumber(v)}
-              onChangeName={v => tempName(v)}
-              onChangeDuty={v => tempDuty(v)}
-              onDelete={() => onDelete(stu.id)}
-              deleting={deletingId === stu.id}
+              edit={{
+                isEditing: editingId === stu.id,
+                tempNumber,
+                tempName,
+                tempDuty,
+                onChangeNumber: (e) => setTempNumber(e.target.value),
+                onChangeName: (e) => setTempName(e.target.value),
+                onChangeDuty: (e) => setTempDuty(e.target.value),
+                onStartEdit: startEditStudent,
+                onSave: saveEditingStudent,
+                onCancel: cancelEditStudent,
+              }}
+              remove={{
+                onDelete: () => handleDeleteStudent(stu.id),
+                deleting: deletingId === stu.id,
+              }}
             />
           ))}
 
@@ -77,7 +86,7 @@ export default function StudentsList({
 
       {/* 여학생 */}
       <div className="relative overflow-hidden backdrop-blur-2xl bg-white/10 border border-white/30 rounded-3xl shadow-[0_8px_25px_rgba(0,0,0,0.08)] p-6 flex flex-col min-h-0">
-        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/20 via-transparent to-white/5 pointer-events-none"></div>
+        {/* ... (디자인 요소 생략) ... */}
         <h3 className="text-lg font-semibold mb-3 text-pink-600">여학생</h3>
 
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
@@ -86,18 +95,22 @@ export default function StudentsList({
               key={stu.id}
               stu={stu}
               variant="female"
-              isEditing={editingId === stu.id}
-              tempNumber={tempNumber}
-              tempName={tempName}
-              tempDuty={tempDuty}
-              onStartEdit={onStartEdit}
-              onSave={onSave}
-              onCancel={onCancel}
-              onChangeNumber={v => tempNumber(v)}
-              onChangeName={v => tempName(v)}
-              onChangeDuty={v => tempDuty(v)}
-              onDelete={() => onDelete(stu.id)}
-              deleting={deletingId === stu.id}
+              edit={{
+                isEditing: editingId === stu.id,
+                tempNumber,
+                tempName,
+                tempDuty,
+                onChangeNumber: (e) => setTempNumber(e.target.value),
+                onChangeName: (e) => setTempName(e.target.value),
+                onChangeDuty: (e) => setTempDuty(e.target.value),
+                onStartEdit: startEditStudent,
+                onSave: saveEditingStudent,
+                onCancel: cancelEditStudent,
+              }}
+              remove={{
+                onDelete: () => handleDeleteStudent(stu.id),
+                deleting: deletingId === stu.id,
+              }}
             />
           ))}
 
@@ -106,7 +119,6 @@ export default function StudentsList({
           )}
         </div>
       </div>
-
     </div>
   );
 }

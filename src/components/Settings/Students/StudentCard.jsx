@@ -19,19 +19,27 @@ import React from "react";
 export default function StudentCard({
   stu,
   variant,
-  isEditing,
-  tempNumber,
-  tempName,
-  tempDuty,
-  onChangeNumber,
-  onChangeName,
-  onChangeDuty,
-  onStartEdit,
-  onSave,
-  onCancel,
-  onDelete,
-  deleting,
+  edit,
+  remove,
 }) {
+  const {
+    isEditing,
+    tempNumber,
+    tempName,
+    tempDuty,
+    onChangeNumber,
+    onChangeName,
+    onChangeDuty,
+    onStartEdit,
+    onSave,
+    onCancel,
+  } = edit;
+
+  const {
+    onDelete,
+    deleting,
+  } = remove;
+
   const isMale = variant === "male";
 
   const cardBgClass = isMale

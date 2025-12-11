@@ -196,28 +196,39 @@ setSaving(false);
       
 {/* 학생 리스트 3열 분리 */}
 <StudentsList
-  femaleStudents={femaleStudents}
-  maleStudents={maleStudents}
-  editingId={editingId}
-  tempNumber={tempNumber}
-  tempName={tempName}
-  tempDuty={tempDuty}
-  onStartEdit={startEditStudent}
-  onSave={saveEditingStudent}
-  onCancel={cancelEditStudent}
-  onDelete={handleDeleteStudent}
-  deletingId={deletingId}
-  newName={newName}
-  setNewName={setNewName}
-  newGender={newGender}
-  setNewGender={setNewGender}
-  newNumber={newNumber}
-  setNewNumber={setNewNumber}
-  newDuty={newDuty}
-  setNewDuty={setNewDuty}
-  formError={formError}
-  saving={saving}
-  handleAddStudent={handleAddStudent}
+  data={{
+    femaleStudents,
+    maleStudents,
+  }}
+  edit={{
+    editingId,
+    tempNumber,
+    tempName,
+    tempDuty,
+    startEditStudent,
+    saveEditingStudent,
+    cancelEditStudent,
+    setTempNumber,
+    setTempName,
+    setTempDuty,
+  }}
+  add={{
+    newName,
+    setNewName,
+    newGender,
+    setNewGender,
+    newNumber,
+    setNewNumber,
+    newDuty,
+    setNewDuty,
+    formError,
+    saving,
+    handleAddStudent,
+  }}
+  remove={{
+    handleDeleteStudent,
+    deletingId,
+  }}
 />
 
     </div>
