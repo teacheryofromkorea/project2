@@ -68,10 +68,10 @@ export default function StudentCard({
                 <div className="flex items-center gap-2 w-full">
                   <input
                     type="number"
-                    value={tempNumber}
+                    value={tempNumber ?? ""}
                     onChange={(e) => {
                       const v = e.target.value;
-                      onChangeNumber(v === "" ? "" : Number(v));
+                      onChangeNumber(stu.id, v === "" ? "" : Number(v));
                     }}
                     onKeyDown={handleKeyDown}
                     className="w-20 px-2 py-1 rounded-lg bg-white/70 border border-white/40 shadow-inner text-sm"
@@ -79,8 +79,8 @@ export default function StudentCard({
 
                   <input
                     type="text"
-                    value={tempName}
-                    onChange={(e) => onChangeName(e.target.value)}
+                    value={tempName ?? ""}
+                    onChange={(e) => onChangeName(stu.id, e.target.value)}
                     onKeyDown={handleKeyDown}
                     className="flex-1 px-3 py-1 rounded-lg bg-white/70 border border-white/40 shadow-inner text-sm"
                   />
@@ -89,8 +89,8 @@ export default function StudentCard({
                 {/* duty 전체 폭 */}
                 <input
                   type="text"
-                  value={tempDuty}
-                  onChange={(e) => onChangeDuty(e.target.value)}
+                  value={tempDuty ?? ""}
+                  onChange={(e) => onChangeDuty(stu.id, e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="1인1역"
                   className="w-full px-3 py-1 rounded-lg bg-white/70 border border-white/40 shadow-inner text-sm"
