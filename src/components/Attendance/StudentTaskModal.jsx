@@ -33,6 +33,7 @@ function StudentTaskModal({
   showRoutines = true,
   // ✅ 루틴 상태를 저장할 테이블 이름 (기본값: 등교 루틴용)
   routineStatusTable = "student_routine_status",
+  blockId, // 🔴 쉬는시간 구분용
 }) {
   const [routineStatus, setRoutineStatus] = useState({});
   const [missionStatus, setMissionStatus] = useState({});
@@ -53,11 +54,17 @@ function StudentTaskModal({
       let routineMap = {};
 
       if (showRoutines && routines.length > 0) {
-        const { data: routineRows } = await supabase
+        let routineQuery = supabase
           .from(routineStatusTable)
           .select("*")
           .eq("student_id", student.id)
           .eq("date", today);
+
+        if (blockId) {
+          routineQuery = routineQuery.eq("block_id", blockId);
+        }
+
+        const { data: routineRows } = await routineQuery;
 
         // 화면에 있는 루틴들을 먼저 모두 false 로 초기화
         routines.forEach((r) => {
@@ -281,11 +288,17 @@ function StudentTaskModal({
               // -----------------------------
               if (showRoutines && routines.length > 0) {
                 // 오늘 이 학생의 루틴 상태 모두 삭제 후 재삽입
-                await supabase
+                let deleteQuery = supabase
                   .from(routineStatusTable)
                   .delete()
                   .eq("student_id", student.id)
                   .eq("date", today);
+
+                if (blockId) {
+                  deleteQuery = deleteQuery.eq("block_id", blockId);
+                }
+
+                await deleteQuery;
 
                 const routineInserts = Object.entries(routineStatus).map(
                   ([rid, completed]) => ({
@@ -293,6 +306,7 @@ function StudentTaskModal({
                     routine_id: rid,
                     completed,
                     date: today,
+                    block_id: blockId ?? null,
                   })
                 );
 

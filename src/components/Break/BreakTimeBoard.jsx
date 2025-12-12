@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import useCurrentTimeBlock from "../../hooks/useCurrentTimeBlock";
 import { supabase } from "../../lib/supabaseClient";
 import TodayChallengeSidebar from "./TodayChallengeSidebar";
 import SeatCheckContainer from "./SeatCheckContainer";
@@ -23,6 +24,12 @@ export default function BreakTimeBoard() {
 
   const [breakBlocks, setBreakBlocks] = useState([]);
   const [selectedBlockId, setSelectedBlockId] = useState(null);
+  const [nextBlockId, setNextBlockId] = useState(null);
+  const { activeBlock } = useCurrentTimeBlock();
+
+  // 자동 시간 동기화로 선택된 경우를 추적
+  const autoSelectedRef = useRef(false);
+  const LAST_BREAK_BLOCK_KEY = "lastBreakBlockId";
 
   const ROUTINE_ID = "e2c703b6-e823-42ce-9373-9fb12a4cdbb1";
   
@@ -137,13 +144,19 @@ export default function BreakTimeBoard() {
   }, [today]);
 
   const fetchRoutineStatus = useCallback(async () => {
+    if (!selectedBlockId) {
+      setRoutineStatus([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("student_break_routine_status")
       .select("*")
-      .eq("date", today);
+      .eq("date", today)
+      .eq("block_id", selectedBlockId);
 
     if (!error) setRoutineStatus(data || []);
-  }, [today]);
+  }, [today, selectedBlockId]);
 
   const fetchBreakBlocks = useCallback(async () => {
     const { data, error } = await supabase
@@ -154,12 +167,49 @@ export default function BreakTimeBoard() {
 
     if (!error && data) {
       setBreakBlocks(data);
-      // 기본 선택값이 아직 없다면 첫 번째 쉬는시간 블록을 선택
-      if (!selectedBlockId && data.length > 0) {
-        setSelectedBlockId(data[0].id);
-      }
+      // 기본 선택은 하지 않음 (activeBlock 기준으로 처리)
     }
   }, [selectedBlockId]);
+
+  // activeBlock이 실제로 바뀐 경우에만 자동 선택 (setSelectedBlockId 호출을 setNextBlockId로 집중)
+  useEffect(() => {
+    if (!activeBlock) return;
+    if (activeBlock.block_type !== "break") return;
+
+    if (activeBlock.id !== selectedBlockId) {
+      setNextBlockId(activeBlock.id);
+    }
+  }, [activeBlock, selectedBlockId]);
+
+  // 수동 선택 상태에서는 자동 동기화를 하지 않음 (문서화 목적)
+  useEffect(() => {
+    // 수동 선택 상태에서는 자동 동기화를 하지 않음
+    if (!autoSelectedRef.current) return;
+  }, [selectedBlockId]);
+
+  // 🟨 쉬는시간이 아닐 때: 마지막으로 선택한 쉬는시간 복원 (setSelectedBlockId 호출을 setNextBlockId로 집중)
+  useEffect(() => {
+    if (selectedBlockId !== null) return;
+    if (activeBlock && activeBlock.block_type === "break") return;
+
+    const lastBlockId = localStorage.getItem(LAST_BREAK_BLOCK_KEY);
+    if (!lastBlockId) return;
+
+    const exists = breakBlocks.some((b) => b.id === lastBlockId);
+    if (exists) {
+      setNextBlockId(lastBlockId);
+    }
+  }, [breakBlocks, activeBlock, selectedBlockId]);
+
+  // 단일 반영 effect: nextBlockId가 설정되면 실제로 반영
+  useEffect(() => {
+    if (!nextBlockId) return;
+    if (nextBlockId === selectedBlockId) return;
+
+    setSelectedBlockId(nextBlockId);
+    localStorage.setItem(LAST_BREAK_BLOCK_KEY, nextBlockId);
+    setNextBlockId(null);
+  }, [nextBlockId, selectedBlockId]);
 
   // AUTO FETCH - 의존성 배열에 useCallback 함수 포함
   useEffect(() => {
@@ -249,7 +299,15 @@ export default function BreakTimeBoard() {
     {breakBlocks.length > 0 && (
       <select
         value={selectedBlockId || ""}
-        onChange={(e) => setSelectedBlockId(e.target.value || null)}
+onChange={(e) => {
+  const value = e.target.value || null;
+  autoSelectedRef.current = false; // 수동 선택
+  setSelectedBlockId(value);
+
+  if (value) {
+    localStorage.setItem(LAST_BREAK_BLOCK_KEY, value);
+  }
+}}
         className="px-3 py-2 rounded-full border border-gray-300 bg-white text-sm shadow-sm text-gray-700 
                    focus:outline-none focus:ring-2 focus:ring-blue-400"
       >
@@ -442,6 +500,7 @@ export default function BreakTimeBoard() {
           missions={missions}
           routines={routineItems}
           routineStatusTable="student_break_routine_status"
+          blockId={selectedBlockId}
           showRoutines={true}
           onClose={() => setTargetStudent(null)}
           onSaved={async () => {

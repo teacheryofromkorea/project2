@@ -1,8 +1,18 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 function TopNav() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // 자동 탭 전환 토글 상태 (localStorage 연동)
+  const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(() => {
+    return localStorage.getItem("autoTabSwitch") !== "off";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("autoTabSwitch", autoSwitchEnabled ? "on" : "off");
+  }, [autoSwitchEnabled]);
 
   // 탭 목록 + 라우팅 매핑
   const tabs = [
@@ -41,6 +51,24 @@ function TopNav() {
         </nav>
 
         <div className="flex items-center gap-4 text-sm">
+
+          {/* 자동 탭 전환 스위치 */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-600">자동 전환</span>
+            <button
+              onClick={() => setAutoSwitchEnabled((v) => !v)}
+              className={`relative w-10 h-5 rounded-full transition ${
+                autoSwitchEnabled ? "bg-green-500" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition ${
+                  autoSwitchEnabled ? "left-5" : "left-0.5"
+                }`}
+              />
+            </button>
+          </div>
+
           <span className="inline-flex items-center rounded-full bg-purple-600 text-white px-3 py-1 text-xs font-semibold">
             필수 세팅 가이드
           </span>
