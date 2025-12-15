@@ -1,18 +1,37 @@
 /**
- * 수업시간 – 좌측 학생 패널
+ * ClassStudentPanel
+ * -----------------
+ * 수업 화면 좌측에 표시되는 학생 리스트 패널
  *
- * 역할:
- * - 수업 중 다루는 학생 리스트 영역
- * - 교시별 상점 표시 및 증가 (+ 버튼)
- * - 디자인은 청사진 단계 (구조 안정성 우선)
+ * 책임(What this component does):
+ * 1. 수업 중 학생 목록 표시
+ * 2. 선택된 교시 기준 상/벌점 표시
+ * 3. 학생 선택(다중 선택) UI 제공
+ * 4. 개별 학생 상점(+), 벌점(-) 버튼 처리
+ *
+ * 책임 아님(What this component does NOT do):
+ * - 교시 상태 관리
+ * - 상/벌점 누적 저장
+ * - 학생 데이터 fetch
+ *
+ * 👉 순수 UI 컴포넌트 (state는 부모에서 내려받음)
  */
 
 export default function ClassStudentPanel({
+  // 학생 목록
   students = [],
+
+  // { [studentId]: number } 형태의 교시별 상/벌점
   periodPoints = {},
+
+  // 상점 / 벌점 핸들러 (부모에서 전달)
   onAddPoint,
   onRemovePoint,
+
+  // 선택된 학생 id 집합 (다중 선택)
   selectedStudentIds = new Set(),
+
+  // 학생 선택 토글 핸들러
   onToggleSelect,
 }) {
   return (
@@ -28,11 +47,13 @@ export default function ClassStudentPanel({
       ) : (
         <ul className="space-y-2">
           {students.map((student) => {
+            // 현재 교시에서의 학생 상/벌점 (없으면 0)
             const point = periodPoints[student.id] || 0;
 
             return (
               <li
                 key={student.id}
+                // 학생 선택 (상점 버튼 클릭 시에는 전파 중단)
                 onClick={() => onToggleSelect?.(student.id)}
                 className={`flex items-center text-sm cursor-pointer rounded px-1
                   ${selectedStudentIds.has(student.id)
@@ -45,7 +66,7 @@ export default function ClassStudentPanel({
                   {student.name}
                 </span>
 
-                {/* 상점 컨트롤 (오른쪽 고정 영역) */}
+                {/* 상점 컨트롤 영역 (우측 고정) */}
                 <div className="flex items-center gap-1 shrink-0">
                   <span
                     className={`text-xs font-semibold min-w-[28px] text-right ${
@@ -55,7 +76,7 @@ export default function ClassStudentPanel({
                     {point >= 0 ? `+${point}` : point}
                   </span>
 
-                  {/* 벌점 (-) */}
+                  {/* 벌점 (-) 버튼 */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -66,7 +87,7 @@ export default function ClassStudentPanel({
                     -
                   </button>
 
-                  {/* 상점 (+) */}
+                  {/* 상점 (+) 버튼 */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

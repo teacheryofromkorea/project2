@@ -1,46 +1,50 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import ClassTimeBoard from "./ClassTimeBoard";
 import ClassStudentPanel from "./ClassStudentPanel";
 import useClassTimeBlockSelection from "../../hooks/useClassTimeBlockSelection";
+import useInitClassResources from "../../hooks/useInitClassResources";
 import ClassResourceBoard from "./ClassResourceBoard";
 
+/**
+ * ClassPage
+ * ---------
+ * 수업 화면 전체를 구성하는 컨테이너 페이지
+ *
+ * 책임(What this component does):
+ * 1. 수업 화면 레이아웃 구성 (학생 / 콘텐츠 / 도구)
+ * 2. 교시 상태 관리 (선택, 변경)
+ * 3. 교시별 상/벌점 상태 관리
+ * 4. 학생 선택 상태 관리
+ * 5. 상점 저장 및 Supabase 연동
+ *
+ * 책임 아님(What this component does NOT do):
+ * - 개별 UI 상세 렌더링
+ * - 수업 도구 CRUD
+ * - 학생 리스트 UI
+ *
+ * 👉 상태 + 흐름 제어의 Single Source of Truth
+ */
+
 function ClassPage() {
-  const [user, setUser] = useState(null);
+  // 🔹 교시 관련 상태
   const [classBlocks, setClassBlocks] = useState([]);
-  const [students, setStudents] = useState([]); // TODO: 다음 단계(C)에서 students 테이블 fetch 연결
 
-  const didInitResources = useRef(false);
+  // 🔹 학생 데이터
+  const [students, setStudents] = useState([]);
 
-  // 🔹 교시별 상점 상태 (key: studentId, value: 상점 개수)
+  // 🔹 교시별 상점 상태 (key: studentId, value: 점수)
   const [periodPoints, setPeriodPoints] = useState({});
 
-  // 🔹 수업 중 선택된 학생들 (다중 선택)
+  // 🔹 선택된 학생들 (다중 선택)
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
 
   // 🔹 toast 메시지
   const [toast, setToast] = useState(null);
 
-  // 🔹 현재 로그인한 유저 가져오기
-  useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
+  // 🔹 수업 도구 템플릿 초기화 (최초 1회)
+  useInitClassResources();
 
-      if (error) {
-        console.error("유저 정보 불러오기 실패", error);
-        return;
-      }
-
-      setUser(user);
-    };
-
-    getUser();
-  }, []);
-
-  // 🔹 현재 선택된 수업 교시 (ClassTimeBoard의 source of truth)
+  // 🔹 현재 선택된 수업 교시 (source of truth는 이 훅)
   const {
     selectedClassBlockId,
     selectedClassBlock,
@@ -145,61 +149,6 @@ function ClassPage() {
     setSelectedStudentIds(new Set());
   };
 
-  // 🔹 수업 콘텐츠 템플릿 자동 복사 (ClassPage 첫 진입 시 1회)
-  // React StrictMode 개발환경에서 2번 실행되는 것 방지
-  useEffect(() => {
-    if (didInitResources.current) return;
-    didInitResources.current = true;
-
-    const ensureClassResources = async () => {
-      // 1. 이미 class_resources가 있는지 확인
-      const { count, error: countError } = await supabase
-        .from("class_resources")
-        .select("*", { count: "exact", head: true });
-
-      if (countError) {
-        console.error("class_resources count 오류", countError);
-        return;
-      }
-
-      if (count && count > 0) return;
-
-      // 2. 템플릿 불러오기
-      const { data: templates, error: templateError } = await supabase
-        .from("class_resource_templates")
-        .select("*")
-        .eq("is_active", true)
-        .order("order_index", { ascending: true });
-
-      if (templateError) {
-        console.error("템플릿 불러오기 오류", templateError);
-        return;
-      }
-
-      if (!templates || templates.length === 0) return;
-
-      // 3. 템플릿 → 수업 콘텐츠 복사
-      const resources = templates.map((t) => ({
-        title: t.title,
-        url: t.url,
-        icon: t.icon,
-        description: t.description,
-        order_index: t.order_index,
-        is_active: true,
-      }));
-
-      const { error: insertError } = await supabase
-        .from("class_resources")
-        .insert(resources);
-
-      if (insertError) {
-        console.error("class_resources 템플릿 복사 오류", insertError);
-      }
-    };
-
-    ensureClassResources();
-  }, []);
-
   // 수업시간 block 불러오기 (time_blocks 중 block_type === "class")
   useEffect(() => {
     const fetchClassBlocks = async () => {
@@ -242,18 +191,15 @@ function ClassPage() {
   return (
     <div className="max-w-7xl mx-auto px-6  space-y-6">
 
-
-      {/* 수업시간 선택 */}
-      <ClassTimeBoard
-        classBlocks={classBlocks}
-        selectedClassBlockId={selectedClassBlockId}
-        onSelectClassBlock={selectClassBlockManually}
-      />
+      {/* ===============================
+          메인 수업 화면 레이아웃
+          좌: 학생 / 중: 수업 콘텐츠 / 우: 수업 도구
+      =============================== */}
 
       {/* 메인 수업 화면 */}
-      <div className="grid grid-cols-12 gap-6 min-h-[520px]">
+      <div className="grid grid-cols-12 gap-6 h-[calc(100vh-220px)]">
         {/* 좌측: 학생 리스트 */}
-        <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4">
+        <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4 overflow-y-auto">
           <ClassStudentPanel
             students={students}
             periodPoints={periodPoints}
@@ -265,15 +211,21 @@ function ClassPage() {
         </div>
 
         {/* 중앙: 수업 콘텐츠 */}
-        <div className="col-span-6 bg-white/70 rounded-2xl shadow p-4">
-          <ClassResourceBoard />
+        <div className="col-span-6 bg-white/70 rounded-2xl shadow p-4 overflow-y-auto">
+          <ClassResourceBoard
+            classBlocks={classBlocks}
+            selectedClassBlockId={selectedClassBlockId}
+            onChangeClassBlock={selectClassBlockManually}
+          />
         </div>
 
         {/* 우측: 수업 도구 */}
-        <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4 space-y-3">
-          <h3 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
-            🧰 수업 도구
-          </h3>
+        <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4 space-y-3 overflow-y-auto">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-gray-700 flex items-center gap-1">
+              🧰 수업 도구
+            </h3>
+          </div>
 
           <button
             onClick={addPointBulk}

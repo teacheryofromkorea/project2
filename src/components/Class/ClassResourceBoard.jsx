@@ -3,15 +3,50 @@ import { supabase } from "../../lib/supabaseClient";
 import AddClassResourceModal from "./AddClassResourceModal";
 import EditClassResourceModal from "./EditClassResourceModal";
 
-export default function ClassResourceBoard() {
+/**
+ * ClassResourceBoard
+ * ------------------
+ * 수업 중 사용하는 공통 "수업 도구(콘텐츠)" 보드
+ *
+ * 책임(What this component does):
+ * 1. 수업 도구 목록 표시 (카드 그리드)
+ * 2. 수업 도구 CRUD (추가 / 편집 / 삭제)
+ * 3. 수업 도구 순서 정렬 (↑ ↓)
+ * 4. 수업 도구 선택 삭제 모드 UI
+ * 5. 수업 도구 헤더에서 "교시 선택 UI" 제공
+ *
+ * 책임 아님(What this component does NOT do):
+ * - 교시 상태의 소유 (selectedClassBlockId는 부모에서 전달)
+ * - 교시 변경 로직 결정
+ * - 학생, 상/벌점, 수업 흐름 제어
+ *
+ * 👉 UI + 도구 관리 전용 컴포넌트
+ * 👉 상태의 Single Source of Truth는 ClassPage
+ */
+export default function ClassResourceBoard({
+  // 전체 교시 목록 (ClassPage에서 전달)
+  classBlocks = [],
+
+  // 현재 선택된 교시 id (상태는 부모 소유)
+  selectedClassBlockId,
+
+  // 교시 변경 요청 콜백 (부모에게 위임)
+  onChangeClassBlock,
+}) {
+  // 수업 도구 데이터
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // 추가 / 편집 모달 상태
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState(new Set());
   const [editingResource, setEditingResource] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // 삭제 선택 모드 상태
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
+  // 수업 도구 목록 로드 (order_index 기준 정렬)
   const fetchResources = async () => {
     const { data, error } = await supabase
       .from("class_resources")
@@ -38,6 +73,7 @@ export default function ClassResourceBoard() {
     fetchResources();
   }, []);
 
+  // 수업 도구를 새 창으로 열기
   const openResource = (url) => {
     window.open(url, "_blank", "noopener,noreferrer");
   };
@@ -62,6 +98,12 @@ export default function ClassResourceBoard() {
     fetchResources();
   };
 
+  /**
+   * 수업 도구 순서 변경
+   * - 프론트에서 먼저 순서 변경 (optimistic update)
+   * - 이후 DB에 전체 order_index 재저장
+   * - 실패 시 DB 기준으로 롤백
+   */
   const moveResource = async (id, direction) => {
     const index = resources.findIndex((r) => r.id === id);
     if (index === -1) return;
@@ -116,12 +158,29 @@ export default function ClassResourceBoard() {
 
   return (
     <>
+      {/* 📚 수업 도구 헤더
+          - 좌측: 보드 제목 + 교시 선택
+          - 우측: 도구 추가 / 삭제 관련 액션 */}
       <div className="flex items-center justify-between mb-3">
-        {/* 좌측 제목 */}
-        <h3 className="flex items-center gap-2 text-base font-bold text-gray-700">
-          📚 수업 도구
+        {/* 좌측 제목 + 수업시간 선택 */}
+        <div className="flex items-center gap-3">
+          <h3 className="flex items-center gap-2 text-base font-bold text-gray-700">
+            📚 수업 도구
+          </h3>
 
-        </h3>
+          {/* 수업시간 선택 드롭다운 */}
+          <select
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            value={selectedClassBlockId || ""}
+            onChange={(e) => onChangeClassBlock(e.target.value)}
+          >
+            {classBlocks.map((block) => (
+              <option key={block.id} value={block.id}>
+                {block.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* 우측 버튼 영역 */}
         <div className="flex gap-2">
@@ -184,6 +243,10 @@ export default function ClassResourceBoard() {
         </div>
       </div>
 
+      {/* 수업 도구 카드 그리드
+          - 기본: 클릭 시 아무 동작 없음
+          - 삭제 모드: 카드 클릭으로 선택 토글
+          - Hover: 정렬 / 편집 버튼 표시 */}
       <div className="grid grid-cols-4 gap-4">
         {resources.length === 0 ? (
           <div className="col-span-4 text-sm text-gray-400 text-center py-10">
