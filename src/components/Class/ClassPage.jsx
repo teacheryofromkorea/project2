@@ -197,7 +197,7 @@ function ClassPage() {
       =============================== */}
 
       {/* 메인 수업 화면 */}
-      <div className="grid grid-cols-12 gap-6 h-[calc(100vh-220px)]">
+      <div className="grid grid-cols-12 gap-6 h-[85vh]">
         {/* 좌측: 학생 리스트 */}
         <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4 overflow-y-auto">
           <ClassStudentPanel

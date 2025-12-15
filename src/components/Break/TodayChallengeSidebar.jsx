@@ -49,7 +49,8 @@ export default function TodayChallengeSidebar({
   }, [students, missions, studentMissionStatus, routineItems, studentBreakRoutineStatus]);
 
   return (
-    <div className="bg-white/70 rounded-2xl shadow p-4 flex flex-col gap-3 max-h-[80vh] h-[80vh] overflow-hidden">
+    // ⬇️ 여기의 클래스 이름을 변경했습니다. 80vh -> 85vh
+    <div className="bg-white/70 rounded-2xl shadow p-4 flex flex-col gap-3 max-h-[85vh] h-[85vh] overflow-hidden">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold text-gray-800">🚀 오늘의 도전</h3>
         <button

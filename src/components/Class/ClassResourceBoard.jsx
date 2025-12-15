@@ -176,7 +176,7 @@ export default function ClassResourceBoard({
           >
             {classBlocks.map((block) => (
               <option key={block.id} value={block.id}>
-                {block.name}
+                {block.name} ({block.start_time} ~ {block.end_time})
               </option>
             ))}
           </select>
@@ -188,7 +188,7 @@ export default function ClassResourceBoard({
             onClick={() => setIsModalOpen(true)}
             className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600"
           >
-            + 도구 추가
+            +
           </button>
 
           <button
@@ -203,7 +203,7 @@ export default function ClassResourceBoard({
                   : "bg-red-500 text-white hover:bg-red-600"
               }`}
           >
-            {selectMode ? "선택 취소" : "도구 삭제"}
+            {selectMode ? "선택 취소" : "-"}
           </button>
 
           {selectMode && (

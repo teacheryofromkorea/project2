@@ -248,7 +248,7 @@ export default function BreakTimeBoard() {
 
 
   return (
-    <div className="grid grid-cols-[260px,1fr,260px] gap-4 h-full">
+    <div className="grid grid-cols-[260px,1fr,260px] gap-4 h-[85vh]">
 
       {/* 1. 좌측 오늘의 도전 */}
       <TodayChallengeSidebar
