@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import ClassTimeBoard from "./ClassTimeBoard";
 import ClassStudentPanel from "./ClassStudentPanel";
 import useClassTimeBlockSelection from "../../hooks/useClassTimeBlockSelection";
+import ClassResourceBoard from "./ClassResourceBoard";
 
 function ClassPage() {
   const [classBlocks, setClassBlocks] = useState([]);
@@ -13,6 +14,9 @@ function ClassPage() {
 
   // 🔹 수업 중 선택된 학생들 (다중 선택)
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
+
+  // 🔹 toast 메시지
+  const [toast, setToast] = useState(null);
 
   // 🔹 현재 선택된 수업 교시 (ClassTimeBoard의 source of truth)
   const {
@@ -32,12 +36,38 @@ function ClassPage() {
     setSelectedStudentIds(new Set());
   }, [selectedClassBlockId]);
 
-  // 🔹 상점 증가 함수 (D-2단계에서 사용)
+  // 🔹 상점 증가 함수 (개별)
   const addPoint = (studentId) => {
     setPeriodPoints((prev) => ({
       ...prev,
       [studentId]: (prev[studentId] || 0) + 1,
     }));
+  };
+
+  // 🔹 벌점 감소 함수 (개별만 허용)
+  const removePoint = (studentId) => {
+    setPeriodPoints((prev) => ({
+      ...prev,
+      [studentId]: (prev[studentId] || 0) - 1,
+    }));
+  };
+
+  // 🔹 선택 학생 일괄 상점 지급 (선택 없으면 전체 학생)
+  const addPointBulk = () => {
+    const targetStudentIds =
+      selectedStudentIds.size > 0
+        ? Array.from(selectedStudentIds)
+        : students.map((s) => s.id);
+
+    if (targetStudentIds.length === 0) return;
+
+    setPeriodPoints((prev) => {
+      const next = { ...prev };
+      targetStudentIds.forEach((id) => {
+        next[id] = (next[id] || 0) + 1;
+      });
+      return next;
+    });
   };
 
   const toggleStudentSelection = (studentId) => {
@@ -49,15 +79,20 @@ function ClassPage() {
     });
   };
 
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2000);
+  };
+
   // 🔹 이 교시 상점 누적 저장 (D-3)
   const savePeriodPoints = async () => {
     if (!selectedClassBlockId) {
-      alert("저장할 수업 교시가 없습니다.");
+      showToast("저장할 수업 교시가 없습니다.", "error");
       return;
     }
 
     const entries = Object.entries(periodPoints)
-      .filter(([, point]) => point > 0)
+      .filter(([, point]) => point !== 0)
       .map(([studentId, point]) => ({
         student_id: studentId,
         class_block_id: selectedClassBlockId,
@@ -67,7 +102,7 @@ function ClassPage() {
       }));
 
     if (entries.length === 0) {
-      alert("저장할 상점이 없습니다.");
+      showToast("저장할 상점이 없습니다.", "error");
       return;
     }
 
@@ -77,11 +112,11 @@ function ClassPage() {
 
     if (error) {
       console.error("상점 저장 오류:", error);
-      alert("상점 저장 중 오류가 발생했습니다.");
+      showToast("상점 저장 중 오류가 발생했습니다.", "error");
       return;
     }
 
-    alert("이 교시 상점이 저장되었습니다.");
+    showToast("이 교시 상점이 저장되었습니다.", "success");
 
     // 상태 초기화
     setPeriodPoints({});
@@ -128,53 +163,65 @@ function ClassPage() {
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold mb-2">📚 수업 시간 모드</h1>
-        <p className="text-gray-600 text-sm">
-          수업시간 block 선택 로직 테스트 화면입니다.
-        </p>
-      </div>
+    <div className="max-w-7xl mx-auto px-6  space-y-6">
 
-      {/* 🔹 수업시간 선택 / 상태 */}
+
+      {/* 수업시간 선택 */}
       <ClassTimeBoard
         classBlocks={classBlocks}
         selectedClassBlockId={selectedClassBlockId}
         onSelectClassBlock={selectClassBlockManually}
       />
 
-      {/* 🔹 실제 수업시간 UI 골격 */}
-      <div className="grid grid-cols-12 gap-4 mt-6 min-h-[420px]">
-        {/* 좌측: 학생 리스트 영역 */}
-        <div className="col-span-3">
+      {/* 메인 수업 화면 */}
+      <div className="grid grid-cols-12 gap-6 min-h-[520px]">
+        {/* 좌측: 학생 리스트 */}
+        <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4">
           <ClassStudentPanel
             students={students}
             periodPoints={periodPoints}
             onAddPoint={addPoint}
+            onRemovePoint={removePoint}
             selectedStudentIds={selectedStudentIds}
             onToggleSelect={toggleStudentSelection}
           />
         </div>
 
-        {/* 중앙: 수업 콘텐츠 영역 */}
-        <div className="col-span-6 bg-white/70 rounded-2xl shadow p-4 flex flex-col items-center justify-center">
-          <h3 className="text-sm font-bold text-gray-700 mb-2">
-            📖 수업 콘텐츠
-          </h3>
-          <p className="text-xs text-gray-400 text-center">
-            PDF / 이미지 / iframe 수업자료 표시 영역
-          </p>
+        {/* 중앙: 수업 콘텐츠 */}
+        <div className="col-span-6 bg-white/70 rounded-2xl shadow p-4">
+          <ClassResourceBoard />
         </div>
 
-        {/* 우측: 수업 도구 패널 */}
+        {/* 우측: 수업 도구 */}
         <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4 space-y-3">
-          <h3 className="text-sm font-bold text-gray-700 mb-2">
+          <h3 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
             🧰 수업 도구
           </h3>
 
           <button
+            onClick={addPointBulk}
+            disabled={students.length === 0}
+            className={`w-full py-2 rounded-lg text-sm font-semibold
+              ${
+                students.length === 0
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-blue-500 text-white hover:bg-blue-600"
+              }`}
+          >
+            {selectedStudentIds.size > 0
+              ? "선택 학생 상점 +1"
+              : "전체 학생 상점 +1"}
+          </button>
+
+          <button
             onClick={savePeriodPoints}
-            className="w-full py-2 rounded-lg bg-green-500 text-white text-sm font-semibold hover:bg-green-600"
+            disabled={Object.keys(periodPoints).length === 0}
+            className={`w-full py-2 rounded-lg text-sm font-semibold
+              ${
+                Object.keys(periodPoints).length === 0
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-green-500 text-white hover:bg-green-600"
+              }`}
           >
             이 교시 상점 저장
           </button>
@@ -184,6 +231,19 @@ function ClassPage() {
           </p>
         </div>
       </div>
+
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow text-sm
+            ${
+              toast.type === "error"
+                ? "bg-red-500 text-white"
+                : "bg-gray-900 text-white"
+            }`}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

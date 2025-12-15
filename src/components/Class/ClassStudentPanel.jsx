@@ -11,6 +11,7 @@ export default function ClassStudentPanel({
   students = [],
   periodPoints = {},
   onAddPoint,
+  onRemovePoint,
   selectedStudentIds = new Set(),
   onToggleSelect,
 }) {
@@ -45,11 +46,27 @@ export default function ClassStudentPanel({
                 </span>
 
                 {/* 상점 컨트롤 (오른쪽 고정 영역) */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-blue-600 font-semibold min-w-[24px] text-right">
-                    +{point}
+                <div className="flex items-center gap-1 shrink-0">
+                  <span
+                    className={`text-xs font-semibold min-w-[28px] text-right ${
+                      point >= 0 ? "text-blue-600" : "text-red-600"
+                    }`}
+                  >
+                    {point >= 0 ? `+${point}` : point}
                   </span>
 
+                  {/* 벌점 (-) */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemovePoint?.(student.id);
+                    }}
+                    className="px-2 py-0.5 text-xs rounded bg-red-500 text-white hover:bg-red-600"
+                  >
+                    -
+                  </button>
+
+                  {/* 상점 (+) */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
