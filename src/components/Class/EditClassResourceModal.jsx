@@ -31,11 +31,16 @@ export default function EditClassResourceModal({
 
     setLoading(true);
 
+    const normalizedUrl =
+      url.startsWith("http://") || url.startsWith("https://")
+        ? url
+        : `https://${url}`;
+
     const { error } = await supabase
       .from("class_resources")
       .update({
         title,
-        url,
+        url: normalizedUrl,
         icon,
         description,
       })

@@ -116,63 +116,72 @@ export default function ClassResourceBoard() {
 
   return (
     <>
-      <div className="flex justify-end gap-2 mb-3">
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600"
-        >
-          + 콘텐츠 추가
-        </button>
+      <div className="flex items-center justify-between mb-3">
+        {/* 좌측 제목 */}
+        <h3 className="flex items-center gap-2 text-base font-bold text-gray-700">
+          📚 수업 도구
 
-        <button
-          onClick={() => {
-            setSelectMode((prev) => !prev);
-            setSelectedIds(new Set());
-          }}
-          className={`px-3 py-1.5 rounded-lg text-sm
-            ${
-              selectMode
-                ? "bg-gray-300 text-gray-600"
-                : "bg-red-500 text-white hover:bg-red-600"
-            }`}
-        >
-          {selectMode ? "선택 취소" : "콘텐츠 삭제"}
-        </button>
+        </h3>
 
-        {selectMode && (
+        {/* 우측 버튼 영역 */}
+        <div className="flex gap-2">
           <button
-            onClick={async () => {
-              if (selectedIds.size === 0) {
-                alert("삭제할 콘텐츠를 선택하세요.");
-                return;
-              }
-              if (
-                !window.confirm(
-                  `${selectedIds.size}개의 콘텐츠를 삭제할까요?\n(복구할 수 없습니다)`
-                )
-              )
-                return;
-
-              const ids = Array.from(selectedIds);
-              const { error } = await supabase
-                .from("class_resources")
-                .delete()
-                .in("id", ids);
-
-              if (error) {
-                alert("삭제 중 오류가 발생했습니다.");
-                return;
-              }
-
-              setSelectMode(false);
-              setSelectedIds(new Set());
-              fetchResources();
-            }}
-            className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700"
+            onClick={() => setIsModalOpen(true)}
+            className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600"
           >
-            선택 삭제
+            + 도구 추가
           </button>
-        )}
+
+          <button
+            onClick={() => {
+              setSelectMode((prev) => !prev);
+              setSelectedIds(new Set());
+            }}
+            className={`px-3 py-1.5 rounded-lg text-sm
+              ${
+                selectMode
+                  ? "bg-gray-300 text-gray-600"
+                  : "bg-red-500 text-white hover:bg-red-600"
+              }`}
+          >
+            {selectMode ? "선택 취소" : "도구 삭제"}
+          </button>
+
+          {selectMode && (
+            <button
+              onClick={async () => {
+                if (selectedIds.size === 0) {
+                  alert("삭제할 콘텐츠를 선택하세요.");
+                  return;
+                }
+                if (
+                  !window.confirm(
+                    `${selectedIds.size}개의 콘텐츠를 삭제할까요?\n(복구할 수 없습니다)`
+                  )
+                )
+                  return;
+
+                const ids = Array.from(selectedIds);
+                const { error } = await supabase
+                  .from("class_resources")
+                  .delete()
+                  .in("id", ids);
+
+                if (error) {
+                  alert("삭제 중 오류가 발생했습니다.");
+                  return;
+                }
+
+                setSelectMode(false);
+                setSelectedIds(new Set());
+                fetchResources();
+              }}
+              className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700"
+            >
+              선택 삭제
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -250,7 +259,7 @@ export default function ClassResourceBoard() {
               </div>
               <div>
                 <div className="text-xl mb-1">
-                  {resource.icon || "📎"}
+                  {resource.icon || "🌐"}
                 </div>
                 <h4 className="font-bold text-sm mb-1">
                   {resource.title}

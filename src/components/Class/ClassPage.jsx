@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import ClassTimeBoard from "./ClassTimeBoard";
 import ClassStudentPanel from "./ClassStudentPanel";
@@ -6,8 +6,11 @@ import useClassTimeBlockSelection from "../../hooks/useClassTimeBlockSelection";
 import ClassResourceBoard from "./ClassResourceBoard";
 
 function ClassPage() {
+  const [user, setUser] = useState(null);
   const [classBlocks, setClassBlocks] = useState([]);
   const [students, setStudents] = useState([]); // TODO: 다음 단계(C)에서 students 테이블 fetch 연결
+
+  const didInitResources = useRef(false);
 
   // 🔹 교시별 상점 상태 (key: studentId, value: 상점 개수)
   const [periodPoints, setPeriodPoints] = useState({});
@@ -17,6 +20,25 @@ function ClassPage() {
 
   // 🔹 toast 메시지
   const [toast, setToast] = useState(null);
+
+  // 🔹 현재 로그인한 유저 가져오기
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error("유저 정보 불러오기 실패", error);
+        return;
+      }
+
+      setUser(user);
+    };
+
+    getUser();
+  }, []);
 
   // 🔹 현재 선택된 수업 교시 (ClassTimeBoard의 source of truth)
   const {
@@ -122,6 +144,61 @@ function ClassPage() {
     setPeriodPoints({});
     setSelectedStudentIds(new Set());
   };
+
+  // 🔹 수업 콘텐츠 템플릿 자동 복사 (ClassPage 첫 진입 시 1회)
+  // React StrictMode 개발환경에서 2번 실행되는 것 방지
+  useEffect(() => {
+    if (didInitResources.current) return;
+    didInitResources.current = true;
+
+    const ensureClassResources = async () => {
+      // 1. 이미 class_resources가 있는지 확인
+      const { count, error: countError } = await supabase
+        .from("class_resources")
+        .select("*", { count: "exact", head: true });
+
+      if (countError) {
+        console.error("class_resources count 오류", countError);
+        return;
+      }
+
+      if (count && count > 0) return;
+
+      // 2. 템플릿 불러오기
+      const { data: templates, error: templateError } = await supabase
+        .from("class_resource_templates")
+        .select("*")
+        .eq("is_active", true)
+        .order("order_index", { ascending: true });
+
+      if (templateError) {
+        console.error("템플릿 불러오기 오류", templateError);
+        return;
+      }
+
+      if (!templates || templates.length === 0) return;
+
+      // 3. 템플릿 → 수업 콘텐츠 복사
+      const resources = templates.map((t) => ({
+        title: t.title,
+        url: t.url,
+        icon: t.icon,
+        description: t.description,
+        order_index: t.order_index,
+        is_active: true,
+      }));
+
+      const { error: insertError } = await supabase
+        .from("class_resources")
+        .insert(resources);
+
+      if (insertError) {
+        console.error("class_resources 템플릿 복사 오류", insertError);
+      }
+    };
+
+    ensureClassResources();
+  }, []);
 
   // 수업시간 block 불러오기 (time_blocks 중 block_type === "class")
   useEffect(() => {

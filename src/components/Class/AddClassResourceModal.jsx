@@ -7,7 +7,7 @@ export default function AddClassResourceModal({ isOpen, onClose, onAdded }) {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
-  const [icon, setIcon] = useState("📎");
+  const [icon, setIcon] = useState("🌐");
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -33,13 +33,18 @@ export default function AddClassResourceModal({ isOpen, onClose, onAdded }) {
         ? lastItem.order_index + 1
         : 0;
 
-    const { error } = await supabase.from("class_resources").insert({
-      title,
-      url,
-      description,
-      icon,
-      order_index: nextOrderIndex,
-    });
+const normalizedUrl =
+  url.startsWith("http://") || url.startsWith("https://")
+    ? url
+    : `https://${url}`;
+
+const { error } = await supabase.from("class_resources").insert({
+  title,
+  url: normalizedUrl,
+  description,
+  icon,
+  order_index: nextOrderIndex,
+});
 
     setLoading(false);
 
@@ -53,7 +58,7 @@ export default function AddClassResourceModal({ isOpen, onClose, onAdded }) {
     setTitle("");
     setUrl("");
     setDescription("");
-    setIcon("📎");
+    setIcon("🌐");
 
     onAdded?.();
     onClose();
