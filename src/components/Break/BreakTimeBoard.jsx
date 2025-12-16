@@ -1,3 +1,22 @@
+/**
+ * BreakTimeBoard
+ *
+ * [역할]
+ * - 쉬는시간 화면 전체 UI를 담당하는 컨테이너 컴포넌트
+ * - 쉬는시간 루틴 표시 및 편집 UI 제공
+ * - 쉬는시간 착석 체크 영역 렌더링
+ * - 오늘의 미션 / 학생 상태 사이드바 연동
+ *
+ * [위임된 책임]
+ * - 쉬는시간 시간 블록 선택 정책 → useBreakBlockSelection
+ * - 쉬는시간 루틴 CRUD 로직 → useBreakRoutine
+ *
+ * [의도적으로 포함하지 않는 것]
+ * - 시간 블록 자동 전환 로직의 세부 구현
+ * - 루틴 / 미션 / 학생 DB 쿼리의 정책 결정
+ *
+ * ※ 이 컴포넌트는 "화면 구성"과 "hook 조합"에만 집중한다.
+ */
 import { useState, useEffect, useCallback, useMemo } from "react";
 import useBreakBlockSelection from "../../hooks/Break/useBreakBlockSelection";
 import { supabase } from "../../lib/supabaseClient";
@@ -5,16 +24,9 @@ import TodayChallengeSidebar from "./TodayChallengeSidebar";
 import SeatCheckContainer from "./SeatCheckContainer";
 import ClassDutySidebar from "./ClassDutySidebar";
 import StudentTaskModal from "../Attendance/StudentTaskModal";
+import useBreakRoutine from "../../hooks/Break/useBreakRoutine";
 
 export default function BreakTimeBoard() {
-  const [routineItems, setRoutineItems] = useState([]);
-  const [routineTitle, setRoutineTitle] = useState("");
-  const [tempTitle, setTempTitle] = useState("");
-  const [newContent, setNewContent] = useState("");
-  const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
-  const [editRoutine, setEditRoutine] = useState(null);
-  const [editText, setEditText] = useState("");
-
   const [students, setStudents] = useState([]);
   const [missions, setMissions] = useState([]);
   const [missionStatus, setMissionStatus] = useState([]);
@@ -28,89 +40,36 @@ export default function BreakTimeBoard() {
     setSelectedBlockId,
   } = useBreakBlockSelection();
 
+  // 쉬는시간 루틴(공통) ID
   const ROUTINE_ID = "e2c703b6-e823-42ce-9373-9fb12a4cdbb1";
-  
-  // useMemo를 사용하여 오늘 날짜를 한 번만 계산
+
+  const {
+    routineItems,
+    routineTitle,
+    tempTitle,
+    setTempTitle,
+    newContent,
+    setNewContent,
+    editRoutine,
+    setEditRoutine,
+    editText,
+    setEditText,
+
+    fetchRoutineItems,
+    fetchRoutineTitle,
+    addRoutineItem,
+    deleteRoutineItem,
+    moveRoutine,
+    updateRoutine,
+    saveRoutineTitle,
+  } = useBreakRoutine({ routineId: ROUTINE_ID });
+
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  // READ ITEMS (routine_items) - useCallback 적용
-  const fetchRoutineItems = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("routine_items")
-      .select("*")
-      .eq("routine_id", ROUTINE_ID)
-      .order("order_index", { ascending: true });
-
-    if (!error) setRoutineItems(data || []);
-  }, []);
-
-  // READ TITLE (routine_title) - useCallback 적용
-  const fetchRoutineTitle = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("routine_title")
-      .select("title")
-      .eq("id", ROUTINE_ID)
-      .single();
-
-    if (!error && data) {
-      setRoutineTitle(data.title);
-      setTempTitle(data.title);
-    }
-  }, []);
-
-  // CREATE - useCallback 적용
-  const addRoutineItem = useCallback(async () => {
-    await supabase.from("routine_items").insert({
-      routine_id: ROUTINE_ID,
-      content: newContent,
-      order_index: routineItems.length
-    });
-    setNewContent("");
-    fetchRoutineItems(); // 데이터 갱신
-  }, [newContent, routineItems.length, fetchRoutineItems]);
-
-  // DELETE - useCallback 적용
-  const deleteRoutineItem = useCallback(async (id) => {
-    await supabase.from("routine_items").delete().eq("id", id);
-    fetchRoutineItems(); // 데이터 갱신
-  }, [fetchRoutineItems]);
-
-  // MOVE - useCallback 적용
-  const moveRoutine = useCallback(async (index, direction) => {
-    const newList = [...routineItems];
-    if ((direction === "up" && index === 0) || (direction === "down" && index === newList.length - 1)) return;
-
-    const target = newList[index];
-    const swapWith = direction === "up" ? newList[index - 1] : newList[index + 1];
-
-    // 트랜잭션 없이 순차적 업데이트 수행 (안전한 기존 방식 유지)
-    await supabase
-      .from("routine_items")
-      .update({ order_index: swapWith.order_index }) // 순서를 맞바꿈
-      .eq("id", target.id);
-
-    await supabase
-      .from("routine_items")
-      .update({ order_index: target.order_index }) // 순서를 맞바꿈
-      .eq("id", swapWith.id);
-
-    fetchRoutineItems(); // 데이터 갱신
-  }, [routineItems, fetchRoutineItems]);
-
-  // UPDATE - useCallback 적용
-  const updateRoutine = useCallback(async () => {
-    if (!editText.trim() || !editRoutine) return;
-    await supabase
-      .from("routine_items")
-      .update({ content: editText })
-      .eq("id", editRoutine.id);
-
-    setEditRoutine(null);
-    setEditText("");
-    fetchRoutineItems(); // 데이터 갱신
-  }, [editText, editRoutine, fetchRoutineItems]);
-
-  // 🟦 학생 목록 - useCallback 적용
+  // ----------------------
+  // 쉬는시간 맥락 데이터
+  // (학생 / 오늘 미션 / 수행 상태)
+  // ----------------------
   const fetchStudents = useCallback(async () => {
     const { data, error } = await supabase
       .from("students")
@@ -120,7 +79,6 @@ export default function BreakTimeBoard() {
     if (!error) setStudents(data || []);
   }, []);
 
-  // 🟦 오늘 미션 목록 - useCallback 적용
   const fetchMissions = useCallback(async () => {
     const { data, error } = await supabase
       .from("missions")
@@ -130,7 +88,6 @@ export default function BreakTimeBoard() {
     if (!error) setMissions(data || []);
   }, []);
 
-  // 🟦 오늘 미션 상태 - useCallback 적용
   const fetchMissionStatus = useCallback(async () => {
     const { data, error } = await supabase
       .from("student_mission_status")
@@ -157,7 +114,7 @@ export default function BreakTimeBoard() {
 
 
 
-  // AUTO FETCH - 의존성 배열에 useCallback 함수 포함
+  // 초기 진입 및 의존성 변경 시 쉬는시간 화면에 필요한 데이터 로딩
   useEffect(() => {
     (async ()=> {
       await Promise.all([
@@ -180,16 +137,11 @@ export default function BreakTimeBoard() {
 
   // 루틴 제목 저장 핸들러
   const handleSaveRoutineTitleAndClose = async () => {
-    await supabase
-      .from("routine_title")
-      .update({ title: tempTitle })
-      .eq("id", ROUTINE_ID);
-
-    setRoutineTitle(tempTitle);
-    fetchRoutineTitle(); // 갱신된 제목 다시 불러오기
+    await saveRoutineTitle();
     setIsRoutineModalOpen(false);
   };
 
+  const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
 
   return (
     <div className="grid grid-cols-[260px,1fr,260px] gap-4 h-[85vh]">
@@ -213,7 +165,6 @@ export default function BreakTimeBoard() {
 
         {/* 2. 상단 쉬는시간 루틴 */}
         <div className="bg-white/70 rounded-3xl shadow p-8 flex flex-col gap-6">
-          {/* ... (UI 동일) ... */}
 <div className="flex items-center justify-between">
 
   {/* 제목(클릭 = 편집) */}
