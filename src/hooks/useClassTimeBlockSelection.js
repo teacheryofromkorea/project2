@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import useCurrentTimeBlock from "./useCurrentTimeBlock";
 
 /**
@@ -44,6 +44,12 @@ export default function useClassTimeBlockSelection(classBlocks = []) {
   // → 실제 setState는 아래 단일 effect에서만 수행
   const [nextBlockId, setNextBlockId] = useState(null);
 
+  // 사용자가 수동으로 교시를 선택했는지 여부
+  const hasManualOverrideRef = useRef(false);
+
+  // 어떤 activeBlock에서 수동 선택했는지 기록
+  const manualOverrideForActiveIdRef = useRef(null);
+
   const selectedClassBlock = useMemo(() => {
     if (!selectedClassBlockId) return null;
     return classBlocks.find((b) => b.id === selectedClassBlockId) || null;
@@ -56,7 +62,13 @@ export default function useClassTimeBlockSelection(classBlocks = []) {
     if (!activeBlock) return;
     if (activeBlock.block_type !== "class") return;
 
-    // 같은 값이면 불필요한 업데이트 방지
+    const isManualOverrideThisActive =
+      hasManualOverrideRef.current &&
+      manualOverrideForActiveIdRef.current === activeBlock.id;
+
+    // 수동 선택 중이면 자동 선택 금지
+    if (isManualOverrideThisActive) return;
+
     if (activeBlock.id === selectedClassBlockId) return;
 
     setNextBlockId(activeBlock.id);
@@ -97,11 +109,33 @@ export default function useClassTimeBlockSelection(classBlocks = []) {
     setNextBlockId(null);
   }, [nextBlockId, selectedClassBlockId]);
 
+  // 교시(activeBlock)가 바뀌면 수동 override 해제 → 다음 교시는 자동 선택 허용
+  useEffect(() => {
+    if (!activeBlock?.id) {
+      hasManualOverrideRef.current = false;
+      manualOverrideForActiveIdRef.current = null;
+      return;
+    }
+
+    if (
+      manualOverrideForActiveIdRef.current &&
+      manualOverrideForActiveIdRef.current !== activeBlock.id
+    ) {
+      hasManualOverrideRef.current = false;
+      manualOverrideForActiveIdRef.current = null;
+    }
+  }, [activeBlock]);
+
   // 사용자가 드롭다운 등에서 교시를 직접 선택할 때 사용하는 API
   // - 자동 선택 예약(nextBlockId)은 취소
   // - 선택 결과를 localStorage에 즉시 반영
   const selectClassBlockManually = (blockId) => {
     const value = blockId || null;
+
+    // 수동 선택 기록
+    hasManualOverrideRef.current = true;
+    manualOverrideForActiveIdRef.current = activeBlock?.id ?? null;
+
     setNextBlockId(null);
     setSelectedClassBlockId(value);
 
