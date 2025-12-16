@@ -8,7 +8,11 @@ export default function TodayChallengeSidebar({
   routineItems = [],
   studentBreakRoutineStatus = [],
   onOpenModal,
+  mode = "break",
 }) {
+  const getRoutineRowMatchId = (row) =>
+    mode === "lunch" ? row.routine_item_id : row.routine_id;
+
   const [incompleteStudents, setIncompleteStudents] = useState([]);
   const [showIncompleteOnly, setShowIncompleteOnly] = useState(false);
 
@@ -34,7 +38,7 @@ export default function TodayChallengeSidebar({
         const done = studentBreakRoutineStatus.some(
           (row) =>
             row.student_id === student.id &&
-            row.routine_id === r.id &&
+            getRoutineRowMatchId(row) === r.id &&
             row.date === today &&
             row.completed === true
         );
@@ -46,7 +50,7 @@ export default function TodayChallengeSidebar({
     });
 
     setIncompleteStudents(calc);
-  }, [students, missions, studentMissionStatus, routineItems, studentBreakRoutineStatus]);
+  }, [students, missions, studentMissionStatus, routineItems, studentBreakRoutineStatus, mode]);
 
   return (
     // ⬇️ 여기의 클래스 이름을 변경했습니다. 80vh -> 85vh
@@ -102,7 +106,7 @@ export default function TodayChallengeSidebar({
         const done = studentBreakRoutineStatus.some(
           (row) =>
             row.student_id === student.id &&
-            row.routine_id === r.id &&
+            getRoutineRowMatchId(row) === r.id &&
             row.completed === true &&
             row.date === today
         );

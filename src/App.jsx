@@ -15,8 +15,8 @@ import MissionSidebar from "./components/Attendance/MissionSidebar";
 import AttendanceBoard from "./components/Attendance/AttendanceBoard";
 
 import BreakTimeBoard from "./components/Break/BreakTimeBoard";
+import LunchTimeBoard from "./components/Lunch/LunchTimeBoard";
 
-import LunchPage from "./components/Lunch/LunchPage";
 import ClassPage from "./components/Class/ClassPage";
 import EndPage from "./components/End/EndPage";
 import StatsPage from "./components/Stats/StatsPage";
@@ -151,7 +151,7 @@ function AppContent() {
           </Route>
 
           {/* 기타 탭 */}
-          <Route path="/lunch" element={<LunchPage />} />
+          <Route path="/lunch" element={<LunchTimeBoard />} />
           <Route path="/class" element={<ClassPage />} />
           <Route path="/end" element={<EndPage />} />
           <Route path="/stats" element={<StatsPage />} />
