@@ -1,12 +1,24 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 
-export default function SeatCheckContainer({ blockId }) {
-  // 학생 목록
-  const [students, setStudents] = useState([]);
+/*
+  SeatCheckContainer 컴포넌트는 다음과 같은 로직으로 동작합니다:
+
+  1) 학생 목록을 불러옵니다.
+  2) 오늘 출석한 학생 목록을 가져옵니다.
+  3) 현재 선택된 쉬는시간(blockId)과 무관하게,
+     해당 쉬는시간에 수동으로 선택된 학생들도 포함하여 보여줍니다.
+  4) 학생들의 착석 상태를 불러와 표시합니다.
+  5) 학생을 성별(male/female)로 분리하여 UI에 렌더링합니다.
+  6) 착석 상태 변경 시 모달을 통해 확인 후 저장합니다.
+
+  이를 통해 출석 학생뿐 아니라, 수동으로 쉬는시간에 착석 상태가 지정된 학생도 함께 관리할 수 있습니다.
+*/
+
+export default function SeatCheckContainer({ blockId, students }) {
   // 학생별 착석 여부: { [studentId]: { seated: true/false, time: string } }
   const [seatStatus, setSeatStatus] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   // 착석/해제 모달 상태
   const [modalStudent, setModalStudent] = useState(null);
@@ -22,77 +34,45 @@ export default function SeatCheckContainer({ blockId }) {
   };
   const today = getToday();
 
-  // 1) 학생 목록 불러오기
-  const fetchStudents = async () => {
-    const { data, error } = await supabase
-      .from("students")
-      .select("id, name, gender")
-      .order("name", { ascending: true });
-
-    if (error) {
-      console.error("학생 목록 불러오기 에러:", error);
-      return;
-    }
-
-    setStudents(data || []);
-  };
-
-  // 1-2) 오늘 출석 학생 목록 가져오기
-  const fetchTodayAttendance = async () => {
-    const { data, error } = await supabase
-      .from("student_attendance_status")
-      .select("student_id")
-      .eq("date", today)
-      .eq("present", true);
-
-    if (error) {
-      console.error("출석 데이터 불러오기 에러:", error);
-      return [];
-    }
-
-    return data.map((row) => row.student_id);
-  };
-
   // 2) 오늘자 착석 상태 불러오기
-  const fetchSeatStatus = async () => {
-    if (!blockId) return;
+  // - blockId가 없으면(자동전환 OFF + 아직 쉬는시간 선택 전) 빈 상태맵을 반환
+  const fetchSeatStatus = async (targetBlockId) => {
+    if (!targetBlockId) {
+      return {};
+    }
+
     const { data, error } = await supabase
       .from("break_seat_status")
       .select("*")
       .eq("date", today)
-      .eq("block_id", blockId)
+      .eq("block_id", targetBlockId);
 
     if (error) {
       console.error("착석 상태 불러오기 에러:", error);
-      return;
+      return {};
     }
 
     const statusMap = {};
     (data || []).forEach((row) => {
       statusMap[row.student_id] = {
         seated: row.is_seated,
-        time: row.inserted_at
+        time: row.inserted_at,
       };
     });
 
-    setSeatStatus(statusMap);
+    return statusMap;
   };
 
-  // 3) 최초 마운트 시 데이터 불러오기
   useEffect(() => {
-    const init = async () => {
-      setIsLoading(true);
-      setSeatStatus({});
-      await fetchStudents();
-      const attendedIds = await fetchTodayAttendance();
-      await fetchSeatStatus();
-
-      setStudents((prev) => prev.filter((s) => attendedIds.includes(s.id)));
-
-      setIsLoading(false);
+    const loadSeatStatus = async () => {
+      if (!blockId) {
+        setSeatStatus({});
+        return;
+      }
+      const statusMap = await fetchSeatStatus(blockId);
+      setSeatStatus(statusMap);
     };
-
-    init();
+    loadSeatStatus();
   }, [blockId]);
 
   // ESC key listener to close modal
@@ -143,9 +123,9 @@ export default function SeatCheckContainer({ blockId }) {
     }
   };
 
-  // 5) 성별별로 나누기 (원하면 나중에 레이아웃 조정 가능)
-  const girls = students.filter((s) => s.gender === "F");
-  const boys = students.filter((s) => s.gender === "M");
+  // 5) 성별별로 나누기 (male / female 기준으로 통일)
+  const females = students.filter((s) => s.gender === "female");
+  const males = students.filter((s) => s.gender === "male");
 
   if (isLoading) {
     return (
@@ -176,7 +156,7 @@ export default function SeatCheckContainer({ blockId }) {
             남학생
           </h4>
           <div className="flex flex-wrap gap-2">
-            {boys.map((student) => {
+            {males.map((student) => {
               const seated = !!seatStatus[student.id]?.seated;
               return (
                 <button
@@ -217,7 +197,7 @@ export default function SeatCheckContainer({ blockId }) {
             여학생
           </h4>
           <div className="flex flex-wrap gap-2">
-            {girls.map((student) => {
+            {females.map((student) => {
               const seated = !!seatStatus[student.id]?.seated;
               return (
                 <button

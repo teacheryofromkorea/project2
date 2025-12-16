@@ -25,6 +25,7 @@ import SeatCheckContainer from "./SeatCheckContainer";
 import ClassDutySidebar from "./ClassDutySidebar";
 import StudentTaskModal from "../Attendance/StudentTaskModal";
 import useBreakRoutine from "../../hooks/Break/useBreakRoutine";
+import { BREAK_AUTO_SWITCH_EVENT } from "../../hooks/Break/useBreakBlockSelection";
 
 export default function BreakTimeBoard() {
   const [students, setStudents] = useState([]);
@@ -65,6 +66,8 @@ export default function BreakTimeBoard() {
   } = useBreakRoutine({ routineId: ROUTINE_ID });
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const [attendanceStatus, setAttendanceStatus] = useState([]);
 
   // ----------------------
   // 쉬는시간 맥락 데이터
@@ -112,7 +115,15 @@ export default function BreakTimeBoard() {
     if (!error) setRoutineStatus(data || []);
   }, [today, selectedBlockId]);
 
+  const fetchAttendanceStatus = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("student_attendance_status")
+      .select("*")
+      .eq("date", today)
+      .eq("present", true);
 
+    if (!error) setAttendanceStatus(data || []);
+  }, [today]);
 
   // 초기 진입 및 의존성 변경 시 쉬는시간 화면에 필요한 데이터 로딩
   useEffect(() => {
@@ -124,6 +135,7 @@ export default function BreakTimeBoard() {
         fetchMissions(),
         fetchMissionStatus(),
         fetchRoutineStatus(),
+        fetchAttendanceStatus(),
       ]);
     })();
   }, [
@@ -133,7 +145,16 @@ export default function BreakTimeBoard() {
     fetchMissions,
     fetchMissionStatus,
     fetchRoutineStatus,
+    fetchAttendanceStatus,
   ]);
+
+  const presentStudentIds = useMemo(() => {
+    return attendanceStatus.map((a) => a.student_id);
+  }, [attendanceStatus]);
+
+  const presentStudents = useMemo(() => {
+    return students.filter((s) => presentStudentIds.includes(s.id));
+  }, [students, presentStudentIds]);
 
   // 루틴 제목 저장 핸들러
   const handleSaveRoutineTitleAndClose = async () => {
@@ -142,13 +163,48 @@ export default function BreakTimeBoard() {
   };
 
   const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
+  const [autoSwitchToast, setAutoSwitchToast] = useState(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      const { blockId } = e.detail || {};
+
+      const block = breakBlocks.find((b) => b.id === blockId);
+      if (!block) return;
+
+      setAutoSwitchToast(
+        `⏰ 지금은 ${block.name} (${block.start_time?.slice(0, 5)} ~ ${block.end_time?.slice(0, 5)}) 입니다`
+      );
+
+      // 3초 후 자동 제거
+      setTimeout(() => {
+        setAutoSwitchToast(null);
+      }, 3000);
+    };
+
+    window.addEventListener(BREAK_AUTO_SWITCH_EVENT, handler);
+    return () => {
+      window.removeEventListener(BREAK_AUTO_SWITCH_EVENT, handler);
+    };
+  }, [breakBlocks]);
+
+  useEffect(() => {
+    const handleAttendanceUpdated = async () => {
+      await fetchAttendanceStatus();
+    };
+
+    window.addEventListener("attendance:updated", handleAttendanceUpdated);
+    return () => {
+      window.removeEventListener("attendance:updated", handleAttendanceUpdated);
+    };
+  }, [fetchAttendanceStatus]);
 
   return (
     <div className="grid grid-cols-[260px,1fr,260px] gap-4 h-[85vh]">
 
       {/* 1. 좌측 오늘의 도전 */}
       <TodayChallengeSidebar
-        students={students}
+        students={presentStudents}
         missions={missions}
         studentMissionStatus={missionStatus}
         routineItems={routineItems}
@@ -236,9 +292,10 @@ export default function BreakTimeBoard() {
         </div>
 
         {/* 3. 하단 착석 체크 */}
-        {selectedBlockId && (
-  <SeatCheckContainer blockId={selectedBlockId} />
-)}
+        <SeatCheckContainer
+          blockId={selectedBlockId}
+          students={presentStudents}
+        />
       </div>
 
       {/* 4. 우측 역할 사이드바 */}
@@ -399,6 +456,17 @@ export default function BreakTimeBoard() {
             await fetchRoutineStatus();
           }}
         />
+      )}
+
+      {autoSwitchToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="
+            bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl
+            text-sm font-semibold animate-fade-in
+          ">
+            {autoSwitchToast}
+          </div>
+        </div>
       )}
     </div>
   );
