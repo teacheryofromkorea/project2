@@ -124,7 +124,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-200 via-purple-200 to-orange-200 text-gray-900">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-pink-200 via-purple-200 to-orange-200 text-gray-900">
       <Toaster position="top-center" />
       <TopNav
         autoSwitchEnabled={autoSwitchEnabled}
@@ -132,7 +132,7 @@ function AppContent() {
         onUserNavigate={handleUserNavigate}
       />
 
-      <main className="flex-1 px-8 pb-8 pt-4">
+      <main className="flex-1 min-h-0 px-8 pb-8 pt-4">
         <Routes>
           {/* 기본 경로 → 출석 탭 */}
           <Route path="/" element={<Navigate to="/attendance" replace />} />

@@ -136,7 +136,7 @@ export default function SeatCheckContainer({ blockId, students }) {
   }
 
   return (
-    <div className="bg-white/70 rounded-2xl shadow p-6 flex-1 flex flex-col gap-4">
+    <div className="bg-white/70 rounded-2xl shadow p-6 flex-1 flex flex-col gap-4 h-full">
       {/* 상단 제목 영역 */}
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xl font-bold text-gray-800">

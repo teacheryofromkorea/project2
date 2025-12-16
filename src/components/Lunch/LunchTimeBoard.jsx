@@ -113,18 +113,20 @@ export default function LunchTimeBoard() {
         onOpenModal={setTargetStudent}
       />
 
-      {/* 중앙: 점심시간 루틴 + 착석 체크 */}
-      <div className="space-y-6 w-full">
-        <LunchRoutineArea
-          students={presentStudents}
-          onStatusChange={fetchLunchRoutineStatus}
-        />
+{/* 중앙: 점심시간 루틴 + 착석 체크 */}
+<div className="flex flex-col gap-6 w-full h-[85vh] min-h-0">
+  <LunchRoutineArea
+    students={presentStudents}
+    onStatusChange={fetchLunchRoutineStatus}
+  />
 
-        <SeatCheckContainer
-          students={presentStudents}
-          table="lunch_seat_status"
-        />
-      </div>
+  <div className="flex-1 min-h-0 h-full">
+    <SeatCheckContainer
+      students={presentStudents}
+      table="lunch_seat_status"
+    />
+  </div>
+</div>
 
       {/* 우측: 우리반의 소중한 일 */}
       <ClassDutySidebar />
