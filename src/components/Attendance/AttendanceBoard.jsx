@@ -97,20 +97,36 @@ function AttendanceBoard() {
     setMissionStatus(missionData || []);
   };
 
-useEffect(() => {
-  (async () => {
-    await Promise.all([
-      fetchStudents(),
-      fetchRoutines(),
-      fetchMissions(),
-      fetchStatus(),
-      fetchAttendance(),
-    ]);
-  })();
-}, []);
+  // 최초 1회: 루틴/미션/출석/상태만 로딩
+  useEffect(() => {
+    (async () => {
+      await Promise.all([
+        fetchRoutines(),
+        fetchMissions(),
+        fetchStatus(),
+        fetchAttendance(),
+      ]);
+    })();
+  }, []);
 
-  const girls = students.filter((s) => s.gender === "F");
-  const boys = students.filter((s) => s.gender === "M");
+  // 설정탭에서 학생 CRUD 발생 시 즉시 학생 목록 재조회
+  useEffect(() => {
+    const handleStudentsUpdated = () => {
+      fetchStudents();
+    };
+
+    // 최초 진입 시에도 학생 목록 로딩
+    fetchStudents();
+
+    window.addEventListener("students:updated", handleStudentsUpdated);
+
+    return () => {
+      window.removeEventListener("students:updated", handleStudentsUpdated);
+    };
+  }, []);
+
+  const boys = students.filter((s) => s.gender === "male");
+  const girls = students.filter((s) => s.gender === "female");
 
 const markPresent = async (id) => {
   const today = new Date().toISOString().split("T")[0]; // today 변수 재정의

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import StudentsList from "./StudentsList"
 
+const STUDENTS_UPDATED_EVENT = "students:updated";
+
 export default function StudentsPage() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +45,8 @@ export default function StudentsPage() {
       .eq("id", stu.id);
 
     await fetchStudents();
+    window.dispatchEvent(new Event(STUDENTS_UPDATED_EVENT));
+
     setEditingId(null);
   }
 
@@ -130,6 +134,7 @@ const { error } = await supabase.from("students").insert({
     }
 
     await fetchStudents();
+    window.dispatchEvent(new Event(STUDENTS_UPDATED_EVENT));
 
 // 🔥 입력값 초기화
 setNewName("");
@@ -158,6 +163,7 @@ setSaving(false);
     }
 
     await fetchStudents();
+    window.dispatchEvent(new Event(STUDENTS_UPDATED_EVENT));
     setDeletingId(null);
   }
 
