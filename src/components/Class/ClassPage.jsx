@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import ClassStudentPanel from "./ClassStudentPanel";
 import useClassTimeBlockSelection from "../../hooks/useClassTimeBlockSelection";
@@ -31,6 +31,20 @@ function ClassPage() {
 
   // 🔹 학생 데이터
   const [students, setStudents] = useState([]);
+
+  const [attendanceStatus, setAttendanceStatus] = useState([]);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const presentStudentIds = useMemo(
+    () => attendanceStatus.map((row) => row.student_id),
+    [attendanceStatus]
+  );
+
+  const presentStudents = useMemo(
+    () => students.filter((s) => presentStudentIds.includes(s.id)),
+    [students, presentStudentIds]
+  );
 
   // 🔹 교시별 상점 상태 (key: studentId, value: 점수)
   const [periodPoints, setPeriodPoints] = useState({});
@@ -83,7 +97,7 @@ function ClassPage() {
     const targetStudentIds =
       selectedStudentIds.size > 0
         ? Array.from(selectedStudentIds)
-        : students.map((s) => s.id);
+        : presentStudents.map((s) => s.id);
 
     if (targetStudentIds.length === 0) return;
 
@@ -188,6 +202,26 @@ function ClassPage() {
     fetchStudents();
   }, []);
 
+  useEffect(() => {
+    const fetchAttendanceStatus = async () => {
+      const { data, error } = await supabase
+        .from("student_attendance_status")
+        .select("student_id")
+        .eq("date", today)
+        .eq("present", true);
+
+      if (error) {
+        console.error("출석 데이터 불러오기 실패", error);
+        setAttendanceStatus([]);
+        return;
+      }
+
+      setAttendanceStatus(data || []);
+    };
+
+    fetchAttendanceStatus();
+  }, [today]);
+
   return (
     <div className="max-w-7xl mx-auto px-6  space-y-6">
 
@@ -201,7 +235,7 @@ function ClassPage() {
         {/* 좌측: 학생 리스트 */}
         <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4 overflow-y-auto">
           <ClassStudentPanel
-            students={students}
+            students={presentStudents}
             periodPoints={periodPoints}
             onAddPoint={addPoint}
             onRemovePoint={removePoint}
@@ -229,10 +263,10 @@ function ClassPage() {
 
           <button
             onClick={addPointBulk}
-            disabled={students.length === 0}
+            disabled={presentStudents.length === 0}
             className={`w-full py-2 rounded-lg text-sm font-semibold
               ${
-                students.length === 0
+                presentStudents.length === 0
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-blue-500 text-white hover:bg-blue-600"
               }`}

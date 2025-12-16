@@ -1,5 +1,13 @@
-import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+import { Toaster, toast } from "react-hot-toast";
 import TopNav from "./components/TopNav";
 
 import RoutineSidebar from "./components/Attendance/RoutineSidebar";
@@ -35,6 +43,9 @@ function AttendanceLayout() {
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
+  const autoNavigatedRef = useRef(false);
+  const prevPathRef = useRef(location.pathname);
+  const userNavigatingRef = useRef(false);
   const { activeBlock, loading } = useCurrentTimeBlock();
 
   // 자동 탭 전환 토글 (기본값: ON)
@@ -42,20 +53,13 @@ function AppContent() {
     return localStorage.getItem("autoTabSwitch") !== "off";
   });
 
-  // 사용자가 수동으로 탭을 이동했는지 여부
-  const [isManualNavigation, setIsManualNavigation] = useState(false);
-
+  // 자동전환 UX 규칙:
+  // 1) 자동전환 ON 시, 현재 시간에 해당하는 탭으로 즉시 이동
+  // 2) 자동전환에 의해 이동된 이후, 사용자가 직접 탭/드롭다운을 조작하면 자동전환 OFF
   useEffect(() => {
     if (loading || !activeBlock) return;
-
-    // 자동 전환 OFF 상태면 아무 것도 하지 않음
     if (!autoSwitchEnabled) return;
-
-    // 설정 페이지에서는 자동 전환 금지
     if (location.pathname.startsWith("/settings")) return;
-
-    // 사용자가 방금 수동으로 이동했으면 자동 전환 금지
-    if (isManualNavigation) return;
 
     const map = {
       arrival: "/attendance",
@@ -68,37 +72,68 @@ function AppContent() {
     const nextPath = map[activeBlock.block_type];
     if (!nextPath) return;
 
-    // 이미 해당 탭이면 이동하지 않음
-    if (location.pathname === nextPath) return;
+    if (location.pathname !== nextPath) {
+      autoNavigatedRef.current = true;
+      navigate(nextPath, { replace: true });
+      toast.success("시간표에 따라 화면이 자동 전환되었습니다");
+    }
+  }, [activeBlock, loading, autoSwitchEnabled, location.pathname, navigate]);
 
-    navigate(nextPath, { replace: true });
-  }, [activeBlock, loading, location.pathname, autoSwitchEnabled, isManualNavigation]);
-
+  // 사용자 수동 이동 감지 → 자동전환 OFF
   useEffect(() => {
-    // 설정 페이지 이동은 제외
+    // Ignore if path did not actually change
+    if (location.pathname === prevPathRef.current) return;
+    prevPathRef.current = location.pathname;
+
     if (location.pathname.startsWith("/settings")) return;
 
-    // 자동 전환에 의한 이동이 아닌 경우 → 수동 이동으로 간주
-    setIsManualNavigation(true);
+    // If this route change was initiated via our explicit user handler, just consume the flag
+    if (userNavigatingRef.current) {
+      userNavigatingRef.current = false;
+      return;
+    }
 
-    const timer = setTimeout(() => {
-      setIsManualNavigation(false);
-    }, 60 * 1000); // 1분 후 자동 전환 복귀
+    // If the last navigation was automatic, consume the flag and exit
+    if (autoNavigatedRef.current) {
+      autoNavigatedRef.current = false;
+      return;
+    }
 
-    return () => clearTimeout(timer);
+    // User-initiated navigation → disable auto switch
+    if (autoSwitchEnabled) {
+      setAutoSwitchEnabled(false);
+      toast("자동전환이 해제되었습니다");
+    }
   }, [location.pathname]);
 
   useEffect(() => {
     localStorage.setItem("autoTabSwitch", autoSwitchEnabled ? "on" : "off");
   }, [autoSwitchEnabled]);
 
+  const handleUserNavigate = (nextPath) => {
+    // Mark this navigation as user-initiated so we can avoid extra side-effects
+    userNavigatingRef.current = true;
+
+    // If auto-switch is currently enabled, disable it BEFORE navigating
+    if (autoSwitchEnabled) {
+      setAutoSwitchEnabled(false);
+      toast("자동전환이 해제되었습니다");
+    }
+
+    navigate(nextPath);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-200 via-purple-200 to-orange-200 text-gray-900">
-      <TopNav />
+      <Toaster position="top-center" />
+      <TopNav
+        autoSwitchEnabled={autoSwitchEnabled}
+        onToggleAutoSwitch={() => setAutoSwitchEnabled((v) => !v)}
+        onUserNavigate={handleUserNavigate}
+      />
 
       <main className="flex-1 px-8 pb-8 pt-4">
         <Routes>
-
           {/* 기본 경로 → 출석 탭 */}
           <Route path="/" element={<Navigate to="/attendance" replace />} />
 
@@ -108,14 +143,14 @@ function AppContent() {
           {/* 쉬는시간 */}
           <Route path="/break" element={<BreakTimeBoard />} />
 
-
+          {/* 설정 */}
           <Route path="/settings" element={<SettingsLayout />}>
             <Route path="students" element={<StudentsPage />} />
             <Route path="timetable" element={<TimeTablePage />} />
             <Route path="general" element={<GeneralPage />} />
           </Route>
 
-
+          {/* 기타 탭 */}
           <Route path="/lunch" element={<LunchPage />} />
           <Route path="/class" element={<ClassPage />} />
           <Route path="/end" element={<EndPage />} />
@@ -125,8 +160,6 @@ function AppContent() {
 
           {/* 존재하지 않는 경로 → 출석 */}
           <Route path="*" element={<Navigate to="/attendance" replace />} />
-
-
         </Routes>
       </main>
     </div>

@@ -1,31 +1,23 @@
-import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { useMemo } from "react";
 
-function TopNav() {
-  const navigate = useNavigate();
+function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
   const location = useLocation();
 
-  // 자동 탭 전환 토글 상태 (localStorage 연동)
-  const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(() => {
-    return localStorage.getItem("autoTabSwitch") !== "off";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("autoTabSwitch", autoSwitchEnabled ? "on" : "off");
-  }, [autoSwitchEnabled]);
-
-  // 탭 목록 + 라우팅 매핑
-  const tabs = [
-    { label: "등교", path: "/attendance" },
-    { label: "쉬는시간", path: "/break" },
-    { label: "점심", path: "/lunch" },
-    { label: "수업", path: "/class" },
-    { label: "하교", path: "/end" },
-    { label: "능력치", path: "/stats" },
-    { label: "현황", path: "/overview" },
-    { label: "도구", path: "/tools" },
-    { label: "설정", path: "/settings/students" }
-  ];
+  const tabs = useMemo(
+    () => [
+      { label: "등교", path: "/attendance" },
+      { label: "쉬는시간", path: "/break" },
+      { label: "점심", path: "/lunch" },
+      { label: "수업", path: "/class" },
+      { label: "하교", path: "/end" },
+      { label: "능력치", path: "/stats" },
+      { label: "현황", path: "/overview" },
+      { label: "도구", path: "/tools" },
+      { label: "설정", path: "/settings/students" }
+    ],
+    []
+  );
 
   // 현재 URL 과 매칭되는지 확인
   const isActive = (path) => location.pathname.startsWith(path);
@@ -38,7 +30,7 @@ function TopNav() {
           {tabs.map((tab) => (
             <button
               key={tab.path}
-              onClick={() => navigate(tab.path)}
+              onClick={() => onUserNavigate(tab.path)}
               className={`px-3 py-1.5 rounded-full text-sm font-medium ${
                 isActive(tab.path)
                   ? "bg-pink-500 text-white shadow"
@@ -56,7 +48,7 @@ function TopNav() {
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-600">자동 전환</span>
             <button
-              onClick={() => setAutoSwitchEnabled((v) => !v)}
+              onClick={onToggleAutoSwitch}
               className={`relative w-10 h-5 rounded-full transition ${
                 autoSwitchEnabled ? "bg-green-500" : "bg-gray-300"
               }`}
