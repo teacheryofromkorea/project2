@@ -1,18 +1,47 @@
 import { useEffect, useRef, useState } from "react";
+import { useLock } from "../../context/LockContext";
+
+const TIMER_SETTINGS_KEY = "class_timer_settings_v1";
 
 export default function ClassTimer() {
+  const { locked } = useLock();
+
   // 총 시간(초)
-  const [totalSeconds, setTotalSeconds] = useState(300); // 기본 5분
-  const [remaining, setRemaining] = useState(300);
+  const savedSettings = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(TIMER_SETTINGS_KEY)) || {};
+    } catch {
+      return {};
+    }
+  })();
+
+  const initialTotalSeconds = savedSettings.totalSeconds ?? 300;
+
+  const [totalSeconds, setTotalSeconds] = useState(initialTotalSeconds);
+  const [remaining, setRemaining] = useState(initialTotalSeconds);
   const [isRunning, setIsRunning] = useState(false);
 
-  const [timerName, setTimerName] = useState("");
-  const [inputMin, setInputMin] = useState(5);
-  const [inputSec, setInputSec] = useState(0);
+  const [timerName, setTimerName] = useState(savedSettings.timerName ?? "");
+  const [inputMin, setInputMin] = useState(
+    Math.floor(initialTotalSeconds / 60)
+  );
+  const [inputSec, setInputSec] = useState(
+    initialTotalSeconds % 60
+  );
 
   const [showSettings, setShowSettings] = useState(true);
 
   const intervalRef = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem(
+      TIMER_SETTINGS_KEY,
+      JSON.stringify({
+        timerName,
+        totalSeconds,
+      })
+    );
+  }, [timerName, totalSeconds]);
 
   // mm:ss 포맷
   const formatTime = (sec) => {
@@ -89,14 +118,22 @@ export default function ClassTimer() {
   return (
     <div className="w-full h-[75vh] flex flex-col items-center justify-center gap-8 rounded-2xl bg-white/70 backdrop-blur shadow relative">
       <button
-        onClick={() => setShowSettings((v) => !v)}
-        className="absolute top-6 right-6 px-4 py-2 rounded-full bg-white shadow font-semibold"
+        onClick={() => {
+          if (locked) return;
+          setShowSettings((v) => !v);
+        }}
+        className={`absolute top-6 right-6 px-4 py-2 rounded-full shadow font-semibold
+          ${locked ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white"}
+        `}
       >
         ⚙️ 타이머 설정
       </button>
 
       {showSettings && (
-        <div className="w-full max-w-md mb-8 bg-white rounded-2xl p-5 shadow">
+        <div
+          className="w-full max-w-md mb-8 bg-white rounded-2xl p-5 shadow"
+          style={locked ? { pointerEvents: "none", opacity: 0.9 } : undefined}
+        >
           <div className="font-bold text-lg mb-4 flex items-center gap-2">
             ⏱ 타이머 설정
           </div>
@@ -110,6 +147,7 @@ export default function ClassTimer() {
               value={timerName}
               onChange={(e) => setTimerName(e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-gray-100 outline-none"
+              disabled={locked}
             />
           </div>
 
@@ -125,6 +163,7 @@ export default function ClassTimer() {
                   value={inputMin}
                   onChange={(e) => setInputMin(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-gray-100 outline-none"
+                  disabled={locked}
                 />
               </div>
               <div className="flex-1">
@@ -136,6 +175,7 @@ export default function ClassTimer() {
                   value={inputSec}
                   onChange={(e) => setInputSec(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-gray-100 outline-none"
+                  disabled={locked}
                 />
               </div>
             </div>
@@ -154,6 +194,7 @@ export default function ClassTimer() {
                       ? "bg-blue-100 text-blue-700"
                       : "bg-gray-100 hover:bg-gray-200"
                   }`}
+                  disabled={locked}
                 >
                   {m}분
                 </button>
@@ -162,8 +203,15 @@ export default function ClassTimer() {
           </div>
 
           <button
-            onClick={applyCustomTime}
-            className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold"
+            onClick={() => {
+              if (locked) return;
+              applyCustomTime();
+            }}
+            className={`w-full py-3 rounded-xl font-bold
+              ${locked
+                ? "bg-gray-300 text-gray-400 cursor-not-allowed"
+                : "bg-blue-600 text-white"}
+            `}
           >
             설정 적용
           </button>
@@ -192,14 +240,28 @@ export default function ClassTimer() {
       {!showSettings && (
         <div className="flex gap-4">
           <button
-            onClick={handleStartPause}
-            className="px-6 py-3 rounded-2xl bg-blue-600 text-white text-lg font-bold shadow hover:bg-blue-700"
+            onClick={() => {
+              if (locked) return;
+              handleStartPause();
+            }}
+            className={`px-6 py-3 rounded-2xl text-lg font-bold shadow
+              ${locked
+                ? "bg-gray-300 text-gray-400 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"}
+            `}
           >
             {isRunning ? "일시정지" : "시작"}
           </button>
           <button
-            onClick={handleReset}
-            className="px-6 py-3 rounded-2xl bg-gray-300 text-gray-800 text-lg font-bold shadow hover:bg-gray-400"
+            onClick={() => {
+              if (locked) return;
+              handleReset();
+            }}
+            className={`px-6 py-3 rounded-2xl text-lg font-bold shadow
+              ${locked
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-gray-300 text-gray-800 hover:bg-gray-400"}
+            `}
           >
             리셋
           </button>

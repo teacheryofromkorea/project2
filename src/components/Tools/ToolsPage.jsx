@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLock } from "../../context/LockContext";
+import { supabase } from "../../lib/supabaseClient";
 
 const TOOL_TAB_STORAGE_KEY = "tools_active_tab_v1";
 
 import Blackboard from "./BlackBoard";
 import ClassTimer from "./ClassTimer";
+import RandomPicker from "./RandomPicker";
 
 function ToolTabButton({ active, onClick, children }) {
   return (
@@ -53,6 +55,10 @@ function ToolsPage() {
     return localStorage.getItem(TOOL_TAB_STORAGE_KEY) || "blackboard";
   });
 
+  const [students, setStudents] = useState([]);
+
+  const today = new Date().toISOString().slice(0, 10);
+
   // ESC 누르면 칠판 탭으로 돌아오게(실수 방지용, 가벼운 UX)
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -61,6 +67,47 @@ function ToolsPage() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    const fetchStudentsWithAttendance = async () => {
+      // 1. 전체 학생
+      const { data: studentsData, error: studentsError } = await supabase
+        .from("students")
+        .select("id, name");
+
+      if (studentsError) {
+        console.error("학생 불러오기 실패", studentsError);
+        return;
+      }
+
+      // 2. 오늘 출석 상태
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from("student_attendance_status")
+        .select("student_id, present")
+        .eq("date", today);
+
+      if (attendanceError) {
+        console.error("출석 불러오기 실패", attendanceError);
+        return;
+      }
+
+      // 3. 학생 + 출석 merge
+      const merged = studentsData.map((s) => {
+        const attendance = attendanceData.find(
+          (a) => a.student_id === s.id
+        );
+        return {
+          id: s.id,
+          name: s.name,
+          present: attendance ? attendance.present : false,
+        };
+      });
+
+      setStudents(merged);
+    };
+
+    fetchStudentsWithAttendance();
+  }, [today]);
 
   useEffect(() => {
     localStorage.setItem(TOOL_TAB_STORAGE_KEY, activeTool);
@@ -122,10 +169,7 @@ function ToolsPage() {
         {activeTool === "timer" ? <ClassTimer /> : null}
 
         {activeTool === "picker" ? (
-          <PlaceholderPanel
-            title="🎲 랜덤 뽑기"
-            description="다음 단계에서: 전체/출석한 학생/선택 학생에서 뽑기 (v1은 기록 저장 없이)"
-          />
+          <RandomPicker students={students} />
         ) : null}
 
         {activeTool === "teams" ? (
