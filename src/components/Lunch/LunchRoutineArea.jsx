@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { useLock } from "../../context/LockContext";
 import useLunchRoutine from "../../hooks/Lunch/useLunchRoutine";
 import EditItemModal from "../Break/EditItemModal";
 
 export default function LunchRoutineArea() {
+  const { locked } = useLock();
+
   const {
     routineItems,
     routineTitle,
@@ -30,17 +33,31 @@ export default function LunchRoutineArea() {
     fetchRoutineItems();
   }, [fetchRoutineTitle, fetchRoutineItems]);
 
+  useEffect(() => {
+    if (locked) {
+      setIsRoutineModalOpen(false);
+      setEditRoutine(null);
+      setEditText("");
+      setNewContent("");
+    }
+  }, [locked]);
+
   return (
     <div className="bg-white/70 rounded-3xl shadow p-8 flex flex-col gap-6 w-full">
       {/* 헤더: 클릭 시 전체 편집 모달 오픈 */}
       <div className="flex items-center justify-between">
         <h2
           onClick={() => {
+            if (locked) return;
             setTempTitle(routineTitle);
             setNewContent("");
             setIsRoutineModalOpen(true);
           }}
-          className="text-3xl font-extrabold tracking-tight flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors"
+          className={`text-3xl font-extrabold tracking-tight flex items-center gap-2 transition-colors
+            ${locked
+              ? "text-gray-800"
+              : "text-gray-800 cursor-pointer hover:text-blue-600"}
+          `}
         >
           🍱 {routineTitle || "점심시간 루틴"}
         </h2>
@@ -67,7 +84,10 @@ export default function LunchRoutineArea() {
       {isRoutineModalOpen && (
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60]"
-          onClick={() => setIsRoutineModalOpen(false)}
+          onClick={() => {
+            if (locked) return;
+            setIsRoutineModalOpen(false);
+          }}
         >
           <div className="bg-white p-6 rounded-2xl shadow-xl w-[400px]" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold mb-4">점심시간 루틴 편집</h3>
@@ -85,10 +105,11 @@ export default function LunchRoutineArea() {
                 <li key={item.id} className="flex items-center justify-between bg-gray-100 rounded-lg px-3 py-2 text-sm">
                   <span className="flex-1 truncate mr-2">{item.text}</span>
                   <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => moveRoutine(index, "up")}>▲</button>
-                    <button onClick={() => moveRoutine(index, "down")}>▼</button>
+                    <button onClick={() => { if (locked) return; moveRoutine(index, "up"); }}>▲</button>
+                    <button onClick={() => { if (locked) return; moveRoutine(index, "down"); }}>▼</button>
                     <button
                       onClick={() => {
+                        if (locked) return;
                         setEditRoutine(item); // 수정할 객체 저장
                         setEditText(item.text); // 입력란 초기값 설정
                       }}
@@ -96,7 +117,7 @@ export default function LunchRoutineArea() {
                     >
                       수정
                     </button>
-                    <button onClick={() => deleteRoutineItem(item.id)} className="text-red-600">삭제</button>
+                    <button onClick={() => { if (locked) return; deleteRoutineItem(item.id); }} className="text-red-600">삭제</button>
                   </div>
                 </li>
               ))}
@@ -110,12 +131,12 @@ export default function LunchRoutineArea() {
                 onChange={(e) => setNewContent(e.target.value)}
                 className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
               />
-              <button onClick={addRoutineItem} className="px-4 py-2 bg-green-600 text-white rounded-lg">추가</button>
+              <button onClick={() => { if (locked) return; addRoutineItem(); }} className="px-4 py-2 bg-green-600 text-white rounded-lg">추가</button>
             </div>
 
             <div className="flex justify-end gap-2">
-              <button onClick={() => setIsRoutineModalOpen(false)} className="px-4 py-2 bg-gray-200 rounded-lg">닫기</button>
-              <button onClick={async () => { await saveRoutineTitle(); setIsRoutineModalOpen(false); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg">저장</button>
+              <button onClick={() => { if (locked) return; setIsRoutineModalOpen(false); }} className="px-4 py-2 bg-gray-200 rounded-lg">닫기</button>
+              <button onClick={async () => { if (locked) return; await saveRoutineTitle(); setIsRoutineModalOpen(false); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg">저장</button>
             </div>
           </div>
         </div>
