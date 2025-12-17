@@ -22,6 +22,7 @@ export default function useLunchRoutine() {
   const [routineItems, setRoutineItems] = useState([]);
   const [routineTitle, setRoutineTitle] = useState("");
   const [tempTitle, setTempTitle] = useState("");
+  const [titleId, setTitleId] = useState(null);
 
   const [newContent, setNewContent] = useState("");
   const [editRoutine, setEditRoutine] = useState(null);
@@ -47,13 +48,15 @@ export default function useLunchRoutine() {
   const fetchRoutineTitle = useCallback(async () => {
     const { data, error } = await supabase
       .from("lunch_routine_title")
-      .select("title")
-      .single();
+      .select("id, title")
+      .order("created_at", { ascending: true })
+      .limit(1);
 
-    if (!error && data) {
-      setRoutineTitle(data.title);
-      setTempTitle(data.title);
-    }
+    if (error || !data || data.length === 0) return;
+
+    setRoutineTitle(data[0].title);
+    setTempTitle(data[0].title);
+    setTitleId(data[0].id);
   }, []);
 
   /* ===============================
@@ -63,7 +66,7 @@ export default function useLunchRoutine() {
     if (!newContent.trim()) return;
 
     await supabase.from("lunch_routine_items").insert({
-      content: newContent,
+      text: newContent,
       order_index: routineItems.length,
     });
 
@@ -123,7 +126,7 @@ export default function useLunchRoutine() {
 
     await supabase
       .from("lunch_routine_items")
-      .update({ content: editText })
+      .update({ text: editText })
       .eq("id", editRoutine.id);
 
     setEditRoutine(null);
@@ -135,13 +138,19 @@ export default function useLunchRoutine() {
      루틴 제목 저장
      =============================== */
   const saveRoutineTitle = useCallback(async () => {
-    await supabase
-      .from("lunch_routine_title")
-      .update({ title: tempTitle });
+    if (!tempTitle.trim()) return;
+    if (!titleId) return;
 
-    setRoutineTitle(tempTitle);
-    fetchRoutineTitle();
-  }, [tempTitle, fetchRoutineTitle]);
+    const { error } = await supabase
+      .from("lunch_routine_title")
+      .update({ title: tempTitle })
+      .eq("id", titleId);
+
+    if (!error) {
+      setRoutineTitle(tempTitle);
+      fetchRoutineTitle();
+    }
+  }, [tempTitle, titleId, fetchRoutineTitle]);
 
   return {
     // 상태

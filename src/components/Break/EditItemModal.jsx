@@ -8,6 +8,7 @@ export default function EditItemModal({
   setEditText,
   updateRoutine,
   onClose,
+  title = "루틴 수정",
 }) {
   // editRoutine이 없으면 렌더링하지 않음
   if (!editRoutine) return null;
@@ -15,7 +16,7 @@ export default function EditItemModal({
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-2xl shadow-xl w-[300px]">
-        <h3 className="text-lg font-bold mb-4">루틴 수정</h3>
+        <h3 className="text-lg font-bold mb-4">{title}</h3>
         <input
           value={editText}
           onChange={(e) => setEditText(e.target.value)}
