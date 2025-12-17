@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLock } from "../../context/LockContext";
 
+const TOOL_TAB_STORAGE_KEY = "tools_active_tab_v1";
+
 import Blackboard from "./BlackBoard";
 import ClassTimer from "./ClassTimer";
 
@@ -47,7 +49,9 @@ function Panel({ title, subtitle, children }) {
 
 function ToolsPage() {
   const { locked } = useLock();
-  const [activeTool, setActiveTool] = useState("blackboard");
+  const [activeTool, setActiveTool] = useState(() => {
+    return localStorage.getItem(TOOL_TAB_STORAGE_KEY) || "blackboard";
+  });
 
   // ESC 누르면 칠판 탭으로 돌아오게(실수 방지용, 가벼운 UX)
   useEffect(() => {
@@ -57,6 +61,10 @@ function ToolsPage() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(TOOL_TAB_STORAGE_KEY, activeTool);
+  }, [activeTool]);
 
   return (
     <div className="w-full h-full p-4">
