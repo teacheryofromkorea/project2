@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
 import TopNav from "./components/TopNav";
+import { LockProvider } from "./context/LockContext";
 
 import RoutineSidebar from "./components/Attendance/RoutineSidebar";
 import MissionSidebar from "./components/Attendance/MissionSidebar";
@@ -169,7 +170,9 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <LockProvider>
+        <AppContent />
+      </LockProvider>
     </BrowserRouter>
   );
 }

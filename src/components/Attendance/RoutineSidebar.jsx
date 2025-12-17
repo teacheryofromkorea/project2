@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { useLock } from "../../context/LockContext";
 
 function RoutineSidebar() {
+  const { locked } = useLock();
+
   // 🗂 루틴 목록 (DB에서 불러옴)
   const [routineItems, setRoutineItems] = useState([]);
   const [routineTitle, setRoutineTitle] = useState("✏️ 등교시 루틴");
@@ -57,9 +60,18 @@ useEffect(() => {
   return () => window.removeEventListener("keydown", handleKey);
 }, [isEditing, editRoutineIndex]);
 
+useEffect(() => {
+  if (locked) {
+    setIsEditing(false);
+    setEditRoutineIndex(null);
+    setEditText("");
+  }
+}, [locked]);
+
 
 
   const addRoutine = async () => {
+    if (locked) return;
     if (newRoutine.trim() === "") return;
 
     // DB에 삽입
@@ -79,6 +91,7 @@ useEffect(() => {
   };
 
   const deleteRoutine = async (index) => {
+    if (locked) return;
     const id = routineItems[index].id;
 
     // 1) 루틴 삭제
@@ -107,6 +120,7 @@ useEffect(() => {
     }
   };
   const moveRoutine = async (index, direction) => {
+    if (locked) return;
     const newList = [...routineItems];
     if (direction === "up" && index === 0) return;
     if (direction === "down" && index === newList.length - 1) return;
@@ -149,8 +163,18 @@ useEffect(() => {
         </ul>
 
         <button
-          className="mt-4 w-full bg-blue-500 text-white text-sm font-semibold py-2 rounded-full"
-          onClick={() => setIsEditing(true)}
+          disabled={locked}
+          className={`mt-4 w-full text-sm font-semibold py-2 rounded-full transition
+            ${
+              locked
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            }
+          `}
+          onClick={() => {
+            if (locked) return;
+            setIsEditing(true);
+          }}
         >
           ✏️ 루틴 편집
         </button>
@@ -181,19 +205,26 @@ useEffect(() => {
                   <div className="flex items-center space-x-2">
                     <button
                       className="text-gray-500 font-bold"
-                      onClick={() => moveRoutine(index, "up")}
+                      onClick={() => {
+                        if (locked) return;
+                        moveRoutine(index, "up");
+                      }}
                     >
                       ▲
                     </button>
                     <button
                       className="text-gray-500 font-bold"
-                      onClick={() => moveRoutine(index, "down")}
+                      onClick={() => {
+                        if (locked) return;
+                        moveRoutine(index, "down");
+                      }}
                     >
                       ▼
                     </button>
                     <button
                       className="text-blue-500 font-semibold"
                       onClick={() => {
+                        if (locked) return;
                         setEditRoutineIndex(index);
                         setEditText(item.text);
                       }}
@@ -202,7 +233,10 @@ useEffect(() => {
                     </button>
                     <button
                       className="text-red-500 font-semibold"
-                      onClick={() => deleteRoutine(index)}
+                      onClick={() => {
+                        if (locked) return;
+                        deleteRoutine(index);
+                      }}
                     >
                       삭제
                     </button>
@@ -220,7 +254,10 @@ useEffect(() => {
 
             <button
               className="w-full bg-green-500 text-white py-2 rounded-full mb-2 font-semibold"
-              onClick={addRoutine}
+              onClick={() => {
+                if (locked) return;
+                addRoutine();
+              }}
             >
               추가
             </button>
@@ -228,6 +265,7 @@ useEffect(() => {
 <button
   className="w-full bg-gray-300 py-2 rounded-full font-semibold"
   onClick={async () => {
+    if (locked) return;
     // 🔥 제목 저장: 모든 루틴 row의 routine_title 업데이트
     if (routineItems.length > 0) {
       const ids = routineItems.map((item) => item.id);
@@ -257,6 +295,7 @@ useEffect(() => {
                 if (e.key === "Enter") {
                   e.preventDefault();
                   if (editRoutineIndex !== null) {
+                    if (locked) return;
                     const id = routineItems[editRoutineIndex].id;
 
                     await supabase
@@ -292,6 +331,7 @@ useEffect(() => {
                 <button
                   className="w-full bg-blue-500 text-white py-2 rounded-full mb-2 font-semibold"
                   onClick={async () => {
+                    if (locked) return;
                     const id = routineItems[editRoutineIndex].id;
 
                     await supabase.from("routines").update({ text: editText }).eq("id", id);

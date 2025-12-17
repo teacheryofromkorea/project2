@@ -1,8 +1,11 @@
 import { useLocation } from "react-router-dom";
 import { useMemo } from "react";
+import { useLock } from "../context/LockContext";
+import LockButton from "./LockButton";
 
 function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
   const location = useLocation();
+  const { locked } = useLock();
 
   const tabs = useMemo(
     () => [
@@ -30,9 +33,15 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
           {tabs.map((tab) => (
             <button
               key={tab.path}
-              onClick={() => onUserNavigate(tab.path)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                isActive(tab.path)
+              onClick={() => {
+                if (locked) return;
+                onUserNavigate(tab.path);
+              }}
+              disabled={locked}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                locked
+                  ? "text-gray-400 cursor-not-allowed"
+                  : isActive(tab.path)
                   ? "bg-pink-500 text-white shadow"
                   : "text-gray-600 hover:bg-white"
               }`}
@@ -43,6 +52,8 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
         </nav>
 
         <div className="flex items-center gap-4 text-sm">
+
+          <LockButton />
 
           {/* 자동 탭 전환 스위치 */}
           <div className="flex items-center gap-2">

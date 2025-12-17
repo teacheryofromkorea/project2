@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { useLock } from "../../context/LockContext";
 
 function MissionSidebar() {
   const [missions, setMissions] = useState([]);
@@ -9,8 +10,8 @@ function MissionSidebar() {
   const [editText, setEditText] = useState("");
   const [missionTitle, setMissionTitle] = useState("오늘의 미션");
   
+  const { locked } = useLock();
   
-
   // -------------------------
   // 1) SUPABASE: 미션 불러오기
   // -------------------------
@@ -58,10 +59,20 @@ if (data && data.length > 0) {
     return () => window.removeEventListener("keydown", handleKey);
   }, [isEditing, editMission]);
 
+  useEffect(() => {
+    if (locked) {
+      setIsEditing(false);
+      setEditMission(null);
+      setEditText("");
+      setNewMission("");
+    }
+  }, [locked]);
+
   // -------------------------
   // 2) SUPABASE: 미션 추가
   // -------------------------
   const addMission = async () => {
+    if (locked) return;
     if (newMission.trim() === "") return;
 
   // 현재 미션 중 가장 큰 order_index 찾기
@@ -88,6 +99,7 @@ if (data && data.length > 0) {
   // 3) SUPABASE: 미션 삭제
   // -------------------------
   const deleteMission = async (id) => {
+    if (locked) return;
     // 1) 미션 삭제
     const { error } = await supabase
       .from("missions")
@@ -115,6 +127,7 @@ if (data && data.length > 0) {
   };
 
   const moveMission = async (index, direction) => {
+    if (locked) return;
     const newList = [...missions];
 
     if (direction === "up" && index === 0) return;
@@ -142,6 +155,7 @@ if (data && data.length > 0) {
   };
 
   const updateMission = async () => {
+    if (locked) return;
     if (editText.trim() === "") return;
 
     const { error } = await supabase
@@ -177,8 +191,18 @@ if (data && data.length > 0) {
         </ul>
 
         <button
-          className="mt-4 w-full bg-purple-500 text-white text-sm font-semibold py-2 rounded-full"
-          onClick={() => setIsEditing(true)}
+          disabled={locked}
+          className={`mt-4 w-full text-sm font-semibold py-2 rounded-full transition
+    ${
+      locked
+        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+        : "bg-purple-500 text-white hover:bg-purple-600"
+    }
+  `}
+          onClick={() => {
+            if (locked) return;
+            setIsEditing(true);
+          }}
         >
           ✏️ 미션 편집
         </button>
@@ -216,14 +240,20 @@ if (data && data.length > 0) {
                   <div className="flex items-center space-x-2">
                     <button
                       className="text-gray-500 font-bold"
-                      onClick={() => moveMission(missions.findIndex(m => m.id === item.id), "up")}
+                      onClick={() => {
+                        if (locked) return;
+                        moveMission(missions.findIndex(m => m.id === item.id), "up");
+                      }}
                     >
                       ▲
                     </button>
 
                     <button
                       className="text-gray-500 font-bold"
-                      onClick={() => moveMission(missions.findIndex(m => m.id === item.id), "down")}
+                      onClick={() => {
+                        if (locked) return;
+                        moveMission(missions.findIndex(m => m.id === item.id), "down");
+                      }}
                     >
                       ▼
                     </button>
@@ -231,6 +261,7 @@ if (data && data.length > 0) {
                     <button
                       className="text-blue-500 font-semibold"
                       onClick={() => {
+                        if (locked) return;
                         setEditMission(item);
                         setEditText(item.text);
                       }}
@@ -240,7 +271,10 @@ if (data && data.length > 0) {
 
                     <button
                       className="text-red-500 font-semibold"
-                      onClick={() => deleteMission(item.id)}
+                      onClick={() => {
+                        if (locked) return;
+                        deleteMission(item.id);
+                      }}
                     >
                       삭제
                     </button>
@@ -261,7 +295,10 @@ if (data && data.length > 0) {
 
             <button
               className="w-full bg-green-500 text-white py-2 rounded-full mb-2 font-semibold"
-              onClick={addMission}
+              onClick={() => {
+                if (locked) return;
+                addMission();
+              }}
             >
               추가
             </button>
@@ -269,6 +306,7 @@ if (data && data.length > 0) {
 <button
   className="w-full bg-gray-300 py-2 rounded-full font-semibold"
   onClick={async () => {
+    if (locked) return;
     if (missions.length > 0) {
       const ids = missions.map((item) => item.id);
 
@@ -324,7 +362,10 @@ if (data && data.length > 0) {
 
                 <button
                   className="w-full bg-blue-500 text-white py-2 rounded-full mb-2 font-semibold"
-                  onClick={updateMission}
+                  onClick={() => {
+                    if (locked) return;
+                    updateMission();
+                  }}
                 >
                   저장
                 </button>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLock } from "../../context/LockContext";
 
 function ToolTabButton({ active, onClick, children }) {
   return (
@@ -32,6 +33,7 @@ function Panel({ title, subtitle, children }) {
 }
 
 function Blackboard() {
+  const { locked } = useLock();
   const [boardText, setBoardText] = useState("");
   const [fontSize, setFontSize] = useState(35);
   const [boardColor, setBoardColor] = useState("#064e3b"); // 기본 짙은 초록색
@@ -95,6 +97,14 @@ function Blackboard() {
       <div
         className="relative rounded-2xl shadow-lg basis-[80%]"
       >
+        {locked && (
+          <div className="absolute inset-0 z-10 cursor-not-allowed" />
+        )}
+        {locked && (
+          <div className="absolute top-3 right-3 z-20 bg-black/60 text-white text-sm px-3 py-1 rounded-full">
+            🔒 편집 잠김
+          </div>
+        )}
         <textarea
           value={boardText}
           onChange={(e) => setBoardText(e.target.value)}
@@ -130,7 +140,8 @@ function Blackboard() {
                 const value = Number(e.target.value);
                 setFontSize(value);
               }}
-              className="w-full"
+              disabled={locked}
+              className="w-full disabled:opacity-50"
             />
           </div>
 
@@ -145,9 +156,10 @@ function Blackboard() {
                   onClick={() => {
                     setBoardColor(color);
                   }}
+                  disabled={locked}
                   className={`w-8 h-8 rounded-full border-2 ${
                     boardColor === color ? "border-white" : "border-transparent"
-                  } shadow-md transition`}
+                  } shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed`}
                   style={{ backgroundColor: color }}
                   title={name}
                 />
@@ -166,9 +178,10 @@ function Blackboard() {
                   onClick={() => {
                     setTextColor(color);
                   }}
+                  disabled={locked}
                   className={`w-8 h-8 rounded-full border-2 ${
                     textColor === color ? "border-white" : "border-transparent"
-                  } shadow-md transition`}
+                  } shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed`}
                   style={{ backgroundColor: color }}
                   title={name}
                 />
@@ -181,14 +194,16 @@ function Blackboard() {
             <button
               type="button"
               onClick={handleClear}
-              className="flex-1 px-2 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+              disabled={locked}
+              className="flex-1 px-2 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               지우기
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="flex-1 px-2 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+              disabled={locked}
+              className="flex-1 px-2 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               저장
             </button>
@@ -210,6 +225,7 @@ function PlaceholderPanel({ title, description }) {
 }
 
 function ToolsPage() {
+  const { locked } = useLock();
   const [activeTool, setActiveTool] = useState("blackboard");
 
   // ESC 누르면 칠판 탭으로 돌아오게(실수 방지용, 가벼운 UX)
@@ -226,31 +242,46 @@ function ToolsPage() {
       <div className="flex flex-wrap gap-2 mb-4">
         <ToolTabButton
           active={activeTool === "blackboard"}
-          onClick={() => setActiveTool("blackboard")}
+          onClick={() => {
+            if (locked) return;
+            setActiveTool("blackboard");
+          }}
         >
           📋 칠판
         </ToolTabButton>
         <ToolTabButton
           active={activeTool === "timer"}
-          onClick={() => setActiveTool("timer")}
+          onClick={() => {
+            if (locked) return;
+            setActiveTool("timer");
+          }}
         >
           ⏱ 타이머
         </ToolTabButton>
         <ToolTabButton
           active={activeTool === "picker"}
-          onClick={() => setActiveTool("picker")}
+          onClick={() => {
+            if (locked) return;
+            setActiveTool("picker");
+          }}
         >
           🎲 랜덤 뽑기
         </ToolTabButton>
         <ToolTabButton
           active={activeTool === "teams"}
-          onClick={() => setActiveTool("teams")}
+          onClick={() => {
+            if (locked) return;
+            setActiveTool("teams");
+          }}
         >
           👥 팀 편성
         </ToolTabButton>
         <ToolTabButton
           active={activeTool === "seats"}
-          onClick={() => setActiveTool("seats")}
+          onClick={() => {
+            if (locked) return;
+            setActiveTool("seats");
+          }}
         >
           🪑 자리 바꾸기
         </ToolTabButton>
