@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import useCurrentTimeBlock from "../useCurrentTimeBlock";
-import { useAutoSwitchEnabled } from "../common/useAutoSwitchEnabled";
+import { useAutoSwitchEnabled } from "../Common/useAutoSwitchEnabled";
 
 /**
  * 쉬는시간 블록 선택 로직 전담 Hook

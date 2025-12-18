@@ -7,6 +7,7 @@ const TOOL_TAB_STORAGE_KEY = "tools_active_tab_v1";
 import Blackboard from "./BlackBoard";
 import ClassTimer from "./ClassTimer";
 import RandomPicker from "./RandomPicker";
+import TeamBuilder from "./TeamBuilder";
 
 function ToolTabButton({ active, onClick, children }) {
   return (
@@ -172,12 +173,7 @@ function ToolsPage() {
           <RandomPicker students={students} />
         ) : null}
 
-        {activeTool === "teams" ? (
-          <PlaceholderPanel
-            title="👥 팀 편성기"
-            description="다음 단계에서: 팀 개수/인원 기준으로 랜덤 분배 (v1은 저장 없이)"
-          />
-        ) : null}
+        {activeTool === "teams" ? <TeamBuilder /> : null}
 
         {activeTool === "seats" ? (
           <PlaceholderPanel
