@@ -113,6 +113,7 @@ export default function LunchTimeBoard() {
         students={presentStudents}
         missions={missions}
         studentMissionStatus={missionStatus}
+        mode="lunch"
         routineItems={routineItems}
         studentBreakRoutineStatus={lunchRoutineStatus}
 
