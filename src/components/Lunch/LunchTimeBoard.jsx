@@ -17,7 +17,8 @@ export default function LunchTimeBoard() {
   /* ===============================
      상태 선언
      =============================== */
-  const { routineItems } = useLunchRoutine();
+  const { routineItems, routineTitle, fetchRoutineItems, fetchRoutineTitle } =
+    useLunchRoutine();
 
   const [students, setStudents] = useState([]);
   const [missions, setMissions] = useState([]);
@@ -50,6 +51,10 @@ export default function LunchTimeBoard() {
     fetchAttendanceStatus();
     fetchMissionStatus();
     fetchLunchRoutineStatus();
+
+    // ✅ 점심 루틴 제목/아이템 fetch
+    fetchRoutineItems();
+    fetchRoutineTitle();
   }, []);
 
   const fetchStudents = async () => {
@@ -110,6 +115,11 @@ export default function LunchTimeBoard() {
         studentMissionStatus={missionStatus}
         routineItems={routineItems}
         studentBreakRoutineStatus={lunchRoutineStatus}
+
+        /* ✅ 점심 컨텍스트 명시 */
+        routineLabel={routineTitle?.title || "점심시간 루틴"}
+        routineType="lunch"
+
         onOpenModal={setTargetStudent}
       />
 
@@ -137,7 +147,12 @@ export default function LunchTimeBoard() {
           student={targetStudent}
           missions={missions}
           routines={routineItems}
+
+          /* 🔑 점심시간 전용 설정 */
           routineStatusTable="student_lunch_routine_status"
+          routineIdField="routine_item_id"
+          routineLabel={routineTitle?.title || "점심시간 루틴"}
+
           showRoutines={true}
           onClose={() => setTargetStudent(null)}
         />

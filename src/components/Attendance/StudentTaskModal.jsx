@@ -31,8 +31,9 @@ function StudentTaskModal({
   routines = [],
   missions = [],
   showRoutines = true,
-  // ✅ 루틴 상태를 저장할 테이블 이름 (기본값: 등교 루틴용)
+  routineLabel = "루틴", // ✅ 추가 (기본값)
   routineStatusTable = "student_routine_status",
+  routineIdField = "routine_id", // ✅ 추가 (기본값)
   blockId, // 🔴 쉬는시간 구분용
 }) {
   const [routineStatus, setRoutineStatus] = useState({});
@@ -71,9 +72,9 @@ function StudentTaskModal({
           routineMap[r.id] = false;
         });
 
-        // DB에 저장된 상태 반영 (routine_id 컬럼이 r.id 값이라고 가정)
+        // DB에 저장된 상태 반영 (routineIdField 컬럼이 r.id 값이라고 가정)
         routineRows?.forEach((row) => {
-          routineMap[row.routine_id] = row.completed;
+          routineMap[row[routineIdField]] = row.completed;
         });
       } else {
         // 루틴 안 쓰는 경우도 형식만 맞춰서 초기화
@@ -204,7 +205,7 @@ function StudentTaskModal({
  {showRoutines && (
   <div className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/60">
     <h3 className="font-semibold mb-3 text-black-700">
-      🧭 {routines?.[0]?.routine_title || "쉬는시간 루틴"}
+      🧭 {routineLabel}
     </h3>
     <ul className="space-y-2">
       {routines.map((r) => (
@@ -303,7 +304,7 @@ function StudentTaskModal({
                 const routineInserts = Object.entries(routineStatus).map(
                   ([rid, completed]) => ({
                     student_id: student.id,
-                    routine_id: rid,
+                    [routineIdField]: rid,
                     completed,
                     date: today,
                     ...(routineStatusTable === "student_break_routine_status"
