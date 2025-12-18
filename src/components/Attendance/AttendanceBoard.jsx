@@ -164,35 +164,39 @@ const markPresent = async (id) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
           {boys.map((s) => {
             const pending = getPendingTasks(s.id);
+            const isPresent = attendanceStatus.some(
+              (a) => a.student_id === s.id && a.present
+            );
 
             return (
+              <div
+                key={s.id}
+                onClick={() => {
+                  setSelectedStudent(s);
+                  setModalType(isPresent ? "task" : "confirm");
+                }}
+                className={`cursor-pointer rounded-2xl px-4 py-3 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                  isPresent ? "bg-purple-200" : "bg-white"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {pending > 0 ? (
+                    <span className="shrink-0 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      {pending}
+                    </span>
+                  ) : (
+                    <span className="shrink-0 w-7" />
+                  )}
 
-<div
-  key={s.id}
-  onClick={() => {
-    setSelectedStudent(s);
-    setModalType("confirm");
-  }}
-  className={`cursor-pointer relative rounded-2xl p-3 shadow-sm hover:shadow-md transition flex flex-col items-center gap-2 ${
-  attendanceStatus.some(a => a.student_id === s.id && a.present) ? "bg-purple-300 animate-[pulse_0.4s_ease-in-out]" : "bg-white"
-}`}
->
-
-
-                {pending > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm animate-pulse">
-                    {pending}
-                  </span>
-                )}
-
-                <div className="font-semibold text-base text-center whitespace-nowrap">
-                  {s.name}
+                  <div className="font-semibold text-base truncate">
+                    {s.name}
+                  </div>
                 </div>
 
-                {attendanceStatus.some(a => a.student_id === s.id && a.present) ? (
+                {isPresent ? (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -230,39 +234,46 @@ const markPresent = async (id) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
           {girls.map((s) => {
             const pending = getPendingTasks(s.id);
+            const isPresent = attendanceStatus.some(
+              (a) => a.student_id === s.id && a.present
+            );
 
             return (
-<div
-  key={s.id}
-  onClick={() => {
-    setSelectedStudent(s);
-    setModalType("confirm");
-  }}
-  className={`cursor-pointer relative rounded-2xl p-3 shadow-sm hover:shadow-md transition flex flex-col items-center gap-2 ${
-  attendanceStatus.some(a => a.student_id === s.id && a.present) ? "bg-purple-300 animate-[pulse_0.4s_ease-in-out]" : "bg-white"
-}`}
->
-                {pending > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm animate-pulse">
-                    {pending}
-                  </span>
-                )}
+              <div
+                key={s.id}
+                onClick={() => {
+                  setSelectedStudent(s);
+                  setModalType(isPresent ? "task" : "confirm");
+                }}
+                className={`cursor-pointer rounded-2xl px-4 py-3 shadow-sm hover:shadow-md transition flex items-center justify-between ${
+                  isPresent ? "bg-purple-200" : "bg-white"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {pending > 0 ? (
+                    <span className="shrink-0 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      {pending}
+                    </span>
+                  ) : (
+                    <span className="shrink-0 w-7" />
+                  )}
 
-                <div className="font-semibold text-base text-center whitespace-nowrap">
-                  {s.name}
+                  <div className="font-semibold text-base truncate">
+                    {s.name}
+                  </div>
                 </div>
 
-                {attendanceStatus.some(a => a.student_id === s.id && a.present) ? (
+                {isPresent ? (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedStudent(s);   // 선택한 학생 정보 저장
-                      setModalType("task");    // 모달 열기
+                      setSelectedStudent(s);
+                      setModalType("task");
                     }}
-                    className="px-4 py-1 bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-full text-sm shadow whitespace-nowrap"
+                    className="px-4 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-full text-sm font-semibold shadow whitespace-nowrap"
                   >
                     미션
                   </button>

@@ -306,12 +306,18 @@ function StudentTaskModal({
                     routine_id: rid,
                     completed,
                     date: today,
-                    block_id: blockId ?? null,
+                    ...(routineStatusTable === "student_break_routine_status"
+                      ? { block_id: blockId }
+                      : {}),
                   })
                 );
 
-                if (routineInserts.length > 0) {
-                  await supabase.from(routineStatusTable).insert(routineInserts);
+                const { error } = await supabase
+                  .from(routineStatusTable)
+                  .insert(routineInserts);
+
+                if (error) {
+                  console.error("[Routine Insert Error]", error);
                 }
               }
 
