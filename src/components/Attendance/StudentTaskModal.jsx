@@ -39,8 +39,17 @@ function StudentTaskModal({
   const [routineStatus, setRoutineStatus] = useState({});
   const [missionStatus, setMissionStatus] = useState({});
   const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    if (isOpen) {
+      setRoutineStatus({});
+      setMissionStatus({});
+      setLoaded(false);
+    }
+  }, [isOpen]);
 
   // ✅ 루틴/미션 상태 불러오기
   useEffect(() => {
@@ -103,6 +112,7 @@ function StudentTaskModal({
       });
 
       setMissionStatus(missionMap);
+      setLoaded(true);
     };
 
     fetchStatus();
@@ -119,33 +129,37 @@ function StudentTaskModal({
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
+  // ✅ 먼저 계산
+  const totalCount = routines.length + missions.length;
+
+  const completedRoutineCount = routines.filter(
+    (r) => routineStatus[r.id]
+  ).length;
+
+  const completedMissionCount = missions.filter(
+    (m) => missionStatus[m.id]
+  ).length;
+
+  const completedCount = completedRoutineCount + completedMissionCount;
+
   // 🎉 모든 루틴+미션 완료 시 폭죽 효과
   useEffect(() => {
-    const total = routines.length + missions.length;
+    if (!loaded) return;
 
-    const completed =
-      Object.values(routineStatus).filter(Boolean).length +
-      Object.values(missionStatus).filter(Boolean).length;
-
-    if (total > 0 && completed === total) {
+    if (totalCount > 0 && completedCount === totalCount) {
       confetti({
         particleCount: 120,
         spread: 80,
         origin: { y: 0.7 },
       });
     }
-  }, [routineStatus, missionStatus, routines, missions]);
+  }, [loaded, completedCount, totalCount]);
 
   // isOpen이 명시적으로 false이면 렌더링하지 않음 (Attendance 탭용)
   if (typeof isOpen !== "undefined" && !isOpen) return null;
 
   // student가 없으면 렌더링하지 않음 (공통 보호)
   if (!student) return null;
-
-  const totalCount = routines.length + missions.length;
-  const completedCount =
-    Object.values(routineStatus).filter(Boolean).length +
-    Object.values(missionStatus).filter(Boolean).length;
 
   return (
     <div
@@ -170,7 +184,7 @@ function StudentTaskModal({
         {/* 제목 */}
         <h2 className="text-xl font-bold mb-2 flex items-center justify-between">
           <span>🎯 {student.name} 학생 오늘의 도전상황</span>
-          {totalCount > 0 && completedCount === totalCount && (
+          {loaded && totalCount > 0 && completedCount === totalCount && (
             <span className="px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full text-sm animate-bounce">
               🏅 완료!
             </span>
@@ -186,13 +200,15 @@ function StudentTaskModal({
             className="bg-gradient-to-r from-emerald-400 via-sky-400 to-indigo-400 h-3 rounded-full transition-all duration-500"
             style={{
               width: `${
-                totalCount === 0 ? 0 : ((completedCount / totalCount) * 100).toFixed(0)
+                !loaded || totalCount === 0
+                  ? 0
+                  : Math.round((completedCount / totalCount) * 100)
               }%`,
             }}
           ></div>
         </div>
 
-        {totalCount > 0 && completedCount === totalCount && (
+        {loaded && totalCount > 0 && completedCount === totalCount && (
           <div className="mb-4 p-3 rounded-2xl bg-green-100 text-green-700 font-semibold flex items-center space-x-2 animate-pulse">
             <span>🎉</span>
             <span>오늘 할 일을 모두 완료했어요!</span>

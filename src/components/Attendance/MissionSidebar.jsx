@@ -200,11 +200,6 @@ if (data && data.length > 0) {
                 {/* 메모 상단 바(테이프 느낌) */}
                 <div className="absolute -top-2 left-6 w-16 h-3 bg-yellow-200/80 rounded-sm"></div>
 
-                {/* 메모 번호 */}
-                <div className="text-xs text-yellow-700 font-bold mb-1">
-                  MEMO {idx + 1}
-                </div>
-
                 {/* 메모 내용 */}
                 <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
                   {item.text}
