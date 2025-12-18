@@ -183,9 +183,33 @@ if (data && data.length > 0) {
         <ul className="space-y-2 flex-1">
           {missions.map((item, idx) => (
             <li key={item.id}>
-              <button className="w-full bg-white rounded-full px-4 py-2 text-xl font-semibold shadow-sm hover:bg-purple-50 transition">
-                {idx + 1}. {item.text}
-              </button>
+              <div
+                className="
+                  relative w-full
+                  bg-yellow-50
+                  bg-[linear-gradient(transparent_95%,rgba(0,0,0,0.05)_95%)]
+                  bg-[length:100%_28px]
+                  rounded-xl
+                  px-4 py-3
+                  text-lg font-semibold
+                  shadow-sm
+                  border border-yellow-200
+                  hover:shadow-md transition
+                "
+              >
+                {/* 메모 상단 바(테이프 느낌) */}
+                <div className="absolute -top-2 left-6 w-16 h-3 bg-yellow-200/80 rounded-sm"></div>
+
+                {/* 메모 번호 */}
+                <div className="text-xs text-yellow-700 font-bold mb-1">
+                  MEMO {idx + 1}
+                </div>
+
+                {/* 메모 내용 */}
+                <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                  {item.text}
+                </div>
+              </div>
             </li>
           ))}
         </ul>

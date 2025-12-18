@@ -1,5 +1,6 @@
 function StudentCard({ 
   name, 
+  number,
   isPresent, 
   onToggle,
   pendingRoutines = 0,
@@ -10,16 +11,22 @@ function StudentCard({
   return (
     <div className="relative rounded-2xl bg-gradient-to-br from-pink-100 to-rose-100 p-3 shadow-sm flex flex-col justify-between">
 
-      {/* 🔥 배지 */}
-      {totalPending > 0 && (
-        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-2 py-1 rounded-full">
-          {totalPending}
+      {/* 🔥 출석번호 배지 */}
+      {number != null && (
+        <div className="absolute -top-1 -right-1 bg-indigo-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow">
+          {number}
         </div>
       )}
 
       <div className="text-sm font-semibold text-gray-800 mb-3 text-center">
         {name}
       </div>
+
+      {totalPending > 0 && (
+        <div className="text-[10px] text-gray-500 text-center mb-1">
+          미완료 {totalPending}개
+        </div>
+      )}
 
       <button
         onClick={onToggle}

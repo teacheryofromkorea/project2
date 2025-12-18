@@ -183,9 +183,9 @@ const markPresent = async (id) => {
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  {pending > 0 ? (
-                    <span className="shrink-0 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                      {pending}
+                  {s.number != null ? (
+                    <span className="shrink-0 bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                      {s.number}
                     </span>
                   ) : (
                     <span className="shrink-0 w-7" />
@@ -253,9 +253,9 @@ const markPresent = async (id) => {
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  {pending > 0 ? (
-                    <span className="shrink-0 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                      {pending}
+                  {s.number != null ? (
+                    <span className="shrink-0 bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                      {s.number}
                     </span>
                   ) : (
                     <span className="shrink-0 w-7" />
