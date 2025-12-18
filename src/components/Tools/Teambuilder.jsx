@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 
+const STORAGE_KEY = "tool_team_builder_result_v1";
+
 export default function TeamBuilder() {
   /* -------------------------
      1. 학생 데이터
@@ -18,6 +20,9 @@ export default function TeamBuilder() {
      3. 옵션
   ------------------------- */
   const [teamCount, setTeamCount] = useState(4);
+  const [buildMode, setBuildMode] = useState("teamCount"); // "teamCount" | "teamSize"
+  const [teamSize, setTeamSize] = useState(4);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
     setTeamNames((prev) =>
@@ -27,13 +32,44 @@ export default function TeamBuilder() {
 
   const [onlyPresent, setOnlyPresent] = useState(true);
   const [balanceGender, setBalanceGender] = useState(false);
+  const [genderOnly, setGenderOnly] = useState("all"); // "all" | "male" | "female"
+
+  useEffect(() => {
+    if (genderOnly !== "all") {
+      setBalanceGender(false);
+    }
+  }, [genderOnly]);
 
   /* -------------------------
      4. 학생 불러오기
   ------------------------- */
   useEffect(() => {
     fetchStudents();
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setTeams(parsed.teams || []);
+        setTeamNames(parsed.teamNames || []);
+        setTeamCount(parsed.teamCount || 4);
+      } catch (e) {
+        console.error("Failed to load team builder data", e);
+      }
+    }
   }, []);
+  useEffect(() => {
+    if (teams.length === 0) return;
+
+    const payload = {
+      teams,
+      teamNames,
+      teamCount,
+      savedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }, [teams, teamNames, teamCount]);
 
   async function fetchStudents() {
     const today = new Date().toISOString().slice(0, 10);
@@ -74,9 +110,21 @@ export default function TeamBuilder() {
      5. 팀 편성 로직 (일단 랜덤)
   ------------------------- */
   function buildTeams() {
-    const sourceStudents = onlyPresent
+    let sourceStudents = onlyPresent
       ? students.filter((s) => presentStudentIds.includes(s.id))
       : students;
+
+    if (genderOnly === "male") {
+      sourceStudents = sourceStudents.filter((s) => s.gender === "male");
+    }
+    if (genderOnly === "female") {
+      sourceStudents = sourceStudents.filter((s) => s.gender === "female");
+    }
+
+    const calculatedTeamCount =
+      buildMode === "teamSize"
+        ? Math.ceil(sourceStudents.length / teamSize)
+        : teamCount;
 
     let pool = [...sourceStudents];
 
@@ -88,16 +136,16 @@ export default function TeamBuilder() {
       const shuffledBoys = boys.sort(() => Math.random() - 0.5);
       const shuffledGirls = girls.sort(() => Math.random() - 0.5);
 
-      const result = Array.from({ length: teamCount }, () => []);
+      const result = Array.from({ length: calculatedTeamCount }, () => []);
 
       let i = 0;
       while (shuffledBoys.length || shuffledGirls.length) {
         if (shuffledBoys.length) {
-          result[i % teamCount].push(shuffledBoys.shift());
+          result[i % calculatedTeamCount].push(shuffledBoys.shift());
           i++;
         }
         if (shuffledGirls.length) {
-          result[i % teamCount].push(shuffledGirls.shift());
+          result[i % calculatedTeamCount].push(shuffledGirls.shift());
           i++;
         }
       }
@@ -111,10 +159,10 @@ export default function TeamBuilder() {
 
     // 기본 랜덤
     const shuffled = pool.sort(() => Math.random() - 0.5);
-    const result = Array.from({ length: teamCount }, () => []);
+    const result = Array.from({ length: calculatedTeamCount }, () => []);
 
     shuffled.forEach((student, index) => {
-      result[index % teamCount].push(student);
+      result[index % calculatedTeamCount].push(student);
     });
 
     setTeamNames((prev) =>
@@ -141,57 +189,137 @@ export default function TeamBuilder() {
      6. UI
   ------------------------- */
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-full w-full bg-gradient-to-t from-blue-100/60 via-sky-50/40 to-yellow-100/70 p-3 rounded-3xl overflow-hidden">
+      <div className="p-6 space-y-6 bg-white/20 backdrop-blur-[2px] rounded-3xl">
       <h1 className="text-2xl font-bold">🧩 팀 편성 도구</h1>
 
       {/* 컨트롤 */}
-      <div className="flex flex-wrap items-center gap-3 bg-white/60 rounded-2xl p-4 shadow">
-        <label className="text-sm font-medium text-gray-700">팀 수</label>
-        <input
-          type="number"
-          min={2}
-          value={teamCount}
-          onChange={(e) => setTeamCount(Number(e.target.value))}
-          className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm"
-        />
+      <div className="bg-white/60 rounded-3xl p-4 shadow space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* 기준 선택 */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700 shrink-0">기준</label>
+            <label className="flex items-center gap-1 text-sm">
+              <input
+                type="radio"
+                name="buildMode"
+                checked={buildMode === "teamCount"}
+                onChange={() => setBuildMode("teamCount")}
+              />
+              팀 수
+            </label>
+            <label className="flex items-center gap-1 text-sm">
+              <input
+                type="radio"
+                name="buildMode"
+                checked={buildMode === "teamSize"}
+                onChange={() => setBuildMode("teamSize")}
+              />
+              인원 수
+            </label>
+          </div>
 
-        <label className="flex items-center gap-2 text-sm text-gray-700 ml-2">
-          <input
-            type="checkbox"
-            checked={onlyPresent}
-            onChange={(e) => setOnlyPresent(e.target.checked)}
-          />
-          출석한 학생만 포함
-        </label>
-        <label className="flex items-center gap-2 text-sm text-gray-700 ml-2">
-          <input
-            type="checkbox"
-            checked={balanceGender}
-            onChange={(e) => setBalanceGender(e.target.checked)}
-          />
-          성별 균형 맞추기
-        </label>
+          {/* 수치 입력 */}
+          <div className="flex items-center gap-2">
+            {buildMode === "teamCount" ? (
+              <>
+                <label className="text-sm font-medium text-gray-700 shrink-0">팀</label>
+                <input
+                  type="number"
+                  min={2}
+                  value={teamCount}
+                  onChange={(e) => setTeamCount(Number(e.target.value))}
+                  className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                />
+              </>
+            ) : (
+              <>
+                <label className="text-sm font-medium text-gray-700 shrink-0">인원</label>
+                <input
+                  type="number"
+                  min={2}
+                  value={teamSize}
+                  onChange={(e) => setTeamSize(Number(e.target.value))}
+                  className="w-24 px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                />
+              </>
+            )}
+          </div>
 
-        <button
-          onClick={buildTeams}
-          className="px-4 py-2 rounded-lg bg-blue-500/90 text-white text-sm hover:bg-blue-600"
-        >
-          팀 만들기
-        </button>
+          {/* 필터 */}
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={onlyPresent}
+                onChange={(e) => setOnlyPresent(e.target.checked)}
+              />
+              출석한 사람만
+            </label>
 
-        <button
-          onClick={reshuffleTeams}
-          className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
-        >
-          다시 섞기
-        </button>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={balanceGender}
+                onChange={(e) => setBalanceGender(e.target.checked)}
+                disabled={genderOnly !== "all"}
+              />
+              성별 균등
+            </label>
 
-        <button
-          onClick={copyTeamsToClipboard}
-          className="px-4 py-2 rounded-lg bg-green-500/90 text-white text-sm hover:bg-green-600"
-        >
-          팀 결과 복사
-        </button>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={genderOnly === "male"}
+                onChange={(e) =>
+                  setGenderOnly(e.target.checked ? "male" : "all")
+                }
+              />
+              남자끼리
+            </label>
+
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={genderOnly === "female"}
+                onChange={(e) =>
+                  setGenderOnly(e.target.checked ? "female" : "all")
+                }
+              />
+              여자끼리
+            </label>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-4 pt-2">
+          <button
+            onClick={buildTeams}
+            className="px-6 py-2 rounded-xl bg-blue-500/90 text-white text-sm font-medium hover:bg-blue-600"
+          >
+            팀 만들기
+          </button>
+
+          <button
+            onClick={reshuffleTeams}
+            className="px-5 py-2 rounded-xl bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
+          >
+            다시 섞기
+          </button>
+
+          <button
+            onClick={copyTeamsToClipboard}
+            className="px-5 py-2 rounded-xl bg-green-500/90 text-white text-sm hover:bg-green-600"
+          >
+            팀 결과 복사
+          </button>
+
+          <button
+            onClick={() => setShowResetConfirm(true)}
+            className="px-5 py-2 rounded-xl bg-red-500/80 text-white text-sm hover:bg-red-600"
+          >
+            결과 초기화
+          </button>
+        </div>
       </div>
 
       {/* 결과 */}
@@ -223,6 +351,40 @@ export default function TeamBuilder() {
           </div>
         ))}
       </div>
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-2xl shadow-lg p-6 w-[320px] space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800">
+              결과 초기화
+            </h3>
+            <p className="text-sm text-gray-600">
+              현재 팀 편성 결과가 모두 삭제됩니다.
+              <br />
+              정말 초기화할까요?
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm hover:bg-gray-200"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem(STORAGE_KEY);
+                  setTeams([]);
+                  setTeamNames([]);
+                  setShowResetConfirm(false);
+                }}
+                className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm hover:bg-red-600"
+              >
+                초기화
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  </div>
   );
 }
