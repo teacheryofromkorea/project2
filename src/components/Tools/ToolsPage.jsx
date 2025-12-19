@@ -8,6 +8,7 @@ import Blackboard from "./BlackBoard";
 import ClassTimer from "./ClassTimer";
 import RandomPicker from "./RandomPicker";
 import TeamBuilder from "./TeamBuilder";
+import SeatShuffler from "./SeatShuffler";
 
 function ToolTabButton({ active, onClick, children }) {
   return (
@@ -175,12 +176,7 @@ function ToolsPage() {
 
         {activeTool === "teams" ? <TeamBuilder /> : null}
 
-        {activeTool === "seats" ? (
-          <PlaceholderPanel
-            title="🪑 자리 바꾸기"
-            description="다음 단계에서: 격자 자리 배치 + 랜덤 셔플 (v1은 저장 없이)"
-          />
-        ) : null}
+        {activeTool === "seats" ? <SeatShuffler /> : null}
       </div>
     </div>
   );
