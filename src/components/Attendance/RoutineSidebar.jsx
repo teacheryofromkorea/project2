@@ -149,18 +149,52 @@ useEffect(() => {
 
   return (
     <>
-      <aside className="bg-white/50 backdrop-blur rounded-3xl p-4 shadow-sm flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">{routineTitle}</h2>
+      <aside
+        className="
+          relative
+          bg-[#c8ae9a]
+          rounded-2xl
+          p-6
+          shadow-[0_10px_30px_rgba(0,0,0,0.15)]
+          flex flex-col
+          
+        "
+      >
+        {/* 메모지 상단 테이프 */}
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#C5D8B4]/80 rounded-md shadow-sm"></div>
 
-        <ul className="space-y-2 flex-1">
+        <h2 className="text-2xl font-extrabold mb-4 text-gray-800 tracking-tight">
+          {routineTitle}
+        </h2>
+
+<ul className="space-y-2 flex-1">
           {routineItems.map((item, idx) => (
             <li key={idx}>
-              <button className="w-full bg-white rounded-full px-4 py-2 text-xl font-semibold shadow-sm hover:bg-pink-50 transition">
-                {idx + 1}. {item.text}
-              </button>
+<button
+                className="
+                  relative w-full
+                  bg-yellow-50 /* 메모지 색상 */
+                  bg-[linear-gradient(transparent_95%,rgba(0,0,0,0.05)_95%)] /* 줄무늬 추가 */
+                  bg-[length:100%_28px] /* 줄무늬 간격 설정 */
+                  rounded-xl
+                  px-4
+                  py-3 /* 패딩 y값을 3으로 변경 (이전 4) */
+                  text-lg font-semibold
+                  text-black
+                  shadow-sm /* 그림자 크기를 sm으로 변경 (이전 md/lg) */
+                  border border-yellow-200 /* 테두리 추가 */
+                  hover:shadow-md transition /* 호버 시 그림자 크기만 md로 변경 */
+                "
+              >
+                <span className="leading-relaxed block">
+                  {item.text}
+                </span>
+</button>
+
             </li>
           ))}
         </ul>
+
 
         <button
           disabled={locked}
@@ -168,7 +202,7 @@ useEffect(() => {
             ${
               locked
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-blue-500 text-white hover:bg-blue-600"
+                : "bg-[#5E8C61] text-white hover:bg-blue-600"
             }
           `}
           onClick={() => {
@@ -178,6 +212,7 @@ useEffect(() => {
         >
           ✏️ 루틴 편집
         </button>
+        <div className="absolute inset-0 rounded-2xl pointer-events-none shadow-inner"></div>
       </aside>
 
       {isEditing && (

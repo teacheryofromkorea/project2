@@ -175,8 +175,20 @@ if (data && data.length > 0) {
 
   return (
     <>
-      <aside className="bg-white/50 backdrop-blur rounded-3xl p-4 shadow-sm flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">
+<aside
+  className="
+    relative
+    bg-[#c8ae9a]
+    rounded-2xl
+    p-6
+    shadow-[0_10px_30px_rgba(0,0,0,0.15)]
+    flex flex-col
+  "
+>
+
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-yellow-200/80 rounded-md shadow-sm"></div>
+        
+        <h2 className="text-2xl font-extrabold mb-4  text-gray-800 tracking-tight">
           {missionTitle}
         </h2>
 
@@ -186,22 +198,21 @@ if (data && data.length > 0) {
               <div
                 className="
                   relative w-full
-                  bg-yellow-50
+                  bg-yellow-50 /* 메모지 색상 */
                   bg-[linear-gradient(transparent_95%,rgba(0,0,0,0.05)_95%)]
                   bg-[length:100%_28px]
                   rounded-xl
                   px-4 py-3
                   text-lg font-semibold
+                  text-center
                   shadow-sm
                   border border-yellow-200
                   hover:shadow-md transition
                 "
               >
-                {/* 메모 상단 바(테이프 느낌) */}
-                <div className="absolute -top-2 left-6 w-16 h-3 bg-yellow-200/80 rounded-sm"></div>
 
                 {/* 메모 내용 */}
-                <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                <div className="leading-relaxed block">
                   {item.text}
                 </div>
               </div>
@@ -215,7 +226,7 @@ if (data && data.length > 0) {
     ${
       locked
         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-        : "bg-purple-500 text-white hover:bg-purple-600"
+        : "bg-[#5E8C61] text-white hover:bg-[#4A704D]" /* 버튼 색상 */
     }
   `}
           onClick={() => {
@@ -227,6 +238,7 @@ if (data && data.length > 0) {
         </button>
 
       </aside>
+
 
       {isEditing && (
         <div
