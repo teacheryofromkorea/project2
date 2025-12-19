@@ -78,11 +78,12 @@ export default function SeatShuffler() {
           </div>
 
           {/* 자리 격자 */}
-          <div className="w-full max-h-full overflow-y-auto pb-4">
+          <div className="w-full h-full">
             <div
-              className="mx-auto grid gap-4"
+              className="mx-auto grid gap-4 h-full"
               style={{
-                gridTemplateColumns: `repeat(${cols}, minmax(80px, 1fr))`,
+                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
               }}
             >
               {Array.from({ length: rows * cols }).map((_, index) => {
@@ -92,16 +93,16 @@ export default function SeatShuffler() {
                     key={index}
                     className={`
                       relative
-                      h-24
                       flex items-center justify-center
                       rounded-2xl
                       border
                       text-lg font-bold
                       transition-all duration-200
+                      min-h-0 min-w-0
                       ${
                         student
                           ? "bg-[#FFF8E7] border-yellow-200 shadow-md hover:shadow-lg"
-                          : "bg-gray-100 border-gray-200 text-gray-400"
+                          : "bg-white border-2 border-dashed border-gray-300 text-gray-400 shadow-sm"
                       }
                     `}
                   >
