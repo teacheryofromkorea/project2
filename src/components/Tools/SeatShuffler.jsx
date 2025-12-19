@@ -30,7 +30,7 @@ export default function SeatShuffler() {
     const fetchStudents = async () => {
       const { data, error } = await supabase
         .from("students")
-        .select("id, name")
+        .select("id, name, number, gender")
         .order("number", { ascending: true });
 
       if (error) {
@@ -133,17 +133,41 @@ export default function SeatShuffler() {
     const name = prompt("이 자리 배치의 이름을 입력하세요");
     if (!name) return;
 
-    const layout = {
-      name,
-      seats,
-      rows,
-      cols,
-      savedAt: Date.now(),
-    };
+    const existingIndex = savedLayouts.findIndex(
+      (l) => l.name === name
+    );
 
-    const next = [...savedLayouts, layout];
-    setSavedLayouts(next);
-    localStorage.setItem(LAYOUTS_KEY, JSON.stringify(next));
+    let nextLayouts;
+
+    if (existingIndex !== -1) {
+      const ok = window.confirm(
+        `"${name}" 배치가 이미 있습니다. 덮어쓸까요?`
+      );
+      if (!ok) return;
+
+      nextLayouts = [...savedLayouts];
+      nextLayouts[existingIndex] = {
+        name,
+        seats,
+        rows,
+        cols,
+        savedAt: Date.now(),
+      };
+    } else {
+      nextLayouts = [
+        ...savedLayouts,
+        {
+          name,
+          seats,
+          rows,
+          cols,
+          savedAt: Date.now(),
+        },
+      ];
+    }
+
+    setSavedLayouts(nextLayouts);
+    localStorage.setItem(LAYOUTS_KEY, JSON.stringify(nextLayouts));
   };
 
   const loadLayout = (name) => {
@@ -232,15 +256,27 @@ export default function SeatShuffler() {
                       <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-10 h-3 bg-yellow-200/80 rounded-sm"></div>
                     )}
 
-                    {isPreset && (
-                      <span className="absolute top-1 right-1 text-xs">
-                        📌
+                    {student && (
+                      <span className="absolute top-1 left-2 text-xs font-bold text-gray-600">
+                        {student.number}
                       </span>
                     )}
 
                     <span className="px-2 text-center leading-snug">
                       {student ? student.name : ""}
                     </span>
+
+                    {student && (
+                      <span className="absolute top-1 right-2 text-xs">
+                        {student.gender === "male" ? "🔵" : student.gender === "female" ? "🔴" : ""}
+                      </span>
+                    )}
+
+                    {isPreset && (
+                      <span className="absolute bottom-1 right-1 text-xs">
+                        📌
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -298,20 +334,23 @@ export default function SeatShuffler() {
                 자리 실행
               </h3>
 
-              <button
-                className="w-full px-6 py-3 rounded-full bg-blue-500 text-white font-bold shadow"
-                onClick={() => generateSeats(students)}
-              >
-                자리 만들기
-              </button>
+<div className="flex gap-2 w-full"> 
+  <button
+    className="flex-1 px-6 py-3 rounded-full bg-blue-500 text-white font-bold shadow"
+    onClick={() => generateSeats(students)}
+  >
+    자리 만들기
+  </button>
 
-              <button
-                className="w-full px-6 py-3 rounded-full bg-purple-500 text-white font-bold shadow"
-                onClick={() => generateSeats(students)}
-                disabled={seats.length === 0}
-              >
-                다시 섞기
-              </button>
+  <button
+    className="flex-1 px-6 py-3 rounded-full bg-purple-500 text-white font-bold shadow"
+    onClick={() => generateSeats(students)}
+    disabled={seats.length === 0}
+  >
+    다시 섞기
+  </button>
+</div>
+
 
               <button
                 className="w-full px-6 py-3 rounded-full bg-gray-200 text-gray-700 font-bold"
@@ -343,6 +382,26 @@ export default function SeatShuffler() {
                   ))}
                 </select>
 
+                <button
+                  className="w-full px-4 py-2 rounded-xl bg-red-100 text-red-600 font-semibold"
+                  disabled={!selectedLayout}
+                  onClick={() => {
+                    const ok = window.confirm(
+                      `"${selectedLayout}" 배치를 삭제할까요?`
+                    );
+                    if (!ok) return;
+
+                    const next = savedLayouts.filter(
+                      (l) => l.name !== selectedLayout
+                    );
+
+                    setSavedLayouts(next);
+                    localStorage.setItem(LAYOUTS_KEY, JSON.stringify(next));
+                    setSelectedLayout("");
+                  }}
+                >
+                  선택된 배치 삭제
+                </button>
 
                 <button
                   className="w-full px-4 py-2 rounded-xl bg-gray-100 font-semibold"
