@@ -25,6 +25,9 @@ export default function SeatShuffler() {
   const [savedLayouts, setSavedLayouts] = useState([]);
   const [selectedLayout, setSelectedLayout] = useState("");
 
+  // 👇 토스트 상태 추가
+  const [showSeatGuideToast, setShowSeatGuideToast] = useState(true);
+
   // 학생 불러오기 (전체 학생)
   useEffect(() => {
     const fetchStudents = async () => {
@@ -179,8 +182,25 @@ export default function SeatShuffler() {
     setSeats(layout.seats);
   };
 
+  // 👇 3초 후 토스트 자동 사라짐
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSeatGuideToast(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="w-full h-[75vh] flex gap-6 rounded-2xl bg-white/70 backdrop-blur shadow p-6">
+{/* 👇 화면 정중앙 토스트 안내 */}
+{showSeatGuideToast && (
+  <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50">
+    <div className="px-6 py-3 rounded-full bg-black/80 text-white text-sm font-semibold shadow-lg whitespace-nowrap">
+      💡 빈 자리를 클릭하면 특정 학생을 고정할 수 있어요
+    </div>
+  </div>
+)}
+
       <div className="flex gap-6 w-full h-full">
         <div className="flex-1 flex flex-col items-center justify-start gap-6 h-full">
           {/* 칠판 영역 */}
@@ -382,6 +402,14 @@ export default function SeatShuffler() {
                   ))}
                 </select>
 
+                                <button
+                  className="w-full px-4 py-2 rounded-xl bg-gray-100 font-semibold"
+                  onClick={saveCurrentLayout}
+                  disabled={seats.length === 0}
+                >
+                  현재 배치 저장
+                </button>
+
                 <button
                   className="w-full px-4 py-2 rounded-xl bg-red-100 text-red-600 font-semibold"
                   disabled={!selectedLayout}
@@ -403,13 +431,6 @@ export default function SeatShuffler() {
                   선택된 배치 삭제
                 </button>
 
-                <button
-                  className="w-full px-4 py-2 rounded-xl bg-gray-100 font-semibold"
-                  onClick={saveCurrentLayout}
-                  disabled={seats.length === 0}
-                >
-                  현재 배치 저장
-                </button>
               </div>
             </div>
           </div>
