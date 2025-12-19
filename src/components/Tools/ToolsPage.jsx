@@ -61,15 +61,6 @@ function ToolsPage() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // ESC 누르면 칠판 탭으로 돌아오게(실수 방지용, 가벼운 UX)
-  useEffect(() => {
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") setActiveTool("blackboard");
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
   useEffect(() => {
     const fetchStudentsWithAttendance = async () => {
       // 1. 전체 학생

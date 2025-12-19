@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import confetti from "canvas-confetti";
 import { supabase } from "../../lib/supabaseClient";
 
 const STORAGE_KEY = "seatShuffler_seats_v1";
@@ -27,6 +28,10 @@ export default function SeatShuffler() {
 
   // 👇 토스트 상태 추가
   const [showSeatGuideToast, setShowSeatGuideToast] = useState(true);
+
+  // 👇 카운트다운 & 셔플 애니메이션 상태
+  const [countdown, setCountdown] = useState(null); // 3,2,1
+  const [isShuffling, setIsShuffling] = useState(false); // 셔플 연출 중
 
   // 학생 불러오기 (전체 학생)
   useEffect(() => {
@@ -126,6 +131,41 @@ export default function SeatShuffler() {
     setSeats(nextSeats);
   };
 
+  // 셔플 카운트다운 및 셔플 연출 → 실제 자리 배치 실행
+  const runSeatShuffle = () => {
+    if (isShuffling) return;
+
+    setCountdown(3);
+    setIsShuffling(true);
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === 1) {
+          clearInterval(interval);
+
+          // 카운트다운 종료 → 실제 자리 배치
+          setCountdown(null);
+          generateSeats(students);
+
+          // 🎉 자리 확정 폭죽
+          confetti({
+            particleCount: 120,
+            spread: 80,
+            origin: { y: 0.7 },
+          });
+
+          // 셔플 애니메이션 종료
+          setTimeout(() => {
+            setIsShuffling(false);
+          }, 400);
+
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   // seats 변경 시 localStorage 저장
   useEffect(() => {
     if (!isStorageLoaded) return;
@@ -190,6 +230,43 @@ export default function SeatShuffler() {
     return () => clearTimeout(timer);
   }, []);
 
+  // 🔐 ESC 키 처리: SeatShuffler 내부 모달만 닫기
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key !== "Escape") return;
+
+      // 상위(App / ToolsPage)로 이벤트 전파 차단
+      e.preventDefault();
+      e.stopPropagation();
+
+      // 1️⃣ 학생 선택 모달 닫기
+      if (selectSeatIndex !== null) {
+        setSelectSeatIndex(null);
+        return;
+      }
+
+      // 2️⃣ 초기화 확인 모달 닫기
+      if (showConfirmReset) {
+        setShowConfirmReset(false);
+        return;
+      }
+
+      // 3️⃣ 카운트다운 중이면 무시 (연출 보호)
+      if (countdown !== null) {
+        return;
+      }
+
+      // 그 외에는 아무 동작도 하지 않음
+    };
+
+    // capture 단계에서 먼저 가로챔 (중요)
+    window.addEventListener("keydown", handleKeyDown, true);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [selectSeatIndex, showConfirmReset, countdown]);
+
   return (
     <div className="w-full h-[75vh] flex gap-6 rounded-2xl bg-white/70 backdrop-blur shadow p-6">
 {/* 👇 화면 정중앙 토스트 안내 */}
@@ -197,6 +274,15 @@ export default function SeatShuffler() {
   <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50">
     <div className="px-6 py-3 rounded-full bg-black/80 text-white text-sm font-semibold shadow-lg whitespace-nowrap">
       💡 빈 자리를 클릭하면 특정 학생을 고정할 수 있어요
+    </div>
+  </div>
+)}
+
+{/* 👇 3초 카운트다운 오버레이 */}
+{countdown !== null && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="text-[120px] font-extrabold text-white drop-shadow-lg animate-pulse">
+      {countdown}
     </div>
   </div>
 )}
@@ -250,6 +336,7 @@ export default function SeatShuffler() {
                       text-lg font-bold
                       transition-all duration-200
                       min-h-0 min-w-0
+                      ${isShuffling ? "animate-pulse scale-95 opacity-70" : ""}
                       ${
                         student
                           ? isPreset
@@ -357,15 +444,16 @@ export default function SeatShuffler() {
 <div className="flex gap-2 w-full"> 
   <button
     className="flex-1 px-6 py-3 rounded-full bg-blue-500 text-white font-bold shadow"
-    onClick={() => generateSeats(students)}
+    onClick={runSeatShuffle}
+    disabled={isShuffling}
   >
     자리 만들기
   </button>
 
   <button
     className="flex-1 px-6 py-3 rounded-full bg-purple-500 text-white font-bold shadow"
-    onClick={() => generateSeats(students)}
-    disabled={seats.length === 0}
+    onClick={runSeatShuffle}
+    disabled={isShuffling}
   >
     다시 섞기
   </button>
@@ -439,8 +527,14 @@ export default function SeatShuffler() {
 
       {/* 초기화 확인 모달 */}
       {showConfirmReset && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-72 shadow-xl">
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={() => setShowConfirmReset(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 w-72 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <p className="font-semibold mb-4">자리를 모두 초기화할까요?</p>
             <div className="flex justify-end gap-3">
               <button
@@ -465,8 +559,14 @@ export default function SeatShuffler() {
       )}
 
       {selectSeatIndex !== null && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-80 shadow-xl">
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={() => setSelectSeatIndex(null)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 w-80 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="font-bold mb-3">이 자리에 배치할 학생</h3>
 
             <ul className="max-h-64 overflow-y-auto space-y-2 mb-4">
