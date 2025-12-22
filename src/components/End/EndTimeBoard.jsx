@@ -127,7 +127,7 @@ export default function EndTimeBoard() {
       <div className="flex flex-col gap-6 w-full h-[85vh] min-h-0">
         <EndRoutineArea />
 
-        <div className="bg-white/70 rounded-3xl shadow p-6 flex-1 min-h-0 h-full">
+<div className="flex-1 min-h-0 h-full">
           <EndCheckContainer />
         </div>
       </div>
