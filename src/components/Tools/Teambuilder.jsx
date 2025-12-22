@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 
 const STORAGE_KEY = "tool_team_builder_result_v1";
+const HISTORY_KEY = "tool_team_builder_history_v1";
 
 export default function TeamBuilder() {
   /* -------------------------
@@ -23,6 +24,14 @@ export default function TeamBuilder() {
   const [buildMode, setBuildMode] = useState("teamCount"); // "teamCount" | "teamSize"
   const [teamSize, setTeamSize] = useState(4);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const [history, setHistory] = useState([]);
+  const [selectedHistoryIndex, setSelectedHistoryIndex] = useState(null);
+
+  // 추가된 상태들
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [saveLabel, setSaveLabel] = useState("");
 
   useEffect(() => {
     setTeamNames((prev) =>
@@ -57,19 +66,16 @@ export default function TeamBuilder() {
         console.error("Failed to load team builder data", e);
       }
     }
+
+    const historyRaw = localStorage.getItem(HISTORY_KEY);
+    if (historyRaw) {
+      try {
+        setHistory(JSON.parse(historyRaw));
+      } catch (e) {
+        console.error("Failed to load team history", e);
+      }
+    }
   }, []);
-  useEffect(() => {
-    if (teams.length === 0) return;
-
-    const payload = {
-      teams,
-      teamNames,
-      teamCount,
-      savedAt: new Date().toISOString(),
-    };
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  }, [teams, teamNames, teamCount]);
 
   async function fetchStudents() {
     const today = new Date().toISOString().slice(0, 10);
@@ -291,34 +297,48 @@ export default function TeamBuilder() {
           </div>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-4 pt-2">
-          <button
-            onClick={buildTeams}
-            className="px-6 py-2 rounded-xl bg-blue-500/90 text-white text-sm font-medium hover:bg-blue-600"
-          >
-            팀 만들기
-          </button>
+        <div className="flex flex-col items-center gap-3 pt-2">
+          {/* 1줄: 주요 액션 */}
+          <div className="flex flex-wrap justify-center gap-4">
+            <button
+              onClick={buildTeams}
+              className="px-6 py-2 rounded-xl bg-blue-500/90 text-white text-sm font-medium hover:bg-blue-600"
+            >
+              팀 만들기
+            </button>
 
-          <button
-            onClick={reshuffleTeams}
-            className="px-5 py-2 rounded-xl bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
-          >
-            다시 섞기
-          </button>
+            <button
+              onClick={reshuffleTeams}
+              className="px-5 py-2 rounded-xl bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
+            >
+              다시 섞기
+            </button>
 
-          <button
-            onClick={copyTeamsToClipboard}
-            className="px-5 py-2 rounded-xl bg-green-500/90 text-white text-sm hover:bg-green-600"
-          >
-            팀 결과 복사
-          </button>
+            <button
+              onClick={copyTeamsToClipboard}
+              className="px-5 py-2 rounded-xl bg-green-500/90 text-white text-sm hover:bg-green-600"
+            >
+              결과 복사
+            </button>
 
-          <button
-            onClick={() => setShowResetConfirm(true)}
-            className="px-5 py-2 rounded-xl bg-red-500/80 text-white text-sm hover:bg-red-600"
-          >
-            결과 초기화
-          </button>
+          </div>
+
+          {/* 2줄: 저장 / 불러오기 */}
+          <div className="flex gap-4">
+            <button
+              onClick={() => setShowSaveModal(true)}
+              className="px-5 py-2 rounded-xl bg-indigo-500/90 text-white text-sm hover:bg-indigo-600"
+            >
+              💾 저장하기
+            </button>
+
+            <button
+              onClick={() => setShowLoadModal(true)}
+              className="px-5 py-2 rounded-xl bg-amber-500/90 text-white text-sm hover:bg-amber-600"
+            >
+              📂 불러오기
+            </button>
+          </div>
         </div>
       </div>
 
@@ -379,6 +399,143 @@ export default function TeamBuilder() {
                 className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm hover:bg-red-600"
               >
                 초기화
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-lg p-6 w-[360px] space-y-4">
+            <h3 className="text-lg font-semibold">팀 편성 저장</h3>
+
+            <input
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+              placeholder="예: 3교시 수학 모둠"
+              value={saveLabel}
+              onChange={(e) => setSaveLabel(e.target.value)}
+            />
+
+            <p className="text-xs text-gray-500 leading-relaxed">
+              • 팀 이름은 필수입니다.<br />
+              • 최근 <b>10개</b>까지만 저장됩니다.
+            </p>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-sm"
+              >
+                취소
+              </button>
+
+              <button
+                onClick={() => {
+                  if (teams.length === 0) return;
+                  if (!saveLabel.trim()) {
+                    alert("팀 이름을 입력해주세요.");
+                    return;
+                  }
+
+                  const existingIndex = history.findIndex(
+                    (h) => h.label === saveLabel.trim()
+                  );
+
+                  let next = [...history];
+
+                  const record = {
+                    createdAt: new Date().toISOString(),
+                    label: saveLabel.trim(),
+                    teamCount,
+                    teamNames,
+                    teams,
+                  };
+
+                  if (existingIndex !== -1) {
+                    // 덮어쓰기
+                    if (!window.confirm("같은 이름의 팀이 있습니다. 덮어쓸까요?")) {
+                      return;
+                    }
+                    next.splice(existingIndex, 1);
+                  }
+
+                  next = [record, ...next].slice(0, 10);
+
+                  localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+                  setHistory(next);
+
+                  setSaveLabel("");
+                  setShowSaveModal(false);
+                }}
+                className="px-4 py-2 rounded-lg bg-indigo-500 text-white text-sm"
+              >
+                저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLoadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-lg p-6 w-[360px] space-y-4">
+            <h3 className="text-lg font-semibold">저장된 팀 불러오기</h3>
+
+            {history.length === 0 ? (
+              <p className="text-sm text-gray-500">저장된 팀이 없습니다.</p>
+            ) : (
+              <ul className="space-y-2 max-h-60 overflow-y-auto">
+                {history.map((h, idx) => (
+                  <li
+                    key={idx}
+                    className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+                  >
+                    <div>
+                      <div className="text-sm font-medium">
+                        {h.label || "이름 없는 팀"}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(h.createdAt).toLocaleString()} · {h.teamCount}팀
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setTeams(h.teams);
+                          setTeamNames(h.teamNames);
+                          setTeamCount(h.teamCount);
+                          setShowLoadModal(false);
+                        }}
+                        className="text-sm px-1 py-1 rounded-lg bg-amber-500 text-white"
+                      >
+                        불러오기
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (!window.confirm("이 팀을 삭제할까요?")) return;
+                          const next = history.filter((_, i) => i !== idx);
+                          localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+                          setHistory(next);
+                        }}
+                        className="text-sm px-1 py-1 rounded-lg bg-red-500 text-white"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setShowLoadModal(false)}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-sm"
+              >
+                닫기
               </button>
             </div>
           </div>
