@@ -8,8 +8,7 @@ import { supabase } from "../../lib/supabaseClient";
   - student_end_check_status 테이블 사용
 */
 
-export default function EndCheckContainer() {
-  const [students, setStudents] = useState([]);
+export default function EndCheckContainer({ students }) {
   const [checkStatus, setCheckStatus] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -25,43 +24,6 @@ export default function EndCheckContainer() {
     return `${y}-${m}-${d}`;
   };
   const today = getToday();
-
-  /* ===============================
-     오늘 출석한 학생 불러오기
-     =============================== */
-  useEffect(() => {
-    const fetchStudents = async () => {
-      setIsLoading(true);
-
-      const { data, error } = await supabase
-        .from("student_attendance_status")
-        .select(
-          `
-          student_id,
-          students (
-            id,
-            name,
-            gender,
-            number
-          )
-        `
-        )
-        .eq("date", today)
-        .eq("present", true);
-
-      if (!error && data) {
-        const list = data
-          .map((row) => row.students)
-          .filter(Boolean)
-          .sort((a, b) => a.number - b.number);
-        setStudents(list);
-      }
-
-      setIsLoading(false);
-    };
-
-    fetchStudents();
-  }, [today]);
 
   /* ===============================
      오늘 하교 체크 상태
@@ -100,11 +62,18 @@ export default function EndCheckContainer() {
 
     setIsSaving(true);
 
-    const { error } = await supabase.from("student_end_check_status").upsert({
-      student_id: studentId,
-      date: today,
-      checked: next,
-    });
+    const { error } = await supabase
+      .from("student_end_check_status")
+      .upsert(
+        {
+          student_id: studentId,
+          date: today,
+          checked: next,
+        },
+        {
+          onConflict: "student_id,date",
+        }
+      );
 
     setIsSaving(false);
 
