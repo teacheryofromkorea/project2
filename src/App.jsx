@@ -19,7 +19,7 @@ import BreakTimeBoard from "./components/Break/BreakTimeBoard";
 import LunchTimeBoard from "./components/Lunch/LunchTimeBoard";
 
 import ClassPage from "./components/Class/ClassPage";
-import EndPage from "./components/End/EndPage";
+import EndTimeBoard from "./components/End/EndTimeBoard";
 import StatsPage from "./components/Stats/StatsPage";
 import OverviewPage from "./components/Overview/OverviewPage";
 import ToolsPage from "./components/Tools/ToolsPage";
@@ -154,7 +154,7 @@ function AppContent() {
           {/* 기타 탭 */}
           <Route path="/lunch" element={<LunchTimeBoard />} />
           <Route path="/class" element={<ClassPage />} />
-          <Route path="/end" element={<EndPage />} />
+          <Route path="/end" element={<EndTimeBoard />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/overview" element={<OverviewPage />} />
           <Route path="/tools" element={<ToolsPage />} />
