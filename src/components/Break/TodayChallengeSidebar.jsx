@@ -11,7 +11,7 @@ export default function TodayChallengeSidebar({
   mode = "break",
 }) {
   const getRoutineRowMatchId = (row) =>
-    mode === "lunch" ? row.routine_item_id : row.routine_id;
+    mode === "break" ? row.routine_id : row.routine_item_id;
 
   const [incompleteStudents, setIncompleteStudents] = useState([]);
   const [showIncompleteOnly, setShowIncompleteOnly] = useState(false);

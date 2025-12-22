@@ -19,8 +19,25 @@ export default function EndTimeBoard() {
   /* ===============================
      하교 루틴 훅
      =============================== */
-  const { routineItems, routineTitle, fetchRoutineItems, fetchRoutineTitle } =
-    useEndRoutine();
+  const {
+    routineItems,
+    routineTitle,
+    tempTitle,
+    setTempTitle,
+    newContent,
+    setNewContent,
+    editRoutine,
+    setEditRoutine,
+    editText,
+    setEditText,
+    fetchRoutineItems,
+    fetchRoutineTitle,
+    addRoutineItem,
+    deleteRoutineItem,
+    moveRoutine,
+    updateRoutine,
+    saveRoutineTitle,
+  } = useEndRoutine();
 
   const [students, setStudents] = useState([]);
   const [missions, setMissions] = useState([]);
@@ -125,7 +142,27 @@ export default function EndTimeBoard() {
 
       {/* 중앙: 하교시간 루틴 + 하교 체크 */}
       <div className="flex flex-col gap-6 w-full h-[85vh] min-h-0">
-        <EndRoutineArea />
+        <EndRoutineArea
+          routine={{
+            routineItems,
+            routineTitle,
+            tempTitle,
+            setTempTitle,
+            newContent,
+            setNewContent,
+            editRoutine,
+            setEditRoutine,
+            editText,
+            setEditText,
+            fetchRoutineItems,
+            fetchRoutineTitle,
+            addRoutineItem,
+            deleteRoutineItem,
+            moveRoutine,
+            updateRoutine,
+            saveRoutineTitle,
+          }}
+        />
 
 <div className="flex-1 min-h-0 h-full">
           <EndCheckContainer students={presentStudents} />

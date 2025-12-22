@@ -5,7 +5,7 @@ import { useLock } from "../../context/LockContext";
 import useEndRoutine from "../../hooks/End/useEndRoutine";
 import EditItemModal from "../Break/EditItemModal";
 
-export default function EndRoutineArea() {
+export default function EndRoutineArea({routine}) {
   const { locked } = useLock();
 
   const {
@@ -26,7 +26,7 @@ export default function EndRoutineArea() {
     moveRoutine,
     updateRoutine,
     saveRoutineTitle,
-  } = useEndRoutine();
+  } = routine;
 
   const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
 

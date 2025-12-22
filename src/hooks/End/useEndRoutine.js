@@ -26,39 +26,70 @@ export default function useEndRoutine() {
   const [editText, setEditText] = useState("");
 
   const fetchRoutineItems = useCallback(async () => {
+    if (!titleId) return;
+
     const { data } = await supabase
       .from("end_routine_items")
       .select("*")
+      .eq("title_id", titleId)
       .order("order_index", { ascending: true });
 
     setRoutineItems(data || []);
-  }, []);
+  }, [titleId]);
 
   const fetchRoutineTitle = useCallback(async () => {
-    const { data } = await supabase
+    const today = new Date().toISOString().slice(0, 10);
+
+    const { data, error } = await supabase
       .from("end_routine_title")
       .select("id, title")
-      .order("created_at", { ascending: true })
+      .eq("date", today)
       .limit(1);
 
-    if (!data || data.length === 0) return;
+    if (error) {
+      console.error("하교 루틴 제목 조회 실패:", error);
+      return;
+    }
 
+    if (!data || data.length === 0) {
+      const { data: insertData, error: insertError } = await supabase
+        .from("end_routine_title")
+        .insert({
+          date: today,
+          title: "하교시간 루틴",
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("하교 루틴 제목 생성 실패:", insertError);
+        return;
+      }
+
+      setTitleId(insertData.id);
+      setRoutineTitle(insertData.title);
+      setTempTitle(insertData.title);
+      return;
+    }
+
+    setTitleId(data[0].id);
     setRoutineTitle(data[0].title);
     setTempTitle(data[0].title);
-    setTitleId(data[0].id);
   }, []);
 
   const addRoutineItem = useCallback(async () => {
+    if (!titleId) return;
     if (!newContent.trim()) return;
 
     await supabase.from("end_routine_items").insert({
+      title_id: titleId,
       text: newContent,
       order_index: routineItems.length,
     });
 
     setNewContent("");
     fetchRoutineItems();
-  }, [newContent, routineItems.length, fetchRoutineItems]);
+  }, [newContent, routineItems.length, fetchRoutineItems, titleId]);
 
   const deleteRoutineItem = useCallback(
     async (id) => {
