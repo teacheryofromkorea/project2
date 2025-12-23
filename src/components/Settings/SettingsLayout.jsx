@@ -4,6 +4,7 @@ export default function SettingsLayout() {
   const tabs = [
     { label: "🧑‍🎓 학생 명단", path: "students" },
     { label: "⏰ 시간표 설정", path: "timetable" },
+    { label: "🪑 자리 배치", path: "seating" },
     { label: "⚙️ 일반 설정", path: "general" },
   ];
 

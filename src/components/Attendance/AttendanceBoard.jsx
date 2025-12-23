@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import StudentTaskModal from "./StudentTaskModal";
+import SeatGrid from "./SeatGrid";
+import SeatAssignModal from "./SeatAssignModal";
 
 function AttendanceBoard() {
   const today = new Date().toISOString().split("T")[0]; // 오늘 날짜 (YYYY-MM-DD)
+  const todayLabel = new Date().toLocaleDateString("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
 
   const [students, setStudents] = useState([]);
 
   const [routineStatus, setRoutineStatus] = useState([]);
   const [missionStatus, setMissionStatus] = useState([]);
   const [attendanceStatus, setAttendanceStatus] = useState([]);
+
+  const [seats, setSeats] = useState([]);
 
   const getPendingTasks = (studentId) => {
     // ... (기존 getPendingTasks 함수는 동일)
@@ -53,6 +62,7 @@ function AttendanceBoard() {
 
   const [modalType, setModalType] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedSeat, setSelectedSeat] = useState(null);
   const [routines, setRoutines] = useState([]);
   const [missions, setMissions] = useState([]);
 
@@ -82,6 +92,32 @@ function AttendanceBoard() {
     else setStudents(data);
   };
 
+  const fetchSeats = async () => {
+    const { data, error } = await supabase
+      .from("classroom_seats")
+      .select(`
+        id,
+        row,
+        col,
+        label,
+        student_id,
+        students (
+          id,
+          name,
+          number,
+          gender
+        )
+      `)
+      .order("row", { ascending: true })
+      .order("col", { ascending: true });
+
+    if (error) {
+      console.error(error);
+    } else {
+      setSeats(data || []);
+    }
+  };
+
   const fetchStatus = async () => {
     const { data: routineData } = await supabase
       .from("student_routine_status")
@@ -105,6 +141,7 @@ function AttendanceBoard() {
         fetchMissions(),
         fetchStatus(),
         fetchAttendance(),
+        fetchSeats(),
       ]);
     })();
   }, []);
@@ -124,9 +161,6 @@ function AttendanceBoard() {
       window.removeEventListener("students:updated", handleStudentsUpdated);
     };
   }, []);
-
-  const boys = students.filter((s) => s.gender === "male");
-  const girls = students.filter((s) => s.gender === "female");
 
 const markPresent = async (id) => {
   const today = new Date().toISOString().split("T")[0]; // today 변수 재정의
@@ -154,147 +188,75 @@ const markPresent = async (id) => {
 
   return (
     <>
-    <div className="flex gap-6 w-full">
+    {/* 교실 배경 컨테이너 (85vh 고정 + 스크롤) */}
+    <div className="relative w-full h-[85vh] overflow-y-auto bg-gradient-to-b from-[#f5f4f2] to-[#eceae6]">
+      {/* subtle paper texture */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.035]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(45deg, rgba(0,0,0,0.04) 0px, rgba(0,0,0,0.04) 1px, transparent 1px, transparent 6px)",
+        }}
+      />
 
-      {/* 🛑 남학생 박스를 먼저 배치했습니다. */}
-      <div className="flex-1 bg-blue-100/60 rounded-3xl p-4 shadow">
-        <div className="flex justify-center mb-4">
-          <div className="px-6 py-2 rounded-full bg-blue-200 text-blue-800 font-bold shadow-sm">
-            👦 남학생 ({boys.length}명)
+      {/* 상단 고정 헤더 */}
+      <div className="sticky top-0 z-10 backdrop-blur-md bg-[#f5f4f2]/80 border-b border-black/5">
+        <div className="max-w-6xl mx-auto px-6 h-12 flex items-center justify-between">
+          <div className="text-sm font-semibold text-gray-800">
+            오늘의 등교
           </div>
-        </div>
 
-        <div className="space-y-2">
-          {boys.map((s) => {
-            const pending = getPendingTasks(s.id);
-            const isPresent = attendanceStatus.some(
-              (a) => a.student_id === s.id && a.present
-            );
-
-            return (
-              <div
-                key={s.id}
-                onClick={() => {
-                  setSelectedStudent(s);
-                  setModalType(isPresent ? "task" : "confirm");
-                }}
-                className={`cursor-pointer rounded-2xl px-4 py-3 shadow-sm hover:shadow-md transition flex items-center justify-between ${
-                  isPresent ? "bg-purple-200" : "bg-white"
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  {s.number != null ? (
-                    <span className="shrink-0 bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                      {s.number}
-                    </span>
-                  ) : (
-                    <span className="shrink-0 w-7" />
-                  )}
-
-                  <div className="font-semibold text-base truncate">
-                    {s.name}
-                  </div>
-                </div>
-
-                {isPresent ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedStudent(s);
-                      setModalType("task");
-                    }}
-                    className="px-4 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-full text-sm font-semibold shadow whitespace-nowrap"
-                  >
-                    미션
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedStudent(s);
-                      setModalType("confirm");
-                    }}
-                    className="px-4 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm shadow whitespace-nowrap"
-                  >
-                    출석
-                  </button>
-                )}
-              </div>
-            );
-          })}
+          <div className="text-xs text-gray-500">
+            {todayLabel}
+          </div>
         </div>
       </div>
 
+      {/* 칠판 영역 (헤더 아래, 좌석 위) */}
+      <div className="relative z-10 px-10 pt-6">
+        <div className="max-w-5xl mx-auto rounded-2xl bg-[#495750] shadow-sm">
+          <div className="px-6 py-4 flex items-center">
+<div className="flex items-center justify-center h-full w-full">
+  <div className="text-sm font-extrabold text-gray-300 tracking-wide">
+    칠판
+  </div>
+</div>
 
-      {/* 🛑 여학생 박스를 두 번째로 배치했습니다. */}
-      <div className="flex-1 bg-pink-100/60 rounded-3xl p-4 shadow">
-        <div className="flex justify-center mb-4">
-          <div className="px-6 py-2 rounded-full bg-pink-200 text-pink-800 font-bold shadow-sm">
-            👧 여학생 ({girls.length}명)
           </div>
         </div>
-
-        <div className="space-y-2">
-          {girls.map((s) => {
-            const pending = getPendingTasks(s.id);
-            const isPresent = attendanceStatus.some(
-              (a) => a.student_id === s.id && a.present
-            );
-
-            return (
-              <div
-                key={s.id}
-                onClick={() => {
-                  setSelectedStudent(s);
-                  setModalType(isPresent ? "task" : "confirm");
-                }}
-                className={`cursor-pointer rounded-2xl px-4 py-3 shadow-sm hover:shadow-md transition flex items-center justify-between ${
-                  isPresent ? "bg-purple-200" : "bg-white"
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  {s.number != null ? (
-                    <span className="shrink-0 bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                      {s.number}
-                    </span>
-                  ) : (
-                    <span className="shrink-0 w-7" />
-                  )}
-
-                  <div className="font-semibold text-base truncate">
-                    {s.name}
-                  </div>
-                </div>
-
-                {isPresent ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedStudent(s);
-                      setModalType("task");
-                    }}
-                    className="px-4 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-full text-sm font-semibold shadow whitespace-nowrap"
-                  >
-                    미션
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedStudent(s);
-                      setModalType("confirm");
-                    }}
-                    className="px-4 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm shadow whitespace-nowrap"
-                  >
-                    출석
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
       </div>
-      
+
+      {/* 좌석 영역 래퍼 */}
+      <div className="relative z-10 min-h-full px-10 pt-10 pb-16 flex justify-center items-start">
+
+        {/* 좌석 무대 */}
+        <div className="relative w-full max-w-5xl rounded-3xl bg-white/80 backdrop-blur-lg shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-10">
+          <div className="h-2" />
+          <SeatGrid
+            seats={seats}
+            attendanceMap={attendanceStatus.reduce((acc, row) => {
+              acc[row.student_id] = row.present;
+              return acc;
+            }, {})}
+            onSeatClick={(seat) => {
+              // 빈 좌석 → 자리 배정 모달
+              if (!seat.students) {
+                setSelectedSeat(seat);
+                return;
+              }
+
+              // 학생이 앉아있는 좌석 → 기존 출석/미션 로직
+              const isPresent = attendanceStatus.some(
+                (a) => a.student_id === seat.students.id && a.present
+              );
+
+              setSelectedStudent(seat.students);
+              setModalType(isPresent ? "task" : "confirm");
+            }}
+          />
+        </div>
+
+      </div>
     </div>
 
     {/* 모달 UI 부분은 동일 */}
@@ -364,6 +326,16 @@ setModalType(null);
 
     </div>
   </div>
+)}
+
+{selectedSeat && (
+  <SeatAssignModal
+    seat={selectedSeat}
+    onClose={() => setSelectedSeat(null)}
+    onAssigned={async () => {
+      await fetchSeats();
+    }}
+  />
 )}
     </>
   );
