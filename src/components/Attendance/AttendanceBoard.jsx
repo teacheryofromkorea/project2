@@ -199,18 +199,6 @@ const markPresent = async (id) => {
         }}
       />
 
-      {/* 상단 고정 헤더 */}
-      <div className="sticky top-0 z-10 backdrop-blur-md bg-[#f5f4f2]/80 border-b border-black/5">
-        <div className="max-w-6xl mx-auto px-6 h-12 flex items-center justify-between">
-          <div className="text-sm font-semibold text-gray-800">
-            오늘의 등교
-          </div>
-
-          <div className="text-xs text-gray-500">
-            {todayLabel}
-          </div>
-        </div>
-      </div>
 
       {/* 칠판 영역 (헤더 아래, 좌석 위) */}
       <div className="relative z-10 px-10 pt-6">
@@ -227,7 +215,7 @@ const markPresent = async (id) => {
       </div>
 
       {/* 좌석 영역 래퍼 */}
-      <div className="relative z-10 min-h-full px-10 pt-10 pb-16 flex justify-center items-start">
+      <div className="relative z-10 min-h-full px-10 pt-5 pb-16 flex justify-center items-start">
 
         {/* 좌석 무대 */}
         <div className="relative w-full max-w-5xl rounded-3xl bg-white/80 backdrop-blur-lg shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-10">
