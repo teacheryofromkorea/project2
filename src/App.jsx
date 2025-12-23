@@ -27,6 +27,7 @@ import ToolsPage from "./components/Tools/ToolsPage";
 import SettingsLayout from "./components/Settings/SettingsLayout";
 import StudentsPage from "./components/Settings/Students/StudentsPage";
 import TimeTablePage from "./components/Settings/TimeTable/TimeTablePage";
+import SeatingPlanPage from "./components/Settings/Seating/SeatingPlanPage";
 import GeneralPage from "./components/Settings/General/GeneralPage";
 
 import useCurrentTimeBlock from "./hooks/useCurrentTimeBlock";
@@ -148,6 +149,7 @@ function AppContent() {
           <Route path="/settings" element={<SettingsLayout />}>
             <Route path="students" element={<StudentsPage />} />
             <Route path="timetable" element={<TimeTablePage />} />
+            <Route path="seating" element={<SeatingPlanPage />} />
             <Route path="general" element={<GeneralPage />} />
           </Route>
 
