@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import StudentTaskModal from "./StudentTaskModal";
 import SeatGrid from "./SeatGrid";
-import SeatAssignModal from "./SeatAssignModal";
 
 function AttendanceBoard() {
   const today = new Date().toISOString().split("T")[0]; // 오늘 날짜 (YYYY-MM-DD)
@@ -62,7 +61,6 @@ function AttendanceBoard() {
 
   const [modalType, setModalType] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [selectedSeat, setSelectedSeat] = useState(null);
   const [routines, setRoutines] = useState([]);
   const [missions, setMissions] = useState([]);
 
@@ -226,20 +224,12 @@ const markPresent = async (id) => {
               acc[row.student_id] = row.present;
               return acc;
             }, {})}
-            onSeatClick={(seat) => {
-              // 빈 좌석 → 자리 배정 모달
-              if (!seat.students) {
-                setSelectedSeat(seat);
-                return;
-              }
-
-              // 학생이 앉아있는 좌석 → 기존 출석/미션 로직
-              const isPresent = attendanceStatus.some(
-                (a) => a.student_id === seat.students.id && a.present
-              );
-
-              setSelectedStudent(seat.students);
-              setModalType(isPresent ? "task" : "confirm");
+            onToggleAttendance={(student) => {
+              markPresent(student.id);
+            }}
+            onOpenMission={(student) => {
+              setSelectedStudent(student);
+              setModalType("task");
             }}
           />
         </div>
@@ -314,16 +304,6 @@ setModalType(null);
 
     </div>
   </div>
-)}
-
-{selectedSeat && (
-  <SeatAssignModal
-    seat={selectedSeat}
-    onClose={() => setSelectedSeat(null)}
-    onAssigned={async () => {
-      await fetchSeats();
-    }}
-  />
 )}
     </>
   );
