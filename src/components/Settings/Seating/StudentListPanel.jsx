@@ -81,6 +81,13 @@ function StudentListPanel({
             const isSelected = student.id === selectedStudentId;
             const isHovered = student.id === hoveredStudentId;
 
+            const genderBarClass =
+              student.gender === "male"
+                ? "bg-blue-500"
+                : student.gender === "female"
+                ? "bg-pink-400"
+                : "";
+
             return (
               <button
                 key={student.id}
@@ -95,8 +102,8 @@ function StudentListPanel({
                   if (onStudentSelect) onStudentSelect(student);
                 }}
                 className={`
-                  w-full flex items-center justify-between
-                  px-3 py-2 rounded-lg border
+                  w-full relative flex items-center justify-between
+                  pl-3 pr-3 py-2 rounded-lg border
                   text-sm
                   transition
                   ${
@@ -108,6 +115,11 @@ function StudentListPanel({
                   }
                 `}
               >
+                {genderBarClass && (
+                  <span
+                    className={`absolute left-0 top-0 h-full w-[4px] rounded-l-lg ${genderBarClass}`}
+                  />
+                )}
                 <div className="flex items-center gap-2">
                   {student.number != null && (
                     <span className="text-xs font-semibold text-gray-500">
