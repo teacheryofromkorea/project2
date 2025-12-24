@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import StudentTaskModal from "./StudentTaskModal";
 import SeatGrid from "./SeatGrid";
+import AttendanceConfirmModal from "./AttendanceConfirmModal";
 
 function AttendanceBoard() {
   const today = new Date().toISOString().split("T")[0]; // 오늘 날짜 (YYYY-MM-DD)
@@ -18,6 +19,9 @@ function AttendanceBoard() {
   const [attendanceStatus, setAttendanceStatus] = useState([]);
 
   const [seats, setSeats] = useState([]);
+
+  const [confirmType, setConfirmType] = useState(null); // "present" | "cancel"
+  const [pendingStudent, setPendingStudent] = useState(null);
 
   const getPendingTasks = (studentId) => {
     // ... (기존 getPendingTasks 함수는 동일)
@@ -225,7 +229,12 @@ const markPresent = async (id) => {
               return acc;
             }, {})}
             onToggleAttendance={(student) => {
-              markPresent(student.id);
+              const isPresent = attendanceStatus.some(
+                (a) => a.student_id === student.id && a.present
+              );
+
+              setPendingStudent(student);
+              setConfirmType(isPresent ? "cancel" : "present");
             }}
             onOpenMission={(student) => {
               setSelectedStudent(student);
@@ -253,57 +262,20 @@ const markPresent = async (id) => {
   missions={missions}   // 미션 데이터 연결
 />
 
-{modalType === "confirm" && selectedStudent && (
-  <div
-    className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-    onClick={() => setModalType(null)}
-  >
-    <div
-      className="modal-enter bg-white rounded-3xl p-8 shadow-2xl w-[420px] border border-gray-100 flex flex-col gap-6"
-      onClick={(e) => e.stopPropagation()}
-    >
-
-      <div className="flex flex-col items-center gap-3">
-        <div className="text-4xl">
-          {attendanceStatus.some(a => a.student_id === selectedStudent.id && a.present) ? "❌" : "✅"}
-        </div>
-
-        <div className="text-xl font-bold text-gray-900">
-          {attendanceStatus.some(a => a.student_id === selectedStudent.id && a.present) ? "출석 취소" : "출석 확인"}
-        </div>
-
-        <div className="text-2xl font-extrabold text-blue-600 tracking-wide">
-          {selectedStudent.name}
-        </div>
-      </div>
-
-      <div className="text-center text-gray-700 text-base leading-relaxed">
-        {attendanceStatus.some(a => a.student_id === selectedStudent.id && a.present)
-          ? "이 학생의 출석을 취소하시겠습니까?"
-          : "이 학생을 출석 처리하시겠습니까?"}
-      </div>
-
-      <div className="flex items-center gap-4 mt-4">
-        <button
-          onClick={() => setModalType(null)}
-          className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full shadow-sm font-semibold transition"
-        >
-          아니요
-        </button>
-
-        <button
-          onClick={() => {
-markPresent(selectedStudent.id);
-setModalType(null);
-          }}
-          className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-md font-semibold transition"
-        >
-          네, 진행할게요
-        </button>
-      </div>
-
-    </div>
-  </div>
+{confirmType && pendingStudent && (
+  <AttendanceConfirmModal
+    type={confirmType}
+    student={pendingStudent}
+    onClose={() => {
+      setConfirmType(null);
+      setPendingStudent(null);
+    }}
+    onConfirm={async () => {
+      await markPresent(pendingStudent.id);
+      setConfirmType(null);
+      setPendingStudent(null);
+    }}
+  />
 )}
     </>
   );
