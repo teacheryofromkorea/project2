@@ -123,6 +123,14 @@ function SeatEditorGrid({
         const hasGroup = Boolean(seat.group_name);
 
         const student = seat.students;
+        const isEmptySeat = !student;
+
+        const genderBarClass =
+          student?.gender === "male"
+            ? "bg-blue-500"
+            : student?.gender === "female"
+            ? "bg-pink-400"
+            : "";
 
         const isHoveredStudent =
           student?.id && hoveredStudentId && student.id === hoveredStudentId;
@@ -175,35 +183,54 @@ function SeatEditorGrid({
               px-0.5
               text-xs font-medium
               transition
-              ${
-                isGroupEditMode
-                  ? "cursor-pointer hover:brightness-95"
-                  : seat.student_id
-                  ? "cursor-pointer hover:bg-gray-100"
-                  : "cursor-pointer hover:bg-indigo-50"
+              cursor-pointer
+
+              ${isEmptySeat
+                ? "border-dashed bg-gray-50 text-gray-400 hover:bg-indigo-50"
+                : groupStyle
               }
-              ${groupStyle}
-              ${hasGroup ? "shadow-inner" : ""}
+
+              ${!isEmptySeat && hasGroup ? "shadow-inner" : ""}
+
+              ${isGroupEditMode ? "hover:brightness-95" : ""}
+
               ${isSameGroupHovered ? "brightness-95" : ""}
+
               ${isHoveredStudent ? "ring-2 ring-indigo-400 z-10" : ""}
+
               ${isSelectedSeat ? "ring-2 ring-orange-400 z-10" : ""}
             `}
           >
-            {seat.group_name && (
+            {!isEmptySeat && seat.group_name && (
               <span className="absolute top-1 left-1 text-[8px] font-bold text-white bg-black/40 px-1 rounded">
                 {seat.group_name}
               </span>
             )}
 
-            {student?.number != null && (
-              <div className="text-[9px] text-gray-500 leading-none">
-                {student.number}번
-              </div>
-            )}
+            {isEmptySeat ? (
+              <>
+                <div className="text-lg leading-none mb-1">＋</div>
+                <div className="text-[11px] text-gray-400">
+                  빈 자리
+                </div>
+              </>
+            ) : (
+              <>
+                {student?.number != null && (
+                  <div className="text-[9px] text-gray-500 leading-none">
+                    {student.number}번
+                  </div>
+                )}
+                <div className="text-xs text-gray-800 leading-tight text-center truncate w-full">
+                  {student.name}
+                </div>
 
-            <div className="text-xs text-gray-800 leading-tight text-center truncate w-full">
-              {student?.name || "빈 자리"}
-            </div>
+                {/* 성별 컬러 바 */}
+                <div
+                  className={`absolute bottom-0 left-0 w-full h-[4px] rounded-b-lg ${genderBarClass}`}
+                />
+              </>
+            )}
           </div>
         );
       })}
