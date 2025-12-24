@@ -1,11 +1,43 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 
+// ✅ 기본 상태에서 모둠이 확실히 구분되도록 대비를 올린 팔레트
 const GROUP_COLOR_MAP = {
-  A: "border-blue-500 bg-blue-50",
-  B: "border-green-500 bg-green-50",
-  C: "border-purple-500 bg-purple-50",
-  D: "border-orange-500 bg-orange-50",
+  A: "border-blue-600 bg-blue-200",
+  B: "border-green-600 bg-green-200",
+  C: "border-purple-600 bg-purple-200",
+  D: "border-orange-600 bg-orange-200",
+};
+
+// "1조", "2조" 같은 임의 모둠명도 색을 받도록 안전한(정적 클래스) 팔레트
+const GROUP_STYLE_PALETTE = [
+  "border-blue-600 bg-blue-200",
+  "border-green-600 bg-green-200",
+  "border-purple-600 bg-purple-200",
+  "border-orange-600 bg-orange-200",
+  "border-pink-600 bg-pink-200",
+  "border-teal-600 bg-teal-200",
+  "border-amber-600 bg-amber-200",
+];
+
+// 문자열 해시(결정적) → 팔레트 인덱스
+const hashString = (str) => {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return h;
+};
+
+const getGroupStyleClass = (groupName) => {
+  if (!groupName) return null;
+
+  // 딱 매핑된 키면 우선 적용
+  if (GROUP_COLOR_MAP[groupName]) return GROUP_COLOR_MAP[groupName];
+
+  // 나머지는 팔레트에서 결정적으로 고르기
+  const idx = hashString(groupName) % GROUP_STYLE_PALETTE.length;
+  return GROUP_STYLE_PALETTE[idx];
 };
 
 function SeatEditorGrid({
@@ -14,6 +46,9 @@ function SeatEditorGrid({
   hoveredStudentId,
   onSeatHover,
   onSeatHoverOut,
+  isGroupEditMode = false,
+  selectedSeatIds = [],
+  onToggleSeatSelect,
 }) {
   const [seats, setSeats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,27 +112,42 @@ function SeatEditorGrid({
 
   return (
     <div
-      className="grid gap-1.5"
+      className="grid gap-1.5 bg-indigo-50/40 p-2 rounded-xl"
       style={{
         gridTemplateRows: `repeat(${maxRow}, minmax(0, 1fr))`,
         gridTemplateColumns: `repeat(${maxCol}, minmax(0, 1fr))`,
       }}
     >
       {seats.map((seat) => {
-        const groupStyle =
-          seat.group_name && GROUP_COLOR_MAP[seat.group_name]
-            ? GROUP_COLOR_MAP[seat.group_name]
-            : "border-gray-300 bg-white";
+        const groupStyle = getGroupStyleClass(seat.group_name) || "border-gray-300 bg-white";
+        const hasGroup = Boolean(seat.group_name);
 
         const student = seat.students;
 
         const isHoveredStudent =
           student?.id && hoveredStudentId && student.id === hoveredStudentId;
+        const isSelectedSeat = selectedSeatIds.includes(seat.id);
+
+        const isSameGroupHovered =
+          seat.group_name &&
+          seats.some(
+            (s) =>
+              s.group_name === seat.group_name &&
+              s.students?.id === hoveredStudentId
+          );
 
         return (
           <div
             key={seat.id}
             onClick={() => {
+              // ✅ 모둠 편집 모드: 선택/해제만 (학생 배치/자리 비우기 잠금)
+              if (isGroupEditMode) {
+                if (onToggleSeatSelect) {
+                  onToggleSeatSelect(seat.id);
+                }
+                return;
+              }
+
               // 빈 자리 → 학생 배치
               if (!seat.student_id && onSeatEmptyClick) {
                 onSeatEmptyClick(seat);
@@ -125,13 +175,22 @@ function SeatEditorGrid({
               px-0.5
               text-xs font-medium
               transition
-              ${seat.student_id ? "cursor-pointer hover:bg-gray-100" : "cursor-pointer hover:bg-indigo-50"}
+              ${
+                isGroupEditMode
+                  ? "cursor-pointer hover:brightness-95"
+                  : seat.student_id
+                  ? "cursor-pointer hover:bg-gray-100"
+                  : "cursor-pointer hover:bg-indigo-50"
+              }
               ${groupStyle}
+              ${hasGroup ? "shadow-inner" : ""}
+              ${isSameGroupHovered ? "brightness-95" : ""}
               ${isHoveredStudent ? "ring-2 ring-indigo-400 z-10" : ""}
+              ${isSelectedSeat ? "ring-2 ring-orange-400 z-10" : ""}
             `}
           >
             {seat.group_name && (
-              <span className="absolute top-1 left-1 text-[8px] font-bold text-gray-500">
+              <span className="absolute top-1 left-1 text-[8px] font-bold text-white bg-black/40 px-1 rounded">
                 {seat.group_name}
               </span>
             )}
