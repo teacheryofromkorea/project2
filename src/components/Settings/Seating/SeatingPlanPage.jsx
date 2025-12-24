@@ -12,6 +12,9 @@ function SeatingPlanPage() {
   const [seatForAssign, setSeatForAssign] = useState(null);
   const [seatToClear, setSeatToClear] = useState(null);
   const [hoveredStudentId, setHoveredStudentId] = useState(null);
+  const [isGroupEditMode, setIsGroupEditMode] = useState(false);
+  const [selectedSeatIds, setSelectedSeatIds] = useState([]);
+  const [groupNameInput, setGroupNameInput] = useState("");
 
   useEffect(() => {
     if (!seatToClear) return;
@@ -47,6 +50,14 @@ function SeatingPlanPage() {
     loadSettings();
   }, []);
 
+  const toggleSeatSelect = (seatId) => {
+    setSelectedSeatIds((prev) =>
+      prev.includes(seatId)
+        ? prev.filter((id) => id !== seatId)
+        : [...prev, seatId]
+    );
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {/* (공간 확보) 상단 타이틀/설명 제거 */}
@@ -66,25 +77,108 @@ function SeatingPlanPage() {
         {/* 우측: 좌석 미니맵 */}
         <div className="flex-1 rounded-2xl border bg-white p-3 flex flex-col gap-3">
           {/* 칠판 영역 */}
-          <div className="h-10 rounded-lg bg-emerald-900 flex items-center justify-center">
+          <div className="h-10 rounded-lg bg-emerald-900 flex items-center justify-between px-4">
             <span className="text-emerald-100 text-sm font-semibold tracking-wide">
               칠판
             </span>
+
+            <label className="flex items-center gap-2 text-emerald-100 text-xs cursor-pointer">
+              <span>모둠 편집</span>
+              <input
+                type="checkbox"
+                checked={isGroupEditMode}
+                onChange={(e) => {
+                  setIsGroupEditMode(e.target.checked);
+                  setSelectedSeatIds([]);
+                }}
+                className="accent-emerald-400"
+              />
+            </label>
           </div>
 
           {/* 좌석 배치 */}
           <SeatEditorGrid
             key={refreshKey}
             hoveredStudentId={hoveredStudentId}
+            isGroupEditMode={isGroupEditMode}
+            selectedSeatIds={selectedSeatIds}
+            onToggleSeatSelect={toggleSeatSelect}
             onSeatEmptyClick={(seat) => {
-              setSeatForAssign(seat);
+              if (!isGroupEditMode) setSeatForAssign(seat);
             }}
             onSeatOccupiedClick={(seat) => {
-              setSeatToClear(seat);
+              if (!isGroupEditMode) setSeatToClear(seat);
             }}
             onSeatHover={(studentId) => setHoveredStudentId(studentId)}
             onSeatHoverOut={() => setHoveredStudentId(null)}
           />
+          {isGroupEditMode && selectedSeatIds.length > 0 && (
+            <div className="sticky bottom-0 mt-3 rounded-xl border bg-indigo-50 px-4 py-3 flex items-center gap-3">
+              <span className="text-sm font-semibold text-indigo-700">
+                선택 좌석 {selectedSeatIds.length}개
+              </span>
+
+              <input
+                type="text"
+                placeholder="모둠명 (A, 1조 등)"
+                value={groupNameInput}
+                onChange={(e) => setGroupNameInput(e.target.value)}
+                className="px-3 py-1.5 rounded-md border text-sm w-32"
+              />
+
+              <button
+                disabled={!groupNameInput}
+                onClick={async () => {
+                  const ok = window.confirm(
+                    `선택한 ${selectedSeatIds.length}개 좌석을 '${groupNameInput}' 모둠으로 지정할까요?`
+                  );
+                  if (!ok) return;
+
+                  const { error } = await supabase
+                    .from("classroom_seats")
+                    .update({ group_name: groupNameInput })
+                    .in("id", selectedSeatIds);
+
+                  if (error) {
+                    console.error(error);
+                    return;
+                  }
+
+                  setGroupNameInput("");
+                  setSelectedSeatIds([]);
+                  setRefreshKey((k) => k + 1);
+                }}
+                className="px-3 py-1.5 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
+              >
+                모둠 지정
+              </button>
+
+              <button
+                onClick={async () => {
+                  const ok = window.confirm(
+                    `선택한 ${selectedSeatIds.length}개 좌석의 모둠을 해제할까요?`
+                  );
+                  if (!ok) return;
+
+                  const { error } = await supabase
+                    .from("classroom_seats")
+                    .update({ group_name: null })
+                    .in("id", selectedSeatIds);
+
+                  if (error) {
+                    console.error(error);
+                    return;
+                  }
+
+                  setSelectedSeatIds([]);
+                  setRefreshKey((k) => k + 1);
+                }}
+                className="px-3 py-1.5 rounded-md bg-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-300 transition"
+              >
+                해제
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
