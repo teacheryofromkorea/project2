@@ -43,11 +43,15 @@ function Seat({
         aspect-square
         transition
         ${
-          student
-            ? isPresent
-              ? "bg-green-100 border-green-400"
-              : "bg-white border-gray-300 hover:bg-gray-50"
-            : "bg-gray-100 border-dashed border-gray-300 cursor-default"
+          !student
+            ? "bg-gray-100 border-dashed border-gray-300 cursor-default"
+            : !isPresent
+            ? "bg-white border-gray-300 hover:bg-gray-50"
+            : student.gender === "male"
+            ? "bg-blue-50 border-blue-300"
+            : student.gender === "female"
+            ? "bg-pink-50 border-pink-300"
+            : "bg-emerald-50 border-emerald-300"
         }
       `}
     >
