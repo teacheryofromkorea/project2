@@ -1,16 +1,30 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import SeatEditorGrid from "./SeatEditorGrid";
 import StudentListPanel from "./StudentListPanel";
+import StudentSelectModal from "./StudentSelectModal";
 import { supabase } from "../../../lib/supabaseClient";
 
 function SeatingPlanPage() {
-  const [selectedSeats, setSelectedSeats] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [totalRows, setTotalRows] = useState(0);
   const [totalCols, setTotalCols] = useState(0);
   const [loadingSettings, setLoadingSettings] = useState(true);
-  const [groupInput, setGroupInput] = useState("");
+  const [seatForAssign, setSeatForAssign] = useState(null);
+  const [seatToClear, setSeatToClear] = useState(null);
+  const [hoveredStudentId, setHoveredStudentId] = useState(null);
+
+  useEffect(() => {
+    if (!seatToClear) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setSeatToClear(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [seatToClear]);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -32,37 +46,70 @@ function SeatingPlanPage() {
 
     loadSettings();
   }, []);
+
   return (
     <div className="flex flex-col gap-6">
-      {/* 헤더 */}
-      <div>
-        <h1 className="text-2xl font-bold">🪑 자리 배치 관리</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          교실 좌석 배치와 학생 자리를 설정하는 화면입니다.
-        </p>
+      {/* (공간 확보) 상단 타이틀/설명 제거 */}
+
+      {/* 메인 레이아웃 */}
+      <div className="flex gap-6">
+        {/* 좌측: 학생 목록(미배치 학생) */}
+        <div className="w-72 shrink-0 rounded-2xl border bg-white p-4">
+          <h2 className="font-semibold mb-3">학생 목록</h2>
+          <StudentListPanel
+            hoveredStudentId={hoveredStudentId}
+            onStudentHover={(studentId) => setHoveredStudentId(studentId)}
+            onStudentHoverOut={() => setHoveredStudentId(null)}
+          />
+        </div>
+
+        {/* 우측: 좌석 미니맵 */}
+        <div className="flex-1 rounded-2xl border bg-white p-3 flex flex-col gap-3">
+          {/* 칠판 영역 */}
+          <div className="h-10 rounded-lg bg-emerald-900 flex items-center justify-center">
+            <span className="text-emerald-100 text-sm font-semibold tracking-wide">
+              칠판
+            </span>
+          </div>
+
+          {/* 좌석 배치 */}
+          <SeatEditorGrid
+            key={refreshKey}
+            hoveredStudentId={hoveredStudentId}
+            onSeatEmptyClick={(seat) => {
+              setSeatForAssign(seat);
+            }}
+            onSeatOccupiedClick={(seat) => {
+              setSeatToClear(seat);
+            }}
+            onSeatHover={(studentId) => setHoveredStudentId(studentId)}
+            onSeatHoverOut={() => setHoveredStudentId(null)}
+          />
+        </div>
       </div>
 
-      <div className="flex items-center gap-4 mt-4 p-4 rounded-xl border bg-white">
-        <div className="flex items-center gap-2">
+      {/* 행/열 설정 (아래로 내림) */}
+      <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center gap-1">
           <span className="text-sm font-medium">행</span>
           <input
             type="number"
             min={1}
             value={totalRows}
             onChange={(e) => setTotalRows(Number(e.target.value))}
-            className="w-20 px-2 py-1 rounded border text-sm"
+            className="w-16 px-2 py-1 rounded border text-sm"
             disabled={loadingSettings}
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <span className="text-sm font-medium">열</span>
           <input
             type="number"
             min={1}
             value={totalCols}
             onChange={(e) => setTotalCols(Number(e.target.value))}
-            className="w-20 px-2 py-1 rounded border text-sm"
+            className="w-16 px-2 py-1 rounded border text-sm"
             disabled={loadingSettings}
           />
         </div>
@@ -75,7 +122,6 @@ function SeatingPlanPage() {
             );
             if (!ok) return;
 
-            // 1) get settings row id
             const { data: settingsRow, error: fetchError } = await supabase
               .from("classroom_settings")
               .select("id")
@@ -87,7 +133,6 @@ function SeatingPlanPage() {
               return;
             }
 
-            // 2) update settings with WHERE clause
             const { error: updateError } = await supabase
               .from("classroom_settings")
               .update({
@@ -101,7 +146,6 @@ function SeatingPlanPage() {
               return;
             }
 
-            // 2) delete all existing seats
             const { error: deleteError } = await supabase
               .from("classroom_seats")
               .delete()
@@ -112,15 +156,10 @@ function SeatingPlanPage() {
               return;
             }
 
-            // 3) recreate seats
             const newSeats = [];
             for (let r = 1; r <= totalRows; r++) {
               for (let c = 1; c <= totalCols; c++) {
-                newSeats.push({
-                  row: r,
-                  col: c,
-                  label: `${r}-${c}`,
-                });
+                newSeats.push({ row: r, col: c, label: `${r}-${c}` });
               }
             }
 
@@ -133,197 +172,78 @@ function SeatingPlanPage() {
               return;
             }
 
-            // 4) refresh UI
-            setSelectedSeats([]);
-            setSelectedStudent(null);
             setRefreshKey((k) => k + 1);
           }}
-          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
+          className="px-3 py-1.5 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
         >
           적용
         </button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={async () => {
-            // find next position: append to the max col of the last row
-            const { data, error } = await supabase
-              .from("classroom_seats")
-              .select("row, col")
-              .order("row", { ascending: false })
-              .order("col", { ascending: false })
-              .limit(1);
-
-            if (error) {
-              console.error(error);
-              return;
-            }
-
-            const nextRow = data?.[0]?.row ?? 1;
-            const nextCol = (data?.[0]?.col ?? 0) + 1;
-
-            const { error: insertError } = await supabase
-              .from("classroom_seats")
-              .insert({
-                row: nextRow,
-                col: nextCol,
-                label: `${nextRow}-${nextCol}`,
-              });
-
-            if (insertError) {
-              console.error(insertError);
-              return;
-            }
-
+      {/* 학생 배치 모달 */}
+      {seatForAssign && (
+        <StudentSelectModal
+          seat={seatForAssign}
+          onClose={() => setSeatForAssign(null)}
+          onAssigned={() => {
+            setSeatForAssign(null);
             setRefreshKey((k) => k + 1);
           }}
-          className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
+        />
+      )}
+
+      {seatToClear && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+          onClick={() => setSeatToClear(null)}
         >
-          좌석 추가
-        </button>
-      </div>
+          <div
+            className="w-full max-w-sm rounded-xl bg-white shadow-lg p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold mb-3 text-center">
+              자리 비우기
+            </h3>
 
-      {/* 메인 레이아웃 */}
-      <div className="flex gap-6">
-        {/* 좌측: 학생 목록 영역 */}
-        <div className="w-72 shrink-0 rounded-2xl border bg-white p-4">
-          <h2 className="font-semibold mb-3">학생 목록</h2>
+            <p className="text-sm text-gray-600 text-center mb-4">
+              <span className="font-medium text-gray-800">
+                {seatToClear.students?.number}번 {seatToClear.students?.name}
+              </span>
+              <br />
+              학생의 자리를 비울까요?
+            </p>
 
-          <StudentListPanel
-            onStudentSelect={(student) => {
-              setSelectedStudent(student);
-            }}
-          />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setSeatToClear(null)}
+                className="px-3 py-1.5 rounded-md text-sm bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
+              >
+                취소
+              </button>
 
-          {selectedStudent && (
-            <div className="mt-4 text-xs text-gray-500">
-              선택된 학생: {selectedStudent.name}
+              <button
+                onClick={async () => {
+                  const { error } = await supabase
+                    .from("classroom_seats")
+                    .update({ student_id: null })
+                    .eq("id", seatToClear.id);
+
+                  if (error) {
+                    console.error(error);
+                    return;
+                  }
+
+                  setSeatToClear(null);
+                  setRefreshKey((k) => k + 1);
+                }}
+                className="px-3 py-1.5 rounded-md text-sm bg-red-500 text-white hover:bg-red-600 transition"
+              >
+                자리 비우기
+              </button>
             </div>
-          )}
+          </div>
         </div>
-
-        {/* 우측: 좌석 배치 영역 */}
-        <div className="flex-1 rounded-2xl border bg-white p-4">
-          <h2 className="font-semibold mb-3">좌석 배치</h2>
-
-          <SeatEditorGrid
-            key={refreshKey}
-            totalCols={totalCols}
-            onSeatSelect={(seats) => {
-              setSelectedSeats(seats);
-            }}
-          />
-
-          {selectedSeats.length > 0 && (
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-indigo-100 border border-indigo-300 px-4 py-2 text-sm font-semibold text-indigo-700">
-              🟦 선택됨: {selectedSeats.length}개 좌석
-            </div>
-          )}
-
-          {selectedSeats.length > 0 && (
-            <div className="mt-4 flex items-center gap-2">
-              <input
-                type="text"
-                placeholder="모둠 이름 (A, B, 1조 등)"
-                value={groupInput}
-                onChange={(e) => setGroupInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && groupInput) {
-                    e.preventDefault();
-                    document.getElementById("group-apply-btn")?.click();
-                  }
-                }}
-                className="px-3 py-2 rounded-lg border text-sm w-44"
-              />
-
-              <button
-                id="group-apply-btn"
-                disabled={!groupInput}
-                onClick={async () => {
-                  const ok = window.confirm(
-                    `선택한 ${selectedSeats.length}개 좌석을 '${groupInput}' 모둠으로 지정할까요?`
-                  );
-                  if (!ok) return;
-
-                  const ids = selectedSeats.map((s) => s.id);
-
-                  const { error } = await supabase
-                    .from("classroom_seats")
-                    .update({ group_name: groupInput })
-                    .in("id", ids);
-
-                  if (error) {
-                    console.error(error);
-                    return;
-                  }
-
-                  setGroupInput("");
-                  setSelectedSeats([]);
-                  setRefreshKey((k) => k + 1);
-                }}
-                className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
-              >
-                모둠 지정
-              </button>
-
-              <button
-                onClick={async () => {
-                  const ok = window.confirm(
-                    `선택한 ${selectedSeats.length}개 좌석의 모둠을 해제할까요?`
-                  );
-                  if (!ok) return;
-
-                  const ids = selectedSeats.map((s) => s.id);
-
-                  const { error } = await supabase
-                    .from("classroom_seats")
-                    .update({ group_name: null })
-                    .in("id", ids);
-
-                  if (error) {
-                    console.error(error);
-                    return;
-                  }
-
-                  setSelectedSeats([]);
-                  setRefreshKey((k) => k + 1);
-                }}
-                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-300 transition"
-              >
-                모둠 해제
-              </button>
-
-              <button
-                onClick={async () => {
-                  const ok = window.confirm(
-                    `⚠️ 선택한 ${selectedSeats.length}개의 좌석을 삭제합니다.\n이 작업은 되돌릴 수 없습니다.\n정말 삭제할까요?`
-                  );
-                  if (!ok) return;
-
-                  const ids = selectedSeats.map((s) => s.id);
-
-                  const { error } = await supabase
-                    .from("classroom_seats")
-                    .delete()
-                    .in("id", ids);
-
-                  if (error) {
-                    console.error(error);
-                    return;
-                  }
-
-                  setSelectedSeats([]);
-                  setRefreshKey((k) => k + 1);
-                }}
-                className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition"
-              >
-                선택 좌석 삭제
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
