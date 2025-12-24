@@ -15,6 +15,7 @@ function SeatingPlanPage() {
   const [isGroupEditMode, setIsGroupEditMode] = useState(false);
   const [selectedSeatIds, setSelectedSeatIds] = useState([]);
   const [groupNameInput, setGroupNameInput] = useState("");
+  const [studentRefreshKey, setStudentRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!seatToClear) return;
@@ -68,6 +69,7 @@ function SeatingPlanPage() {
         <div className="w-72 shrink-0 rounded-2xl border bg-white p-4">
           <h2 className="font-semibold mb-3">학생 목록</h2>
           <StudentListPanel
+            refreshKey={studentRefreshKey}
             hoveredStudentId={hoveredStudentId}
             onStudentHover={(studentId) => setHoveredStudentId(studentId)}
             onStudentHoverOut={() => setHoveredStudentId(null)}
@@ -282,6 +284,7 @@ function SeatingPlanPage() {
           onAssigned={() => {
             setSeatForAssign(null);
             setRefreshKey((k) => k + 1);
+            setStudentRefreshKey((k) => k + 1); // ⭐ 학생 목록 갱신 신호
           }}
         />
       )}
@@ -329,6 +332,7 @@ function SeatingPlanPage() {
 
                   setSeatToClear(null);
                   setRefreshKey((k) => k + 1);
+                  setStudentRefreshKey((k) => k + 1); // ⭐ 학생 목록 갱신 신호
                 }}
                 className="px-3 py-1.5 rounded-md text-sm bg-red-500 text-white hover:bg-red-600 transition"
               >
