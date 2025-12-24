@@ -6,6 +6,7 @@ function StudentListPanel({
   hoveredStudentId,
   onStudentHover,
   onStudentHoverOut,
+  refreshKey,
 }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +16,7 @@ function StudentListPanel({
 
   useEffect(() => {
     fetchStudents();
-  }, []);
+  }, [refreshKey]);
 
   const fetchStudents = async () => {
     setLoading(true);
