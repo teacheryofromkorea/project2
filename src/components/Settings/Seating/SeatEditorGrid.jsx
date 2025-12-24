@@ -49,6 +49,8 @@ function SeatEditorGrid({
   isGroupEditMode = false,
   selectedSeatIds = [],
   onToggleSeatSelect,
+  previewRows,
+  previewCols,
 }) {
   const [seats, setSeats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -110,15 +112,43 @@ function SeatEditorGrid({
   const maxRow = Math.max(...seats.map((s) => s.row));
   const maxCol = Math.max(...seats.map((s) => s.col));
 
+  const effectiveRows = previewRows ?? maxRow;
+  const effectiveCols = previewCols ?? maxCol;
+
+  // 미리보기용 좌석 생성 (늘어날 경우)
+  const seatMap = new Map(seats.map((s) => [`${s.row}-${s.col}`, s]));
+  const previewSeats = [];
+
+  for (let r = 1; r <= effectiveRows; r++) {
+    for (let c = 1; c <= effectiveCols; c++) {
+      const key = `${r}-${c}`;
+      if (seatMap.has(key)) {
+        previewSeats.push(seatMap.get(key));
+      } else {
+        previewSeats.push({
+          id: `preview-${key}`,
+          row: r,
+          col: c,
+          isPreviewAdd: true,
+        });
+      }
+    }
+  }
+
   return (
     <div
       className="grid gap-1.5 bg-indigo-50/40 p-2 rounded-xl"
       style={{
-        gridTemplateRows: `repeat(${maxRow}, minmax(0, 1fr))`,
-        gridTemplateColumns: `repeat(${maxCol}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${effectiveRows}, minmax(0, 1fr))`,
+        gridTemplateColumns: `repeat(${effectiveCols}, minmax(0, 1fr))`,
       }}
     >
-      {seats.map((seat) => {
+      {previewSeats.map((seat) => {
+        const isPreviewAdd = seat.isPreviewAdd;
+        const isPreviewRemove =
+          !isPreviewAdd &&
+          (seat.row > effectiveRows || seat.col > effectiveCols);
+
         const groupStyle = getGroupStyleClass(seat.group_name) || "border-gray-300 bg-white";
         const hasGroup = Boolean(seat.group_name);
 
@@ -148,6 +178,9 @@ function SeatEditorGrid({
           <div
             key={seat.id}
             onClick={() => {
+              if (isPreviewAdd || isPreviewRemove) {
+                return;
+              }
               // ✅ 모둠 편집 모드: 선택/해제만 (학생 배치/자리 비우기 잠금)
               if (isGroupEditMode) {
                 if (onToggleSeatSelect) {
@@ -185,6 +218,9 @@ function SeatEditorGrid({
               transition
               cursor-pointer
 
+              ${isPreviewAdd ? "border-dashed border-indigo-400 bg-indigo-50 text-gray-300" : ""}
+              ${isPreviewRemove ? "bg-gray-200 opacity-40" : ""}
+
               ${isEmptySeat
                 ? "border-dashed bg-gray-50 text-gray-400 hover:bg-indigo-50"
                 : groupStyle
@@ -207,7 +243,14 @@ function SeatEditorGrid({
               </span>
             )}
 
-            {isEmptySeat ? (
+            {isPreviewAdd ? (
+              <>
+                <div className="text-lg leading-none mb-1">＋</div>
+                <div className="text-[11px] text-gray-400">
+                  추가될 자리
+                </div>
+              </>
+            ) : isEmptySeat ? (
               <>
                 <div className="text-lg leading-none mb-1">＋</div>
                 <div className="text-[11px] text-gray-400">

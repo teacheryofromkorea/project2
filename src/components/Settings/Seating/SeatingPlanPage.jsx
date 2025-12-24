@@ -101,6 +101,8 @@ function SeatingPlanPage() {
           {/* 좌석 배치 */}
           <SeatEditorGrid
             key={refreshKey}
+            previewRows={totalRows}
+            previewCols={totalCols}
             hoveredStudentId={hoveredStudentId}
             isGroupEditMode={isGroupEditMode}
             selectedSeatIds={selectedSeatIds}
@@ -213,14 +215,23 @@ function SeatingPlanPage() {
         <button
           disabled={loadingSettings}
           onClick={async () => {
-            const ok = window.confirm(
-              "교실 구조를 변경하면 기존 좌석과 배정이 모두 초기화됩니다.\n계속할까요?"
-            );
-            if (!ok) return;
+            const newTotalRows = totalRows;
+            const newTotalCols = totalCols;
+
+            if (newTotalRows < totalRows || newTotalCols < totalCols) {
+              const ok = window.confirm(
+                `행 또는 열을 줄이면
+범위를 벗어난 좌석의 학생은
+미배치 상태가 됩니다.
+
+계속할까요?`
+              );
+              if (!ok) return;
+            }
 
             const { data: settingsRow, error: fetchError } = await supabase
               .from("classroom_settings")
-              .select("id")
+              .select("id, total_rows, total_cols")
               .limit(1)
               .single();
 
@@ -229,46 +240,58 @@ function SeatingPlanPage() {
               return;
             }
 
-            const { error: updateError } = await supabase
-              .from("classroom_settings")
-              .update({
-                total_rows: totalRows,
-                total_cols: totalCols,
-              })
-              .eq("id", settingsRow.id);
-
-            if (updateError) {
-              console.error(updateError);
-              return;
-            }
-
-            const { error: deleteError } = await supabase
+            const { data: seats, error: seatsError } = await supabase
               .from("classroom_seats")
-              .delete()
-              .neq("id", "00000000-0000-0000-0000-000000000000");
+              .select("id, row, col, student_id");
 
-            if (deleteError) {
-              console.error(deleteError);
+            if (seatsError) {
+              console.error(seatsError);
               return;
             }
 
-            const newSeats = [];
-            for (let r = 1; r <= totalRows; r++) {
-              for (let c = 1; c <= totalCols; c++) {
-                newSeats.push({ row: r, col: c, label: `${r}-${c}` });
+            const outOfRangeSeatIds = seats
+              .filter(
+                (s) => s.row > newTotalRows || s.col > newTotalCols
+              )
+              .map((s) => s.id);
+
+            await supabase
+              .from("classroom_seats")
+              .update({ student_id: null })
+              .or(`row.gt.${newTotalRows},col.gt.${newTotalCols}`);
+
+            if (outOfRangeSeatIds.length > 0) {
+              const { error: deleteError } = await supabase
+                .from("classroom_seats")
+                .delete()
+                .in("id", outOfRangeSeatIds);
+
+              if (deleteError) {
+                console.error(deleteError);
+                return;
               }
             }
 
-            const { error: insertError } = await supabase
-              .from("classroom_seats")
-              .insert(newSeats);
-
-            if (insertError) {
-              console.error(insertError);
-              return;
+            const existingKeySet = new Set(seats.map(s => `${s.row}-${s.col}`));
+            const newSeats = [];
+            for (let r = 1; r <= newTotalRows; r++) {
+              for (let c = 1; c <= newTotalCols; c++) {
+                if (!existingKeySet.has(`${r}-${c}`)) {
+                  newSeats.push({ row: r, col: c, label: `${r}-${c}` });
+                }
+              }
+            }
+            if (newSeats.length > 0) {
+              await supabase.from("classroom_seats").insert(newSeats);
             }
 
+            await supabase
+              .from("classroom_settings")
+              .update({ total_rows: newTotalRows, total_cols: newTotalCols })
+              .eq("id", settingsRow.id);
+
             setRefreshKey((k) => k + 1);
+            setStudentRefreshKey((k) => k + 1);
           }}
           className="px-3 py-1.5 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
         >
