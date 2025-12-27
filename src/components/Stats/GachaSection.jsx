@@ -4,6 +4,16 @@ import { getRandomPet } from "../../constants/pets";
 import { getDuplicateReward } from "../../constants/duplicateRewards";
 import { getActivePityRule, PITY_RULES } from "../../constants/pitySystem";
 import GachaResultModal from "./GachaResultModal";
+import GachaSlotModal from "./GachaSlotModal";
+
+// 🎯 rarity 확률 계산 (STEP 1)
+function rollRarity() {
+  const r = Math.random();
+  if (r < 0.01) return "legendary";
+  if (r < 0.08) return "epic";
+  if (r < 0.30) return "rare";
+  return "common";
+}
 
 /**
  * 🎰 GachaSection (B-2)
@@ -21,6 +31,8 @@ export default function GachaSection({
   const [isDrawing, setIsDrawing] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [lastDrawnPet, setLastDrawnPet] = useState(null);
+  const [isSlotOpen, setIsSlotOpen] = useState(false);
+  const [pendingResult, setPendingResult] = useState(null);
 
   // 🎯 선택된 학생 계산
   const selectedStudents = useMemo(() => {
@@ -95,31 +107,15 @@ export default function GachaSection({
         // 🧮 천장 규칙 확인
         const pityRule = getActivePityRule(duplicateCount);
 
-        // 1️⃣ 펫 결정 (천장 발동 시 강제 rarity)
-        let pet = getRandomPet();
-        if (pityRule) {
-          // guaranteeRarity 이상만 허용
-          const candidates = ["common", "rare", "epic"].includes(
-            pityRule.guaranteeRarity
-          )
-            ? ["epic", "rare", "common"].filter(
-                (r) =>
-                  r === pityRule.guaranteeRarity ||
-                  (pityRule.guaranteeRarity === "rare" && r === "epic")
-              )
-            : null;
+        // 1️⃣ rarity 결정
+        const rarity = rollRarity();
 
-          if (candidates) {
-            // 현재 pets 풀에서 해당 rarity 중 랜덤 선택
-            const pool = [];
-            const { PET_POOL } = await import("../../constants/pets");
-            PET_POOL.forEach((p) => {
-              if (candidates.includes(p.rarity)) pool.push(p);
-            });
-            if (pool.length > 0) {
-              pet = pool[Math.floor(Math.random() * pool.length)];
-            }
-          }
+        // 2️⃣ rarity 기반 펫 선택
+        let pet = getRandomPet({ rarity });
+
+        // fallback (안전장치)
+        if (!pet) {
+          pet = getRandomPet();
         }
 
         // 2️⃣ 중복 여부 확인 (DB 기준)
@@ -162,14 +158,13 @@ export default function GachaSection({
             .eq("id", student.id);
         }
 
-        // 3️⃣ 결과 모달
-        setLastDrawnPet({
-          ...pet,
+        // 3️⃣ 결과 모달 대신 슬롯 연출 시작
+        setPendingResult({
+          pet,
           isDuplicate: Boolean(existingPet),
           rewardLabel,
-          pityLabel,
         });
-        setIsResultOpen(true);
+        setIsSlotOpen(true);
       }
 
       // 4️⃣ students 재-fetch 요청
@@ -179,6 +174,13 @@ export default function GachaSection({
     } finally {
       setIsDrawing(false);
     }
+  };
+
+  const handleSlotFinish = () => {
+    setIsSlotOpen(false);
+    setLastDrawnPet(pendingResult);
+    setIsResultOpen(true);
+    setPendingResult(null);
   };
 
   return (
@@ -280,9 +282,16 @@ export default function GachaSection({
         </p>
       </section>
 
+      <GachaSlotModal
+        isOpen={isSlotOpen}
+        onFinish={handleSlotFinish}
+      />
+
       <GachaResultModal
         isOpen={isResultOpen}
-        pet={lastDrawnPet}
+        pet={lastDrawnPet?.pet ?? null}
+        isDuplicate={lastDrawnPet?.isDuplicate ?? false}
+        rewardLabel={lastDrawnPet?.rewardLabel ?? null}
         onClose={() => setIsResultOpen(false)}
       />
     </>
