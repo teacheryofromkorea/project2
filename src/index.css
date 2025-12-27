@@ -17,3 +17,5 @@ body {
 .animate-fade-in-out {
   animation: fade-in-out 1.8s ease forwards;
 }
+
+@import "./styles/gacha.css";
