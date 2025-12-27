@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getRandomPet } from "../../constants/pets";
+import GachaResultModal from "./GachaResultModal";
 
 /**
  * 🎰 GachaSection (B-2)
@@ -16,6 +17,8 @@ export default function GachaSection({
   onStudentsUpdated,
 }) {
   const [isDrawing, setIsDrawing] = useState(false);
+  const [isResultOpen, setIsResultOpen] = useState(false);
+  const [lastDrawnPet, setLastDrawnPet] = useState(null);
 
   // 🎯 선택된 학생 계산
   const selectedStudents = useMemo(() => {
@@ -56,6 +59,9 @@ export default function GachaSection({
         // 1️⃣ 랜덤 펫 선택
         const pet = getRandomPet();
 
+        setLastDrawnPet(pet);
+        setIsResultOpen(true);
+
         // 2️⃣ 펫 지급 (student_pets insert)
         await supabase.from("student_pets").insert({
           student_id: student.id,
@@ -81,54 +87,62 @@ export default function GachaSection({
   };
 
   return (
-    <section className="rounded-xl border bg-white p-5 space-y-4">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">🎰 가챠</h2>
-        <span className="text-sm text-gray-500">
-          {studentLabel}
-        </span>
-      </div>
+    <>
+      <section className="rounded-xl border bg-white p-5 space-y-4">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold">🎰 가챠</h2>
+          <span className="text-sm text-gray-500">
+            {studentLabel}
+          </span>
+        </div>
 
-      {/* 요약 카드 */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-lg border p-4 bg-gray-50">
-          <div className="text-sm text-gray-500 mb-1">
-            보유 가챠 티켓
+        {/* 요약 카드 */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-lg border p-4 bg-gray-50">
+            <div className="text-sm text-gray-500 mb-1">
+              보유 가챠 티켓
+            </div>
+            <div className="text-2xl font-bold">
+              {totalTickets}
+            </div>
           </div>
-          <div className="text-2xl font-bold">
-            {totalTickets}
+
+          <div className="rounded-lg border p-4 bg-gray-50">
+            <div className="text-sm text-gray-500 mb-1">
+              상태
+            </div>
+            <div className="text-sm font-medium text-gray-600">
+              {isDrawing ? "뽑는 중..." : "대기중"}
+            </div>
           </div>
         </div>
 
-        <div className="rounded-lg border p-4 bg-gray-50">
-          <div className="text-sm text-gray-500 mb-1">
-            상태
-          </div>
-          <div className="text-sm font-medium text-gray-600">
-            {isDrawing ? "뽑는 중..." : "대기중"}
-          </div>
+        {/* 액션 영역 */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleDraw}
+            disabled={!canDraw}
+            className={`px-4 py-2 rounded ${
+              canDraw
+                ? "bg-purple-600 text-white hover:bg-purple-700"
+                : "bg-gray-300 text-gray-600 cursor-not-allowed"
+            }`}
+          >
+            {isDrawing ? "뽑는 중..." : "가챠 뽑기"}
+          </button>
         </div>
-      </div>
 
-      {/* 액션 영역 */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleDraw}
-          disabled={!canDraw}
-          className={`px-4 py-2 rounded ${
-            canDraw
-              ? "bg-purple-600 text-white hover:bg-purple-700"
-              : "bg-gray-300 text-gray-600 cursor-not-allowed"
-          }`}
-        >
-          {isDrawing ? "뽑는 중..." : "가챠 뽑기"}
-        </button>
-      </div>
+        <p className="text-xs text-gray-400">
+          ※ 현재 단계에서는 티켓 차감만 처리됩니다.
+        </p>
+      </section>
 
-      <p className="text-xs text-gray-400">
-        ※ 현재 단계에서는 티켓 차감만 처리됩니다.
-      </p>
-    </section>
+      <GachaResultModal
+        isOpen={isResultOpen}
+        pet={lastDrawnPet}
+        onClose={() => setIsResultOpen(false)}
+      />
+    </>
   );
 }
