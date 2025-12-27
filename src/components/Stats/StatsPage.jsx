@@ -16,7 +16,7 @@ function StatsPage() {
     // 1️⃣ 학생 기본 정보 fetch
     const { data: studentsData, error: studentsError } = await supabase
       .from("students")
-      .select("id, name, number, gacha_tickets")
+      .select("id, name, number, gacha_tickets, duplicate_count")
       .order("number", { ascending: true });
 
     if (studentsError || !studentsData) {

@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getRandomPet } from "../../constants/pets";
+import { getDuplicateReward } from "../../constants/duplicateRewards";
+import { getActivePityRule, PITY_RULES } from "../../constants/pitySystem";
 import GachaResultModal from "./GachaResultModal";
 
 /**
@@ -42,6 +44,37 @@ export default function GachaSection({
     0
   );
 
+  // 🧮 천장(중복 누적) 진행 상태 계산
+  const pityStatus = useMemo(() => {
+    if (selectedStudents.length !== 1) return null;
+
+    const student = selectedStudents[0];
+    const duplicateCount = student.duplicate_count ?? 0;
+
+    // 가장 높은 threshold 기준 (예: Epic)
+    const finalRule = [...PITY_RULES].sort(
+      (a, b) => b.threshold - a.threshold
+    )[0];
+
+    const remaining = Math.max(
+      finalRule.threshold - duplicateCount,
+      0
+    );
+
+    return {
+      current: duplicateCount,
+      target: finalRule.threshold,
+      remaining,
+      isReady: remaining === 0,
+    };
+  }, [selectedStudents]);
+
+  // ⚠️ 천장 임박 여부 (다음 뽑기에서 발동)
+  const isPityWarning =
+    pityStatus &&
+    pityStatus.remaining === 1 &&
+    !pityStatus.isReady;
+
   const canDraw =
     !isDrawing &&
     selectedStudents.length > 0 &&
@@ -56,25 +89,87 @@ export default function GachaSection({
       for (const student of selectedStudents) {
         if ((student.gacha_tickets ?? 0) <= 0) continue;
 
-        // 1️⃣ 랜덤 펫 선택
-        const pet = getRandomPet();
+        // 🎯 현재 중복 누적 카운트
+        const duplicateCount = student.duplicate_count ?? 0;
 
-        setLastDrawnPet(pet);
-        setIsResultOpen(true);
+        // 🧮 천장 규칙 확인
+        const pityRule = getActivePityRule(duplicateCount);
 
-        // 2️⃣ 펫 지급 (student_pets insert)
-        await supabase.from("student_pets").insert({
-          student_id: student.id,
-          pet_id: pet.id,
+        // 1️⃣ 펫 결정 (천장 발동 시 강제 rarity)
+        let pet = getRandomPet();
+        if (pityRule) {
+          // guaranteeRarity 이상만 허용
+          const candidates = ["common", "rare", "epic"].includes(
+            pityRule.guaranteeRarity
+          )
+            ? ["epic", "rare", "common"].filter(
+                (r) =>
+                  r === pityRule.guaranteeRarity ||
+                  (pityRule.guaranteeRarity === "rare" && r === "epic")
+              )
+            : null;
+
+          if (candidates) {
+            // 현재 pets 풀에서 해당 rarity 중 랜덤 선택
+            const pool = [];
+            const { PET_POOL } = await import("../../constants/pets");
+            PET_POOL.forEach((p) => {
+              if (candidates.includes(p.rarity)) pool.push(p);
+            });
+            if (pool.length > 0) {
+              pet = pool[Math.floor(Math.random() * pool.length)];
+            }
+          }
+        }
+
+        // 2️⃣ 중복 여부 확인 (DB 기준)
+        const { data: existingPet } = await supabase
+          .from("student_pets")
+          .select("id")
+          .eq("student_id", student.id)
+          .eq("pet_id", pet.id)
+          .maybeSingle();
+
+        let rewardLabel = null;
+        let pityLabel = pityRule?.label ?? null;
+
+        if (existingPet) {
+          // ♻️ 중복 → 보상 + 중복 카운트 증가
+          const reward = getDuplicateReward(pet.rarity);
+          rewardLabel = reward.label;
+
+          await supabase
+            .from("students")
+            .update({
+              gacha_tickets:
+                (student.gacha_tickets ?? 0) + reward.tickets - 1,
+              duplicate_count: duplicateCount + 1,
+            })
+            .eq("id", student.id);
+        } else {
+          // 🎉 신규 펫 → 지급 + 티켓 차감 + 중복 카운트 리셋
+          await supabase.from("student_pets").insert({
+            student_id: student.id,
+            pet_id: pet.id,
+          });
+
+          await supabase
+            .from("students")
+            .update({
+              gacha_tickets: student.gacha_tickets - 1,
+              duplicate_count: 0,
+            })
+            .eq("id", student.id);
+        }
+
+        // 3️⃣ 결과 모달
+        setLastDrawnPet({
+          ...pet,
+          isDuplicate: Boolean(existingPet),
+          rewardLabel,
+          pityLabel,
         });
-
-        // 3️⃣ 가챠 티켓 차감
-        await supabase
-          .from("students")
-          .update({
-            gacha_tickets: student.gacha_tickets - 1,
-          })
-          .eq("id", student.id);
+        setIsResultOpen(true);
       }
 
       // 4️⃣ students 재-fetch 요청
@@ -118,19 +213,66 @@ export default function GachaSection({
           </div>
         </div>
 
+        {/* 🔥 천장 진행 상태 */}
+        {pityStatus && (
+          <div className="rounded-lg border bg-gradient-to-r from-purple-50 to-pink-50 p-3 space-y-2">
+            <div className="text-xs font-semibold text-purple-700">
+              🔥 천장 보너스 진행 중
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-2 w-full rounded bg-purple-200 overflow-hidden">
+              <div
+                className="h-full bg-purple-600 transition-all"
+                style={{
+                  width: `${Math.min(
+                    (pityStatus.current / pityStatus.target) * 100,
+                    100
+                  )}%`,
+                }}
+              />
+            </div>
+
+            <div className="flex justify-between text-xs text-purple-700">
+              <span>
+                {pityStatus.current} / {pityStatus.target}
+              </span>
+              <span>
+                {pityStatus.isReady
+                  ? "✨ 다음 뽑기 Epic 확정!"
+                  : `Epic 확정까지 ${pityStatus.remaining}회`}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* 액션 영역 */}
-        <div className="flex justify-end">
+        <div className="flex justify-end flex-col items-end space-y-1">
           <button
             onClick={handleDraw}
             disabled={!canDraw}
-            className={`px-4 py-2 rounded ${
+            className={`px-4 py-2 rounded transition relative ${
               canDraw
-                ? "bg-purple-600 text-white hover:bg-purple-700"
+                ? isPityWarning
+                  ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white animate-pulse shadow-lg"
+                  : "bg-purple-600 text-white hover:bg-purple-700"
                 : "bg-gray-300 text-gray-600 cursor-not-allowed"
             }`}
           >
             {isDrawing ? "뽑는 중..." : "가챠 뽑기"}
+
+            {isPityWarning && !isDrawing && (
+              <span className="absolute -top-2 -right-2 rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-black animate-bounce">
+                🔥 천장 임박
+              </span>
+            )}
           </button>
+
+          {isPityWarning && (
+            <p className="text-xs text-purple-600 font-semibold animate-pulse">
+              ⚠️ 이번 가챠에서 Epic 확정이 발동될 수 있어요!
+            </p>
+          )}
         </div>
 
         <p className="text-xs text-gray-400">
