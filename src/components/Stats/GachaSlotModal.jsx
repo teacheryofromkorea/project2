@@ -24,11 +24,11 @@ export default function GachaSlotModal({
   onClose,
   disabled = false,
   onResult,
+  resultPet,
+  rarity,
 }) {
   const [phase, setPhase] = useState("idle"); // "idle" | "spinning" | "pause" | "result"
   const [impact, setImpact] = useState(false);
-  const [rarity, setRarity] = useState("common"); 
-  // "common" | "rare" | "epic" | "legendary"
 
   useEffect(() => {
     if (!isOpen) {
@@ -48,25 +48,14 @@ export default function GachaSlotModal({
 
     // 2️⃣ 완전 정적 구간
     setTimeout(() => {
-      const roll = Math.random();
-
-      let nextRarity;
-      if (roll > 0.95) nextRarity = "legendary";
-      else if (roll > 0.75) nextRarity = "epic";
-      else if (roll > 0.45) nextRarity = "rare";
-      else nextRarity = "common";
-
-      setRarity(nextRarity);
-
-      const pauseTime = PAUSE_BY_RARITY[nextRarity];
-
+      const pauseTime = PAUSE_BY_RARITY[rarity];
       setTimeout(() => {
         setImpact(true);
         setPhase("result");
         setTimeout(() => setImpact(false), BASE_TIMING.IMPACT);
 
         setTimeout(() => {
-          onResult?.(nextRarity);
+          onResult?.(resultPet);
         }, BASE_TIMING.RESULT_DELAY);
       }, pauseTime);
     }, BASE_TIMING.SPIN);
@@ -234,8 +223,12 @@ export default function GachaSlotModal({
                       }
                     `}
                   >
-                    <div className="text-5xl mb-2">🦄</div>
-                    <div className="text-lg">EPIC</div>
+                    <div className="text-5xl mb-2">
+                      {resultPet?.emoji || "❓"}
+                    </div>
+                    <div className="text-sm font-semibold uppercase tracking-wide">
+                      {resultPet?.rarity?.toUpperCase() || ""}
+                    </div>
                   </div>
                 </div>
               )}

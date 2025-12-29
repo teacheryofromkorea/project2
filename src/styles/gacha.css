@@ -955,3 +955,270 @@
     opacity: 0.8;
   }
 }
+
+/* 완성된 슬롯머신 스타일 */
+.reel-slot {
+  position: relative;
+  overflow: hidden;
+  perspective: 1000px;
+}
+
+.reel-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.reel-spinning .reel-background {
+  opacity: 1;
+}
+
+.reel-strips {
+  position: absolute;
+  top: -200%;
+  left: 0;
+  width: 100%;
+  height: 400%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  animation: reel-roll 1.5s ease-out;
+}
+
+.reel-strip-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  font-weight: bold;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.reel-final-number {
+  position: relative;
+  z-index: 10;
+  transition: all 0.3s ease;
+  opacity: 1;
+}
+
+.reel-spinning .reel-final-number {
+  opacity: 0;
+  transform: rotateX(90deg);
+}
+
+.animate-reel-reveal {
+  animation: reel-reveal 0.6s ease-out 1.2s both;
+}
+
+.reel-sparkles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.reel-sparkle {
+  position: absolute;
+  font-size: 8px;
+  animation: reel-sparkle-burst 1.5s ease-out;
+  opacity: 0;
+}
+
+.reel-sparkle:nth-child(1) {
+  top: 20%;
+  left: 20%;
+  animation-delay: 0.2s;
+}
+
+.reel-sparkle:nth-child(2) {
+  top: 20%;
+  right: 20%;
+  animation-delay: 0.4s;
+}
+
+.reel-sparkle:nth-child(3) {
+  bottom: 20%;
+  left: 20%;
+  animation-delay: 0.6s;
+}
+
+.reel-sparkle:nth-child(4) {
+  bottom: 20%;
+  right: 20%;
+  animation-delay: 0.8s;
+}
+
+/* 슬롯머신 릴 애니메이션 키프레임 */
+@keyframes reel-roll {
+  0% {
+    transform: translateY(0) rotateX(0deg);
+  }
+  30% {
+    transform: translateY(-50%) rotateX(180deg);
+  }
+  60% {
+    transform: translateY(-80%) rotateX(360deg);
+  }
+  100% {
+    transform: translateY(-100%) rotateX(540deg);
+  }
+}
+
+@keyframes reel-reveal {
+  0% {
+    opacity: 0;
+    transform: rotateX(90deg) scale(0.8);
+  }
+  50% {
+    opacity: 0.8;
+    transform: rotateX(45deg) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: rotateX(0deg) scale(1);
+  }
+}
+
+@keyframes reel-sparkle-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.2) rotate(90deg);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1) rotate(270deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5) rotate(360deg);
+  }
+}
+
+/* 슬롯머신 전체 효과 */
+.slot-machine-container {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 8px;
+  border: 2px solid #cbd5e0;
+}
+
+.slot-number {
+  position: relative;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #374151;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.slot-number.new-entry {
+  animation: slot-roll-up 0.6s ease-out;
+}
+
+.slot-number.updating {
+  animation: slot-update 0.8s ease-out;
+}
+
+.slot-number:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes slot-roll-up {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+    background: linear-gradient(45deg, #ffd700, #ffed4e);
+  }
+  30% {
+    transform: translateY(-10%);
+    opacity: 0.8;
+    background: linear-gradient(45deg, #ffd700, #ffed4e);
+  }
+  60% {
+    transform: translateY(5%);
+    opacity: 0.9;
+    background: linear-gradient(45deg, #ffd700, #ffed4e);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+    background: white;
+  }
+}
+
+@keyframes slot-update {
+  0% {
+    transform: scale(1);
+    background: white;
+  }
+  20% {
+    transform: scale(1.1) rotateY(5deg);
+    background: linear-gradient(45deg, #10b981, #34d399);
+    color: white;
+  }
+  40% {
+    transform: scale(1.05) rotateY(-2deg);
+    background: linear-gradient(45deg, #10b981, #34d399);
+    color: white;
+  }
+  60% {
+    transform: scale(1.02) rotateY(1deg);
+    background: linear-gradient(45deg, #34d399, #6ee7b7);
+    color: white;
+  }
+  100% {
+    transform: scale(1);
+    background: white;
+    color: #374151;
+  }
+}
+
+.completion-rate-bar {
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  transition: width 0.8s ease-out;
+  animation: progress-shine 2s ease-in-out infinite;
+}
+
+@keyframes progress-shine {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+  }
+}
+
+.pressure-indicator {
+  animation: pressure-pulse 2s ease-in-out infinite;
+}
+
+@keyframes pressure-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}

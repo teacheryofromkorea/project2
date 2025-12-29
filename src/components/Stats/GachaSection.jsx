@@ -27,6 +27,7 @@ export default function GachaSection({
   selectedStudentIds,
   isMultiSelectMode,
   onStudentsUpdated,
+  onPetAcquired,
 }) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
@@ -107,15 +108,19 @@ export default function GachaSection({
         // 🧮 천장 규칙 확인
         const pityRule = getActivePityRule(duplicateCount);
 
-        // 1️⃣ rarity 결정
-        const rarity = rollRarity();
+        // 1️⃣ rarity 결정 (천장 규칙 우선)
+        let rarity = rollRarity();
+        if (pityRule?.forceRarity) {
+          rarity = pityRule.forceRarity;
+        }
 
         // 2️⃣ rarity 기반 펫 선택
         let pet = getRandomPet({ rarity });
 
         // fallback (안전장치)
         if (!pet) {
-          pet = getRandomPet();
+          console.warn("[Gacha] Fallback random pet used");
+          pet = getRandomPet({});
         }
 
         // 2️⃣ 중복 여부 확인 (DB 기준)
@@ -160,16 +165,11 @@ export default function GachaSection({
 
         // 3️⃣ 결과 모달 대신 슬롯 연출 시작
         setPendingResult({
-          pet,
+          pet,                 // ✅ pet 객체 그대로 전달
           isDuplicate: Boolean(existingPet),
           rewardLabel,
         });
         setIsSlotOpen(true);
-      }
-
-      // 4️⃣ students 재-fetch 요청
-      if (onStudentsUpdated) {
-        await onStudentsUpdated();
       }
     } finally {
       setIsDrawing(false);
@@ -181,6 +181,25 @@ export default function GachaSection({
     setLastDrawnPet(pendingResult);
     setIsResultOpen(true);
     setPendingResult(null);
+  };
+
+  const handleResultClose = async () => {
+    setIsResultOpen(false);
+
+    // ✅ STEP 1: 결과 확인 후 모달을 닫는 순간, "신규" 펫이면 컬렉션 상태를 즉시 갱신
+    if (
+      lastDrawnPet?.pet &&
+      !lastDrawnPet?.isDuplicate &&
+      onPetAcquired &&
+      selectedStudents.length === 1
+    ) {
+      onPetAcquired(selectedStudents[0].id, lastDrawnPet.pet.id);
+    }
+
+    // ✅ Supabase 쪽 학생 티켓/천장 카운트 등을 최신으로 다시 받아오기
+    if (onStudentsUpdated) {
+      await onStudentsUpdated();
+    }
   };
 
   return (
@@ -278,13 +297,14 @@ export default function GachaSection({
         </div>
 
         <p className="text-xs text-gray-400">
-          ※ 현재 단계에서는 티켓 차감만 처리됩니다.
+          ※ 결과 모달을 닫으면 신규 펫은 즉시 컬렉션에 반영됩니다.
         </p>
       </section>
 
       <GachaSlotModal
         isOpen={isSlotOpen}
         onFinish={handleSlotFinish}
+        resultPet={pendingResult?.pet}
       />
 
       <GachaResultModal
@@ -292,7 +312,7 @@ export default function GachaSection({
         pet={lastDrawnPet?.pet ?? null}
         isDuplicate={lastDrawnPet?.isDuplicate ?? false}
         rewardLabel={lastDrawnPet?.rewardLabel ?? null}
-        onClose={() => setIsResultOpen(false)}
+        onClose={handleResultClose}
       />
     </>
   );
