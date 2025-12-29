@@ -23,7 +23,7 @@ function StatCardsGrid({
   };
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {statTemplates.map((stat) => {
         const statValue = getAverageValue(stat.id);
 
@@ -35,7 +35,7 @@ function StatCardsGrid({
         return (
           <div
             key={stat.id}
-            className="bg-white rounded-xl shadow p-4"
+            className="relative rounded-2xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-md border border-white/10 p-5 text-white"
           >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xl">{stat.icon}</span>
@@ -55,7 +55,7 @@ function StatCardsGrid({
               />
             </div>
 
-            <div className="flex justify-center gap-4 mt-4">
+            <div className="absolute top-4 right-4 flex gap-2">
               <button
                 onClick={() =>
                   onDecrease(

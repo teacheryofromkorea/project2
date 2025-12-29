@@ -167,8 +167,8 @@ await supabase.from("student_stats").upsert(
 
   if (loading) {
     return (
-      <section className="p-6 bg-white rounded-lg border">
-        <h2 className="text-lg font-semibold mb-4">{title}</h2>
+      <section className="bg-transparent">
+        <h2 className="text-lg font-semibold mb-6 text-white">{title}</h2>
         <div className="text-sm text-gray-500">
           능력치 불러오는 중…
         </div>
@@ -177,8 +177,8 @@ await supabase.from("student_stats").upsert(
   }
 
   return (
-    <section className="p-6 bg-white rounded-lg border">
-      <h2 className="text-lg font-semibold mb-4">{title}</h2>
+    <section className="bg-transparent">
+      <h2 className="text-lg font-semibold mb-6 text-white">{title}</h2>
 
       <StatCardsGrid
         statTemplates={statTemplates}

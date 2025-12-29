@@ -13,7 +13,7 @@ export const petsData = [
   { id: "pet_10", name: "유니콘", emoji: "🦄", rarity: "epic", setId: "magic" },
   { id: "pet_11", name: "우주인", emoji: "👨‍🚀", rarity: "rare", setId: "space" },
   { id: "pet_12", name: "외계인", emoji: "👽", rarity: "epic", setId: "space" },
-  { id: "pet_13", name: "전설의 용", emoji: "🐉", rarity: "legend", setId: "legend" },
+{ id: "pet_13", name: "전설의 용", emoji: "🐉", rarity: "legendary", setId: "legend" },
 ];
 
 export const petSets = [

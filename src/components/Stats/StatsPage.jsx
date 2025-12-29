@@ -45,9 +45,12 @@ function StatsPage() {
     });
 
     // 4️⃣ students + pets 병합
+    // → student.pets 는 항상 string[] (pet_id 배열)
     const mergedStudents = studentsData.map((student) => ({
       ...student,
-      pets: petsByStudent[student.id] ?? [],
+      pets: Array.isArray(petsByStudent[student.id])
+        ? petsByStudent[student.id]
+        : [],
     }));
 
     setStudents(mergedStudents);
@@ -62,6 +65,27 @@ function StatsPage() {
     }
 
     setLoading(false);
+
+    // 개발 중 디버그용
+    // console.log(
+    //   "[StatsPage] mergedStudents pets:",
+    //   mergedStudents.map((s) => ({ id: s.id, pets: s.pets }))
+    // );
+  };
+
+  const handlePetAcquired = (studentId, petId) => {
+    setStudents((prev) =>
+      prev.map((student) =>
+        student.id === studentId
+          ? {
+              ...student,
+              pets: student.pets.includes(petId)
+                ? student.pets
+                : [...student.pets, petId],
+            }
+          : student
+      )
+    );
   };
 
   useEffect(() => {
@@ -77,13 +101,19 @@ function StatsPage() {
   };
 
   const toggleMultiSelectMode = () => {
-    setIsMultiSelectMode((prev) => !prev);
+    const nextIsMulti = !isMultiSelectMode;
+
+    setIsMultiSelectMode(nextIsMulti);
     setSelectedStudentIds([]);
-    if (isMultiSelectMode) {
-      setSelectedStudentId(students.length > 0 ? students[0].id : null);
-    } else {
+
+    // ✅ multi-select로 들어가면 단일 선택 해제
+    if (nextIsMulti) {
       setSelectedStudentId(null);
+      return;
     }
+
+    // ✅ multi-select에서 나올 때는 첫 학생을 기본 선택(있으면)
+    setSelectedStudentId(students.length > 0 ? students[0].id : null);
   };
 
   return (
@@ -106,6 +136,7 @@ function StatsPage() {
         isMultiSelectMode={isMultiSelectMode}
         loading={loading}
         onStudentsUpdated={fetchStudents}
+        onPetAcquired={handlePetAcquired}
       />
     </div>
   );

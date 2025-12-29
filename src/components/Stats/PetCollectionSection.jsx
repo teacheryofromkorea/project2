@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { petsData } from "../../constants/pets";
+import PetDetailModal from "./PetDetailModal";
 
 /**
  * 🐾 PetCollectionSection (Collection Mode)
@@ -11,32 +12,100 @@ export default function PetCollectionSection({
   set,
   ownedPetIds = [],
 }) {
+  const [selectedPet, setSelectedPet] = useState(null);
+  const [justUnlockedPetId, setJustUnlockedPetId] = useState(null);
+  const prevOwnedRef = useRef(new Set(ownedPetIds));
+  const cardRefs = useRef({});
+
+  useEffect(() => {
+    if (!selectedPet) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setSelectedPet(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedPet]);
+
+  const setPets = useMemo(() => {
+    return petsData.filter((pet) => pet.setId === set.id);
+  }, [set.id]);
+
+  useEffect(() => {
+    const prev = prevOwnedRef.current;
+    const next = new Set(ownedPetIds);
+
+    // Find newly added petIds
+    const added = [];
+    for (const id of next) {
+      if (!prev.has(id)) added.push(id);
+    }
+
+    // Save current as previous for next run
+    prevOwnedRef.current = next;
+
+    if (added.length === 0) return;
+
+    // Highlight the newest acquisition that belongs to this set
+    const addedInThisSet = added
+      .map((id) => setPets.find((p) => p.id === id))
+      .filter(Boolean);
+
+    if (addedInThisSet.length === 0) return;
+
+    const newest = addedInThisSet[addedInThisSet.length - 1];
+    setJustUnlockedPetId(newest.id);
+
+    // Scroll the unlocked card into view for instant feedback
+    const el = cardRefs.current[newest.id];
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    }
+
+    const t = window.setTimeout(() => {
+      setJustUnlockedPetId(null);
+    }, 2200);
+
+    return () => window.clearTimeout(t);
+  }, [ownedPetIds, setPets]);
+
   if (!set || !set.id) {
     return null;
   }
-  const setPets = petsData.filter(
-    (pet) => pet.setId === set.id
-  );
 
   return (
-    <section className="rounded-xl bg-[#3a2468] p-5 space-y-4">
+    <section className="rounded-2xl bg-gradient-to-br from-[#2b1650] to-[#1b0f33] p-6 space-y-5 shadow-xl">
       {/* 세트 헤더 */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-white">
+        <h2 className="text-lg font-bold text-white tracking-tight">
           {set.theme} {set.name}
         </h2>
         <span className="text-xs text-white/60">
-          {ownedPetIds.filter((id) =>
-            setPets.some((p) => p.id === id)
-          ).length}
+          {
+            ownedPetIds.filter((id) =>
+              setPets.some((p) => p.id === id)
+            ).length
+          }
           /{setPets.length}
         </span>
       </div>
 
       {/* 슬롯 그리드 */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {setPets.map((pet) => {
           const owned = ownedPetIds.includes(pet.id);
+          const isJustUnlocked = pet.id === justUnlockedPetId;
+
+          const rarityGlow = {
+            common: "shadow-white/10",
+            rare: "shadow-blue-400/30",
+            epic: "shadow-purple-400/40",
+            legendary: "shadow-yellow-300/50",
+          }[pet.rarity];
+
           const starCount = {
             common: 1,
             rare: 2,
@@ -47,20 +116,63 @@ export default function PetCollectionSection({
           return (
             <div
               key={pet.id}
-              className={`rounded-lg border p-4 text-center transition
-                ${
-                  owned
-                    ? "bg-white shadow-md"
-                    : "bg-[#2a164d] border-white/10 text-white/40"
-                }`}
+              ref={(el) => {
+                if (!el) return;
+                cardRefs.current[pet.id] = el;
+              }}
+              className={`relative rounded-xl border p-4 text-center ${
+                owned ? "cursor-pointer" : "cursor-not-allowed"
+              }
+transition-all duration-300 ease-out
+${
+  owned
+    ? `bg-white text-gray-900 shadow-lg ${rarityGlow}
+       hover:-translate-y-2 hover:scale-[1.04]
+       hover:shadow-2xl`
+    : "bg-[#24123f] border-white/10 text-white/40"
+}
+${owned && pet.rarity === "legendary" ? "animate-pulse" : ""}
+${isJustUnlocked ? "ring-4 ring-emerald-300/70 shadow-[0_0_45px_rgba(16,185,129,0.55)] scale-[1.06]" : ""}
+group`}
+              onClick={() => {
+                if (owned) setSelectedPet(pet);
+              }}
             >
+              {isJustUnlocked && (
+                <div className="absolute -top-2 -right-2 z-20 rounded-full bg-emerald-400 px-2 py-1 text-[10px] font-extrabold tracking-wide text-black shadow-lg">
+                  NEW
+                </div>
+              )}
+              {owned && pet.rarity !== "common" && (
+                <div className={`absolute inset-0 rounded-xl ring-2 ring-offset-2 ring-offset-transparent
+    ${
+      pet.rarity === "rare"
+        ? "ring-blue-400/40"
+        : pet.rarity === "epic"
+        ? "ring-purple-400/50"
+        : "ring-yellow-300/60"
+    }`} />
+              )}
+
+              {/* 잠금 오버레이 */}
+              {!owned && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 backdrop-blur-sm text-xl">
+                  🔒
+                </div>
+              )}
+
               {/* 아이콘 */}
-              <div className="text-2xl mb-2" aria-label={owned ? pet.name : "Locked pet"}>
-                {owned ? pet.emoji : "🔒"}
+              <div
+                className={`text-4xl mb-2 transition-all duration-300
+${owned ? "group-hover:scale-125 group-hover:rotate-6" : "scale-90"}
+`}
+                aria-label={owned ? pet.name : "Locked pet"}
+              >
+                {owned ? pet.emoji : "❔"}
               </div>
 
               {/* 이름 */}
-              <div className="text-sm font-medium mb-1">
+              <div className="text-sm font-semibold mb-1 transition-opacity duration-300 group-hover:opacity-90">
                 {owned ? pet.name : "???"}
               </div>
 
@@ -74,6 +186,11 @@ export default function PetCollectionSection({
           );
         })}
       </div>
+      <PetDetailModal
+        pet={selectedPet}
+        isOpen={!!selectedPet}
+        onClose={() => setSelectedPet(null)}
+      />
     </section>
   );
 }
