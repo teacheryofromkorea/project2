@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import StatCardsGrid from "./StatCardsGrid";
 import ReasonModal from "./ReasonModal";
+// 🎟️ 가챠 쿠폰 지급 기준: 능력치 5 누적당 1장
+const STAT_PER_GACHA = 5;
 
 function CoreStatsSection({
   students = [],
@@ -136,11 +138,18 @@ await supabase.from("student_stats").upsert(
         delta,
         reason,
       });
-      // 🎟️ 능력치 증가 시 가챠 티켓 지급
+      // 🎟️ 능력치 5 누적당 가챠 쿠폰 지급
       if (delta === 1) {
-        await supabase.rpc("increment_gacha_ticket", {
-          target_student_id: studentId,
-        });
+        const beforeTickets = Math.floor(currentValue / STAT_PER_GACHA);
+        const afterTickets = Math.floor(nextValue / STAT_PER_GACHA);
+        const ticketToGive = afterTickets - beforeTickets;
+
+        // 누적 기준을 넘긴 경우에만 지급
+        for (let i = 0; i < ticketToGive; i++) {
+          await supabase.rpc("increment_gacha_ticket", {
+            target_student_id: studentId,
+          });
+        }
       }
     }
 
