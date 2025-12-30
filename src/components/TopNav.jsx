@@ -5,6 +5,7 @@ import LockButton from "./LockButton";
 
 function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
   const location = useLocation();
+  const isStatsPage = location.pathname.startsWith("/stats");
   const { locked } = useLock();
 
   const tabs = useMemo(
@@ -26,7 +27,13 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
   const isActive = (path) => location.pathname.startsWith(path);
 
   return (
-    <header className="bg-white/60 backdrop-blur border-b border-white/50">
+    <header
+      className={
+        isStatsPage
+          ? "bg-slate-900/80 border-b border-white/10"
+          : "bg-white/60 backdrop-blur border-b border-white/50"
+      }
+    >
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
 
         <nav className="flex gap-2">
@@ -42,7 +49,11 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
                 locked
                   ? "text-gray-400 cursor-not-allowed"
                   : isActive(tab.path)
-                  ? "bg-pink-500 text-white shadow"
+                  ? isStatsPage
+                    ? "bg-purple-600 text-white shadow"
+                    : "bg-pink-500 text-white shadow"
+                  : isStatsPage
+                  ? "text-gray-300 hover:bg-white/10"
                   : "text-gray-600 hover:bg-white"
               }`}
             >
@@ -57,7 +68,9 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
 
           {/* 자동 탭 전환 스위치 */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-600">자동 전환</span>
+            <span className={isStatsPage ? "text-xs text-gray-300" : "text-xs text-gray-600"}>
+              자동 전환
+            </span>
             <button
               onClick={onToggleAutoSwitch}
               className={`relative w-10 h-5 rounded-full transition ${
@@ -72,10 +85,18 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
             </button>
           </div>
 
-          <span className="inline-flex items-center rounded-full bg-purple-600 text-white px-3 py-1 text-xs font-semibold">
+          <span
+            className={
+              isStatsPage
+                ? "inline-flex items-center rounded-full bg-purple-700/80 text-white px-3 py-1 text-xs font-semibold"
+                : "inline-flex items-center rounded-full bg-purple-600 text-white px-3 py-1 text-xs font-semibold"
+            }
+          >
             필수 세팅 가이드
           </span>
-          <div className="text-gray-700 text-xs">11:39</div>
+          <div className={isStatsPage ? "text-gray-300 text-xs" : "text-gray-700 text-xs"}>
+            11:39
+          </div>
         </div>
 
       </div>

@@ -10,6 +10,7 @@ function CoreStatsSection({
   selectedStudentId,
   selectedStudentIds = [],
   isMultiSelectMode = false,
+  onStudentsUpdated,
 }) {
   const [statTemplates, setStatTemplates] = useState([]);
   const [studentStatsMap, setStudentStatsMap] = useState({});
@@ -29,6 +30,11 @@ function CoreStatsSection({
 
   const selectedStudent = students.find(
     (s) => s.id === selectedStudentId
+  );
+
+  // 학생별 gacha_progress 빠른 참조용
+  const studentsMap = Object.fromEntries(
+    students.map((s) => [s.id, s])
   );
 
   const title = isMultiSelectMode
@@ -138,17 +144,47 @@ await supabase.from("student_stats").upsert(
         delta,
         reason,
       });
-      // 🎟️ 능력치 5 누적당 가챠 쿠폰 지급
+      // ⚠️ gacha_progress는 능력치를 '올린 기록'만 누적하는 내부 보상 카운터
+      // 능력치를 내릴 때는 절대 감소하지 않는다
       if (delta === 1) {
-        const beforeTickets = Math.floor(currentValue / STAT_PER_GACHA);
-        const afterTickets = Math.floor(nextValue / STAT_PER_GACHA);
-        const ticketToGive = afterTickets - beforeTickets;
+        // ✅ props(students) 값은 최신이 아닐 수 있으므로, DB에서 현재 gacha_progress를 직접 읽어서 증가
+        const { data: progressRow, error: progressReadError } = await supabase
+          .from("students")
+          .select("gacha_progress")
+          .eq("id", studentId)
+          .single();
 
-        // 누적 기준을 넘긴 경우에만 지급
-        for (let i = 0; i < ticketToGive; i++) {
-          await supabase.rpc("increment_gacha_ticket", {
-            target_student_id: studentId,
-          });
+        if (progressReadError) {
+          console.error("[gacha_progress] read failed", progressReadError);
+        } else {
+          const beforeProgress = progressRow?.gacha_progress ?? 0;
+          const afterProgress = beforeProgress + 1;
+
+          const { error: progressUpdateError } = await supabase
+            .from("students")
+            .update({ gacha_progress: afterProgress })
+            .eq("id", studentId);
+
+          if (progressUpdateError) {
+            console.error("[gacha_progress] update failed", progressUpdateError);
+          } else {
+            // 🎟️ 기준(5점)을 넘긴 경우에만 티켓 지급
+            const beforeTickets = Math.floor(beforeProgress / STAT_PER_GACHA);
+            const afterTickets = Math.floor(afterProgress / STAT_PER_GACHA);
+            const ticketToGive = afterTickets - beforeTickets;
+
+            for (let i = 0; i < ticketToGive; i++) {
+              const { error: ticketError } = await supabase.rpc(
+                "increment_gacha_ticket",
+                {
+                  target_student_id: studentId,
+                }
+              );
+              if (ticketError) {
+                console.error("[gacha_ticket] increment failed", ticketError);
+              }
+            }
+          }
         }
       }
     }
@@ -170,6 +206,11 @@ await supabase.from("student_stats").upsert(
       ...prev,
       ...map,
     }));
+
+    // 🔄 부모(StatsPage)에서 students / gacha 관련 상태 다시 fetch
+    if (typeof onStudentsUpdated === "function") {
+      await onStudentsUpdated();
+    }
 
     setReasonModalOpen(false);
   };
