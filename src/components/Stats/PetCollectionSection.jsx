@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { petsData } from "../../constants/pets";
 import PetDetailModal from "./PetDetailModal";
 
@@ -11,11 +11,9 @@ import PetDetailModal from "./PetDetailModal";
 export default function PetCollectionSection({
   set,
   ownedPetIds = [],
+  lastDrawnPetId = null,
 }) {
   const [selectedPet, setSelectedPet] = useState(null);
-  const [justUnlockedPetId, setJustUnlockedPetId] = useState(null);
-  const prevOwnedRef = useRef(new Set(ownedPetIds));
-  const cardRefs = useRef({});
 
   useEffect(() => {
     if (!selectedPet) return;
@@ -33,44 +31,6 @@ export default function PetCollectionSection({
   const setPets = useMemo(() => {
     return petsData.filter((pet) => pet.setId === set.id);
   }, [set.id]);
-
-  useEffect(() => {
-    const prev = prevOwnedRef.current;
-    const next = new Set(ownedPetIds);
-
-    // Find newly added petIds
-    const added = [];
-    for (const id of next) {
-      if (!prev.has(id)) added.push(id);
-    }
-
-    // Save current as previous for next run
-    prevOwnedRef.current = next;
-
-    if (added.length === 0) return;
-
-    // Highlight the newest acquisition that belongs to this set
-    const addedInThisSet = added
-      .map((id) => setPets.find((p) => p.id === id))
-      .filter(Boolean);
-
-    if (addedInThisSet.length === 0) return;
-
-    const newest = addedInThisSet[addedInThisSet.length - 1];
-    setJustUnlockedPetId(newest.id);
-
-    // Scroll the unlocked card into view for instant feedback
-    const el = cardRefs.current[newest.id];
-    if (el && typeof el.scrollIntoView === "function") {
-      el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-    }
-
-    const t = window.setTimeout(() => {
-      setJustUnlockedPetId(null);
-    }, 2200);
-
-    return () => window.clearTimeout(t);
-  }, [ownedPetIds, setPets]);
 
   if (!set || !set.id) {
     return null;
@@ -97,7 +57,7 @@ export default function PetCollectionSection({
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {setPets.map((pet) => {
           const owned = ownedPetIds.includes(pet.id);
-          const isJustUnlocked = pet.id === justUnlockedPetId;
+          const isNewlyDrawn = owned && pet.id === lastDrawnPetId;
 
           const rarityGlow = {
             common: "shadow-white/10",
@@ -116,10 +76,6 @@ export default function PetCollectionSection({
           return (
             <div
               key={pet.id}
-              ref={(el) => {
-                if (!el) return;
-                cardRefs.current[pet.id] = el;
-              }}
               className={`relative rounded-xl border p-4 text-center ${
                 owned ? "cursor-pointer" : "cursor-not-allowed"
               }
@@ -131,18 +87,22 @@ ${
        hover:shadow-2xl`
     : "bg-[#24123f] border-white/10 text-white/40"
 }
-${owned && pet.rarity === "legendary" ? "animate-pulse" : ""}
-${isJustUnlocked ? "ring-4 ring-emerald-300/70 shadow-[0_0_45px_rgba(16,185,129,0.55)] scale-[1.06]" : ""}
+${
+  isNewlyDrawn
+    ? "ring-4 ring-emerald-300/70 shadow-[0_0_45px_rgba(16,185,129,0.55)] scale-[1.06]"
+    : ""
+}
 group`}
               onClick={() => {
                 if (owned) setSelectedPet(pet);
               }}
             >
-              {isJustUnlocked && (
+              {isNewlyDrawn && (
                 <div className="absolute -top-2 -right-2 z-20 rounded-full bg-emerald-400 px-2 py-1 text-[10px] font-extrabold tracking-wide text-black shadow-lg">
                   NEW
                 </div>
               )}
+
               {owned && pet.rarity !== "common" && (
                 <div className={`absolute inset-0 rounded-xl ring-2 ring-offset-2 ring-offset-transparent
     ${

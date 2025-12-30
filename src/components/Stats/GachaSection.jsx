@@ -42,6 +42,7 @@ export default function GachaSection({
   isMultiSelectMode,
   onStudentsUpdated,
   onPetAcquired,
+  onLastDrawnPetChange,
 }) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
@@ -74,10 +75,23 @@ export default function GachaSection({
     0
   );
 
+  const totalGachaProgress = selectedStudents.reduce(
+    (sum, s) => sum + (s.gacha_progress ?? 0),
+    0
+  );
+
+  // gacha_progress는 5점 단위로 티켓 지급 → 나머지로 진행 상태 표시
+  const progressInCycle = totalGachaProgress % 5;
+
+  // 다음 가챠까지 '항상' 남은 점수 기준
+  // (보상 직후에도 다시 5점이 필요하도록 UX 보정)
+  const remainingToNext = progressInCycle === 0 ? 5 : 5 - progressInCycle;
+
+  const progressRatio = progressInCycle / 5;
+
   const exchangeCosts = Object.values(FRAGMENT_EXCHANGE_COST);
   const nextTarget =
     exchangeCosts.find((c) => c > totalFragments) ?? exchangeCosts[exchangeCosts.length - 1];
-  const progressRatio = Math.min(totalFragments / nextTarget, 1);
 
   const canDraw = !isDrawing && selectedStudents.length > 0 && totalTickets > 0;
 
@@ -188,12 +202,23 @@ export default function GachaSection({
       }
     } finally {
       setIsDrawing(false);
+
+      // 🔄 가챠 처리 후 학생 상태 즉시 동기화
+      if (onStudentsUpdated) {
+        await onStudentsUpdated();
+      }
     }
   };
 
   const handleSlotFinish = () => {
     setIsSlotOpen(false);
     setLastDrawnPet(pendingResult);
+
+    // 🎯 마지막으로 뽑은 펫 id를 외부로 전달 (컬렉션 강조용)
+    if (pendingResult?.pet?.id && onLastDrawnPetChange) {
+      onLastDrawnPetChange(pendingResult.pet.id);
+    }
+
     setIsResultOpen(true);
     setPendingResult(null);
   };
@@ -210,6 +235,7 @@ export default function GachaSection({
       onPetAcquired(selectedStudents[0].id, lastDrawnPet.pet.id);
     }
 
+    // 🎯 슬롯 연출 종료 후 최종 상태 동기화 (중복 호출이지만 안전)
     if (onStudentsUpdated) {
       await onStudentsUpdated();
     }
@@ -217,19 +243,36 @@ export default function GachaSection({
 
   return (
     <>
-<section className="rounded-3xl bg-slate-900/60 backdrop-blur-md border border-white/10 p-6 space-y-6 text-white shadow-2xl">
-  {/* 1단: 상태 요약 */}
-  <div className="rounded-2xl bg-black/40 border border-white/5 p-5 flex justify-between items-center shadow-inner">
-    <div>
+<section className="rounded-3xl bg-slate-900/60 border-white/10 p-6 space-y-6 text-white shadow-2xl">
+  {/* 1단: 상태 요약 (3단 카드) */}
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    {/* 좌: 보유 가챠 티켓 */}
+    <div className="rounded-2xl bg-black/40 border border-white/5 p-5 shadow-inner">
       <div className="text-sm text-white/70 mb-1">보유 가챠 티켓</div>
-      <div className="text-2xl font-bold text-white">
-        {totalTickets}
+      <div className="text-3xl font-extrabold text-white">{totalTickets}<span className="text-base font-medium ml-1">장</span></div>
+    </div>
+
+    {/* 중: 다음 가챠까지 남은 능력치 */}
+    <div className="rounded-2xl bg-black/40 border border-white/5 p-5 shadow-inner flex flex-col justify-between">
+      <div className="text-sm text-white/70">다음 가챠 티켓까지</div>
+      <div className="text-2xl font-bold text-yellow-300">
+        {remainingToNext}점
+      </div>
+      <div className="h-2 mt-3 rounded-full bg-white/10 overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-purple-400 to-pink-400"
+          style={{ width: `${progressRatio * 100}%` }}
+        />
       </div>
     </div>
-    <div className="text-sm font-medium text-white/80 flex items-center gap-2">
-      <div className={`w-2 h-2 rounded-full ${isDrawing ? "bg-purple-500 animate-pulse" : "bg-emerald-500"}`} />
-      {isDrawing ? "뽑는 중..." : "대기중"}
+
+    {/* 우: 보유 조각 */}
+    <div className="rounded-2xl bg-black/40 border border-white/5 p-5 shadow-inner">
+      <div className="text-sm text-white/70 mb-1">보유 조각</div>
+      <div className="text-3xl font-extrabold text-white">{totalFragments}<span className="text-base font-medium ml-1">개</span></div>
     </div>
+
   </div>
 
 {/* 2단: 가챠 머신 (그라데이션 유지, 선명도 극대화) */}

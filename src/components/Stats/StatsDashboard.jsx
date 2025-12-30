@@ -10,6 +10,7 @@ function StatsDashboard({
   selectedStudentIds = [],
   isMultiSelectMode = false,
   loading = false,
+  onStudentsUpdated,
 }) {
   if (loading) {
     return (
@@ -20,6 +21,7 @@ function StatsDashboard({
   }
 
   const [ownedPetIds, setOwnedPetIds] = useState([]);
+  const [lastDrawnPetId, setLastDrawnPetId] = useState(null);
 
   const selectedStudent = students.find(
     (s) => s.id === selectedStudentId
@@ -54,6 +56,7 @@ function StatsDashboard({
             selectedStudentId={selectedStudentId}
             selectedStudentIds={selectedStudentIds}
             isMultiSelectMode={isMultiSelectMode}
+            onStudentsUpdated={onStudentsUpdated}
           />
         </div>
 
@@ -64,12 +67,14 @@ function StatsDashboard({
             selectedStudentId={selectedStudentId}
             selectedStudentIds={selectedStudentIds}
             isMultiSelectMode={isMultiSelectMode}
-            onGachaResult={(pet) => {
+            onPetAcquired={(studentId, petId) => {
               setOwnedPetIds((prev) => {
-                if (prev.includes(pet.id)) return prev;
-                return [...prev, pet.id];
+                if (prev.includes(petId)) return prev;
+                return [...prev, petId];
               });
             }}
+            onLastDrawnPetChange={setLastDrawnPetId}
+            onStudentsUpdated={onStudentsUpdated}
           />
         </div>
 
@@ -83,6 +88,7 @@ function StatsDashboard({
               <PetCollectionSection
                 set={set}
                 ownedPetIds={ownedPetIds}
+                lastDrawnPetId={lastDrawnPetId}
               />
             </div>
           ))}

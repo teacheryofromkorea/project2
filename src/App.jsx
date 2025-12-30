@@ -45,6 +45,7 @@ function AttendanceLayout() {
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isStatsPage = location.pathname.startsWith("/stats");
   const autoNavigatedRef = useRef(false);
   const prevPathRef = useRef(location.pathname);
   const userNavigatingRef = useRef(false);
@@ -126,7 +127,14 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-pink-200 via-purple-200 to-orange-200 text-gray-900">
+    <div
+      className={
+        `min-h-screen flex flex-col text-gray-900 ` +
+        (isStatsPage
+          ? "bg-gradient-to-br from-[#2b145f] via-[#3b1d7a] to-[#5b2fa6]"
+          : "bg-gradient-to-br from-pink-200 via-purple-200 to-orange-200")
+      }
+    >
       <Toaster position="top-center" />
       <TopNav
         autoSwitchEnabled={autoSwitchEnabled}
