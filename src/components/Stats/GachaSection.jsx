@@ -142,13 +142,17 @@ export default function GachaSection({
   };
 
   const handleDraw = async () => {
-    if (!canDraw) return;
+    if (!canDraw) {
+      return;
+    }
 
     setIsDrawing(true);
 
     try {
       for (const student of selectedStudents) {
-        if ((student.gacha_tickets ?? 0) <= 0) continue;
+        if ((student.gacha_tickets ?? 0) <= 0) {
+          continue;
+        }
 
         const duplicateCount = student.duplicate_count ?? 0;
         const pityRule = getActivePityRule(duplicateCount);
@@ -203,10 +207,8 @@ export default function GachaSection({
     } finally {
       setIsDrawing(false);
 
-      // 🔄 가챠 처리 후 학생 상태 즉시 동기화
-      if (onStudentsUpdated) {
-        await onStudentsUpdated();
-      }
+      // ❗ 학생 데이터 동기화는 슬롯/결과 모달이 닫힌 뒤에 수행해야
+      // GachaSection 리마운트로 인해 모달이 사라지는 문제를 방지할 수 있음
     }
   };
 
@@ -214,9 +216,19 @@ export default function GachaSection({
     setIsSlotOpen(false);
     setLastDrawnPet(pendingResult);
 
-    // 🎯 마지막으로 뽑은 펫 id를 외부로 전달 (컬렉션 강조용)
+    // 🎯 마지막으로 뽑은 펫 id 즉시 전달 (NEW 배지 / glow)
     if (pendingResult?.pet?.id && onLastDrawnPetChange) {
       onLastDrawnPetChange(pendingResult.pet.id);
+    }
+
+    // ⚡ NEW 배지 즉시 반영을 위한 낙관적 업데이트
+    if (
+      pendingResult?.pet &&
+      !pendingResult.isDuplicate &&
+      onPetAcquired &&
+      selectedStudents.length === 1
+    ) {
+      onPetAcquired(selectedStudents[0].id, pendingResult.pet.id);
     }
 
     setIsResultOpen(true);
@@ -226,14 +238,7 @@ export default function GachaSection({
   const handleResultClose = async () => {
     setIsResultOpen(false);
 
-    if (
-      lastDrawnPet?.pet &&
-      !lastDrawnPet?.isDuplicate &&
-      onPetAcquired &&
-      selectedStudents.length === 1
-    ) {
-      onPetAcquired(selectedStudents[0].id, lastDrawnPet.pet.id);
-    }
+    // ⛔ 이미 슬롯 종료 시 낙관적 업데이트 완료됨
 
     // 🎯 슬롯 연출 종료 후 최종 상태 동기화 (중복 호출이지만 안전)
     if (onStudentsUpdated) {
@@ -293,6 +298,7 @@ export default function GachaSection({
 
   <div className="relative z-10">
     <button
+      type="button" // ⛔ form submit 방지
       onClick={handleDraw}
       disabled={!canDraw}
       // 버튼 그림자를 날카로운 shadow-xl로 변경, 모서리는 rounded-lg로 변경
@@ -383,6 +389,7 @@ export default function GachaSection({
             <div key={rarity} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 border border-white/5">
               <span>{rarity} ({cost}조각)</span>
               <button
+                type="button" // ⛔ form submit 방지
                 disabled={!canExchange}
                 onClick={() => handleExchange(rarity)}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
@@ -403,11 +410,13 @@ export default function GachaSection({
 
 
 
-      <GachaSlotModal
-        isOpen={isSlotOpen}
-        onFinish={handleSlotFinish}
-        resultPet={pendingResult?.pet}
-      />
+<GachaSlotModal
+  isOpen={isSlotOpen}
+  onClose={() => setIsSlotOpen(false)}
+  onResult={handleSlotFinish}
+  resultPet={pendingResult?.pet}
+  rarity={pendingResult?.pet?.rarity}
+/>
 
       <GachaResultModal
         isOpen={isResultOpen}

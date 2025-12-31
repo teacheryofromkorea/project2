@@ -12,14 +12,6 @@ function StatsDashboard({
   loading = false,
   onStudentsUpdated,
 }) {
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
-        통계 불러오는 중…
-      </div>
-    );
-  }
-
   const [ownedPetIds, setOwnedPetIds] = useState([]);
   const [lastDrawnPetId, setLastDrawnPetId] = useState(null);
 
@@ -28,8 +20,20 @@ function StatsDashboard({
   );
 
   useEffect(() => {
-    setOwnedPetIds(selectedStudent?.pets || []);
-  }, [selectedStudentId, selectedStudent]);
+    if (!selectedStudent) {
+      setOwnedPetIds([]);
+      return;
+    }
+    setOwnedPetIds(selectedStudent.pets || []);
+  }, [selectedStudentId, selectedStudent?.pets]);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-gray-500">
+        통계 불러오는 중…
+      </div>
+    );
+  }
 
   const headerTitle = isMultiSelectMode
     ? `선택된 학생 ${selectedStudentIds.length}명`
@@ -67,14 +71,12 @@ function StatsDashboard({
             selectedStudentId={selectedStudentId}
             selectedStudentIds={selectedStudentIds}
             isMultiSelectMode={isMultiSelectMode}
+            onStudentsUpdated={onStudentsUpdated}
             onPetAcquired={(studentId, petId) => {
-              setOwnedPetIds((prev) => {
-                if (prev.includes(petId)) return prev;
-                return [...prev, petId];
-              });
+              if (studentId !== selectedStudentId) return;
+              setOwnedPetIds((prev) => (prev.includes(petId) ? prev : [...prev, petId]));
             }}
             onLastDrawnPetChange={setLastDrawnPetId}
-            onStudentsUpdated={onStudentsUpdated}
           />
         </div>
 
