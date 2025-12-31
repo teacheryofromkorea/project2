@@ -39,6 +39,7 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
         <nav className="flex gap-2">
           {tabs.map((tab) => (
             <button
+              type="button" // ⛔ submit 방지
               key={tab.path}
               onClick={() => {
                 if (locked) return;
@@ -72,6 +73,7 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
               자동 전환
             </span>
             <button
+              type="button" // ⛔ submit 방지
               onClick={onToggleAutoSwitch}
               className={`relative w-10 h-5 rounded-full transition ${
                 autoSwitchEnabled ? "bg-green-500" : "bg-gray-300"

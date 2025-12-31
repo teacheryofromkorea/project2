@@ -44,16 +44,12 @@ export default function GachaSlotModal({
     // 1️⃣ 회전 + 흔들림
     setTimeout(() => {
       setPhase("pause");
-    }, BASE_TIMING.SPIN);
-
-    // 2️⃣ 완전 정적 구간
-    setTimeout(() => {
+      // 2️⃣ 완전 정적 구간
       const pauseTime = PAUSE_BY_RARITY[rarity];
       setTimeout(() => {
         setImpact(true);
         setPhase("result");
         setTimeout(() => setImpact(false), BASE_TIMING.IMPACT);
-
         setTimeout(() => {
           onResult?.(resultPet);
         }, BASE_TIMING.RESULT_DELAY);

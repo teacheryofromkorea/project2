@@ -28,6 +28,7 @@ export default function StudentSelectPanel({
         <h2 className="font-semibold text-lg text-white">학생 선택</h2>
 
         <button
+          type="button" // ⛔ submit 방지
           onClick={onToggleMultiSelectMode}
           className={`text-sm px-3 py-1 rounded-full border transition ${
             isMultiSelectMode
@@ -44,6 +45,11 @@ export default function StudentSelectPanel({
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault(); // ⛔ form submit 방지
+            }
+          }}
           placeholder="이름 또는 번호 검색"
           className="w-full px-3 py-2 rounded-md text-sm bg-white/10 text-white placeholder-white/40 focus:outline-none focus:ring focus:ring-purple-500/40"
         />
