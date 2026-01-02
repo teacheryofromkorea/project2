@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import StudentTaskModal from "./StudentTaskModal";
 import SeatGrid from "./SeatGrid";
 import AttendanceConfirmModal from "./AttendanceConfirmModal";
@@ -90,8 +91,11 @@ function AttendanceBoard() {
       .select("*")
       .order("name", { ascending: true });
 
-    if (error) console.error(error);
-    else setStudents(data);
+    if (error) {
+      handleSupabaseError(error, "학생 목록을 불러오지 못했어요.");
+    } else {
+      setStudents(data);
+    }
   };
 
   const fetchSeats = async () => {
@@ -114,7 +118,7 @@ function AttendanceBoard() {
       .order("col", { ascending: true });
 
     if (error) {
-      console.error(error);
+      handleSupabaseError(error, "좌석 정보를 불러오지 못했어요.");
     } else {
       setSeats(data || []);
     }
@@ -182,7 +186,7 @@ const markPresent = async (id) => {
       { onConflict: "student_id,date" }
     );
 
-  if (error) console.error(error);
+  handleSupabaseError(error, "출석 저장에 실패했어요.");
   await fetchAttendance();
   await fetchStatus();
 };

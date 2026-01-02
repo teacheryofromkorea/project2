@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { handleSupabaseError } from "../../utils/handleSupabaseError";
 
 /**
  * useLunchRoutine
@@ -37,9 +38,11 @@ export default function useLunchRoutine() {
       .select("*")
       .order("order_index", { ascending: true });
 
-    if (!error) {
-      setRoutineItems(data || []);
+    if (error) {
+      handleSupabaseError(error, "점심시간 루틴 목록을 불러오지 못했어요.");
+      return;
     }
+    setRoutineItems(data || []);
   }, []);
 
   /* ===============================
@@ -52,7 +55,11 @@ export default function useLunchRoutine() {
       .order("created_at", { ascending: true })
       .limit(1);
 
-    if (error || !data || data.length === 0) return;
+    if (error) {
+      handleSupabaseError(error, "점심시간 루틴 제목을 불러오지 못했어요.");
+      return;
+    }
+    if (!data || data.length === 0) return;
 
     setRoutineTitle(data[0].title);
     setTempTitle(data[0].title);
@@ -65,10 +72,11 @@ export default function useLunchRoutine() {
   const addRoutineItem = useCallback(async () => {
     if (!newContent.trim()) return;
 
-    await supabase.from("lunch_routine_items").insert({
+    const { error } = await supabase.from("lunch_routine_items").insert({
       text: newContent,
       order_index: routineItems.length,
     });
+    handleSupabaseError(error, "점심시간 루틴 추가에 실패했어요.");
 
     setNewContent("");
     fetchRoutineItems();
@@ -79,7 +87,8 @@ export default function useLunchRoutine() {
      =============================== */
   const deleteRoutineItem = useCallback(
     async (id) => {
-      await supabase.from("lunch_routine_items").delete().eq("id", id);
+      const { error } = await supabase.from("lunch_routine_items").delete().eq("id", id);
+      handleSupabaseError(error, "점심시간 루틴 삭제에 실패했어요.");
       fetchRoutineItems();
     },
     [fetchRoutineItems]
@@ -103,15 +112,17 @@ export default function useLunchRoutine() {
       const target =
         direction === "up" ? list[index - 1] : list[index + 1];
 
-      await supabase
+      const { error: error1 } = await supabase
         .from("lunch_routine_items")
         .update({ order_index: target.order_index })
         .eq("id", current.id);
+      handleSupabaseError(error1, "점심시간 루틴 순서 변경에 실패했어요.");
 
-      await supabase
+      const { error: error2 } = await supabase
         .from("lunch_routine_items")
         .update({ order_index: current.order_index })
         .eq("id", target.id);
+      handleSupabaseError(error2, "점심시간 루틴 순서 변경에 실패했어요.");
 
       fetchRoutineItems();
     },
@@ -124,10 +135,11 @@ export default function useLunchRoutine() {
   const updateRoutine = useCallback(async () => {
     if (!editRoutine || !editText.trim()) return;
 
-    await supabase
+    const { error } = await supabase
       .from("lunch_routine_items")
       .update({ text: editText })
       .eq("id", editRoutine.id);
+    handleSupabaseError(error, "점심시간 루틴 수정에 실패했어요.");
 
     setEditRoutine(null);
     setEditText("");
@@ -146,10 +158,13 @@ export default function useLunchRoutine() {
       .update({ title: tempTitle })
       .eq("id", titleId);
 
-    if (!error) {
-      setRoutineTitle(tempTitle);
-      fetchRoutineTitle();
+    if (error) {
+      handleSupabaseError(error, "점심시간 루틴 제목 저장에 실패했어요.");
+      return;
     }
+
+    setRoutineTitle(tempTitle);
+    fetchRoutineTitle();
   }, [tempTitle, titleId, fetchRoutineTitle]);
 
   return {
