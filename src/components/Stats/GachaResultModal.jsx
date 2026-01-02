@@ -123,7 +123,7 @@ export default function GachaResultModal({
               ♻️ 중복 보상
             </div>
             <div className="mt-1 text-xs font-medium text-amber-600">
-              {rewardLabel}
+              이미 보유한 펫이에요! {rewardLabel}을 획득했어요.
             </div>
           </div>
         )}

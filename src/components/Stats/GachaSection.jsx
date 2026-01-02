@@ -1,10 +1,16 @@
+const FRAGMENTS_BY_RARITY = {
+  common: 1,
+  rare: 3,
+  epic: 6,
+  legendary: 10,
+};
 import React, { useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getRandomPet } from "../../constants/pets";
-import { getDuplicateReward } from "../../constants/duplicateRewards";
 import { getActivePityRule } from "../../constants/pitySystem";
 import GachaResultModal from "./GachaResultModal";
 import GachaSlotModal from "./GachaSlotModal";
+import PetShopModal from "./PetShopModal";
 
 // ♻️ 중복 교환 시 조각 환급 비율 (50%)
 const DUPLICATE_EXCHANGE_REFUND_RATE = 0.5;
@@ -50,6 +56,11 @@ export default function GachaSection({
   const [isSlotOpen, setIsSlotOpen] = useState(false);
   const [pendingResult, setPendingResult] = useState(null);
 
+  // 🛍️ 펫 상점 상태
+  const [isShopOpen, setIsShopOpen] = useState(false);
+  const [shopRarity, setShopRarity] = useState("common"); // internal "common"
+  const [shopCost, setShopCost] = useState(0);
+
   // 🎯 선택된 학생 계산
   const selectedStudents = useMemo(() => {
     if (isMultiSelectMode) {
@@ -89,56 +100,73 @@ export default function GachaSection({
 
   const progressRatio = progressInCycle / 5;
 
-  const exchangeCosts = Object.values(FRAGMENT_EXCHANGE_COST);
-  const nextTarget =
-    exchangeCosts.find((c) => c > totalFragments) ?? exchangeCosts[exchangeCosts.length - 1];
+  // 🧩 다음 목표 계산 (UI용)
+  const exchangeEntries = Object.entries(FRAGMENT_EXCHANGE_COST);
+  const nextTargetEntry = exchangeEntries.find(([_, cost]) => cost > totalFragments);
+  const [nextTargetLabel, nextTargetCost] = nextTargetEntry || [null, 0];
+  const gapToNextTarget = nextTargetLabel ? nextTargetCost - totalFragments : 0;
 
   const canDraw = !isDrawing && selectedStudents.length > 0 && totalTickets > 0;
 
-  // 🧩 조각 교환
-  const handleExchange = async (rarityLabel) => {
+  // 🧩 조각 교환 (상점 열기)
+  const handleOpenShop = (rarityLabel) => {
     if (selectedStudents.length !== 1) return;
 
-    const student = selectedStudents[0];
     const cost = FRAGMENT_EXCHANGE_COST[rarityLabel];
     const internalRarity = RARITY_MAP[rarityLabel];
 
-    if ((student.fragments ?? 0) < cost) return;
+    setShopRarity(internalRarity);
+    setShopCost(cost);
+    setIsShopOpen(true);
+  };
 
-    const pet = getRandomPet({ rarity: internalRarity });
-    if (!pet) return;
+  // 🛍️ 상점에서 펫 구매 (확정)
+  const handleBuyPet = async (pet) => {
+    if (selectedStudents.length !== 1) return;
+    const student = selectedStudents[0];
 
-    const { data: existingPet } = await supabase
-      .from("student_pets")
-      .select("id")
-      .eq("student_id", student.id)
-      .eq("pet_id", pet.id)
-      .maybeSingle();
-
-    let nextFragments = (student.fragments ?? 0) - cost;
-
-    if (existingPet) {
-      const refund = Math.floor(cost * DUPLICATE_EXCHANGE_REFUND_RATE);
-      nextFragments += refund;
-    } else {
-      await supabase.from("student_pets").insert({
-        student_id: student.id,
-        pet_id: pet.id,
-      });
-
-      if (onPetAcquired) {
-        onPetAcquired(student.id, pet.id);
-      }
+    // 비용 재확인
+    if ((student.fragments ?? 0) < shopCost) {
+      alert("조각이 부족합니다.");
+      return;
     }
 
-    await supabase
+    // 1. 펫 지급
+    const { error: petError } = await supabase.from("student_pets").insert({
+      student_id: student.id,
+      pet_id: pet.id,
+    });
+
+    if (petError) {
+      console.error(petError);
+      alert("구매에 실패했습니다.");
+      return;
+    }
+
+    // 2. 조각 차감
+    const nextFragments = (student.fragments ?? 0) - shopCost;
+    const { error: updateError } = await supabase
       .from("students")
       .update({ fragments: nextFragments })
       .eq("id", student.id);
 
+    if (updateError) {
+      console.error(updateError);
+      return;
+    }
+
+    // 3. UI 갱신 (낙관적 업데이트 or 리페치)
+    // 펫 보유 처리를 위해 상위 상태 갱신은 필수
+    if (onPetAcquired) {
+      onPetAcquired(student.id, pet.id);
+    }
     if (onStudentsUpdated) {
       await onStudentsUpdated();
     }
+
+    // 4. 알림 (선택적)
+    // alert(`${pet.name} 입양 완료!`); 
+    // -> UX상 그냥 모달 유지하고 버튼이 "보유중"으로 바뀌는게 자연스러움
   };
 
   const handleDraw = async () => {
@@ -175,14 +203,14 @@ export default function GachaSection({
         let rewardLabel = null;
 
         if (existingPet) {
-          const reward = getDuplicateReward(pet.rarity);
-          rewardLabel = reward.label;
+          const fragmentReward = FRAGMENTS_BY_RARITY[pet.rarity] ?? 1;
+          rewardLabel = `조각 +${fragmentReward}`;
 
           await supabase
             .from("students")
             .update({
-              gacha_tickets:
-                (student.gacha_tickets ?? 0) + reward.tickets - 1,
+              fragments: (student.fragments ?? 0) + fragmentReward,
+              gacha_tickets: student.gacha_tickets - 1,
               duplicate_count: duplicateCount + 1,
             })
             .eq("id", student.id);
@@ -248,175 +276,206 @@ export default function GachaSection({
 
   return (
     <>
-<section className="rounded-3xl bg-slate-900/60 border-white/10 p-6 space-y-6 text-white shadow-2xl">
-  {/* 1단: 상태 요약 (3단 카드) */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="rounded-3xl bg-slate-900/60 border-white/10 p-6 space-y-6 text-white shadow-2xl">
+        {/* 1단: 상태 요약 (3단 카드) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-    {/* 좌: 보유 가챠 티켓 */}
-    <div className="rounded-2xl bg-black/40 border border-white/5 p-5 shadow-inner">
-      <div className="text-sm text-white/70 mb-1">보유 가챠 티켓</div>
-      <div className="text-3xl font-extrabold text-white">{totalTickets}<span className="text-base font-medium ml-1">장</span></div>
-    </div>
+          {/* 좌: 보유 가챠 티켓 */}
+          <div className="rounded-2xl bg-black/40 border border-white/5 p-5 shadow-inner">
+            <div className="text-sm text-white/70 mb-1">보유 가챠 티켓</div>
+            <div className="text-3xl font-extrabold text-white">{totalTickets}<span className="text-base font-medium ml-1">장</span></div>
+          </div>
 
-    {/* 중: 다음 가챠까지 남은 능력치 */}
-    <div className="rounded-2xl bg-black/40 border border-white/5 p-5 shadow-inner flex flex-col justify-between">
-      <div className="text-sm text-white/70">다음 가챠 티켓까지</div>
-      <div className="text-2xl font-bold text-yellow-300">
-        {remainingToNext}점
-      </div>
-      <div className="h-2 mt-3 rounded-full bg-white/10 overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-purple-400 to-pink-400"
-          style={{ width: `${progressRatio * 100}%` }}
-        />
-      </div>
-    </div>
-
-    {/* 우: 보유 조각 */}
-    <div className="rounded-2xl bg-black/40 border border-white/5 p-5 shadow-inner">
-      <div className="text-sm text-white/70 mb-1">보유 조각</div>
-      <div className="text-3xl font-extrabold text-white">{totalFragments}<span className="text-base font-medium ml-1">개</span></div>
-    </div>
-
-  </div>
-
-{/* 2단: 가챠 머신 (그라데이션 유지, 선명도 극대화) */}
-<div className="rounded-3xl bg-gradient-to-br from-purple-800 to-pink-700 p-12 text-center space-y-6 relative overflow-hidden shadow-2xl">
-  
-  {/* 배경의 미세한 하이라이트 효과 제거 (선명도 위해 제거) */}
-  
-  <div className="relative z-10 space-y-3">
-    {/* 제목 텍스트 그림자(drop-shadow-lg) 제거 */}
-    <h3 className="text-2xl font-black text-yellow-400">
-      ✨ 신비로운 가챠머신 ✨
-    </h3>
-    {/* 부제목 텍스트 투명도 제거 */}
-    <p className="text-base font-semibold text-white">
-      능력치 10점마다 쿠폰 1장 지급
-    </p>
-  </div>
-
-  <div className="relative z-10">
-    <button
-      type="button" // ⛔ form submit 방지
-      onClick={handleDraw}
-      disabled={!canDraw}
-      // 버튼 그림자를 날카로운 shadow-xl로 변경, 모서리는 rounded-lg로 변경
-      className={`w-full max-w-md mx-auto py-4 rounded-lg text-xl font-bold transition-all duration-100 transform active:scale-95 ${
-        canDraw
-          ? "bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:opacity-95 text-white shadow-xl"
-          : "bg-white/10 text-white/40 cursor-not-allowed"
-      }`}
-    >
-      {isDrawing ? (
-        <span className="flex items-center justify-center gap-3">
-          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          뽑는 중...
-        </span>
-      ) : (
-        <span className="flex items-center justify-center gap-3">
-           <span className="text-base">✩</span>
-           <span>🎲 가챠 뽑기</span>
-           <span className="text-base">✩</span>
-        </span>
-      )}
-    </button>
-  </div>
-
-  {/* 하단 텍스트 투명도 제거 */}
-  <div className="relative z-10 text-xs text-white mt-4">
-    쿠폰 1장 필요
-  </div>
-</div>
-
-
-
-  {/* 3단: 확률 카드와 조각 교환 그리드 */}
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {/* 출현 확률 */}
-    <div className="rounded-2xl bg-black/30 border border-white/5 p-5 space-y-4">
-      <h3 className="text-sm font-semibold text-white">📊 출현 확률</h3>
-
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between items-center rounded-xl bg-yellow-500/10 border border-yellow-500/20 px-3 py-2.5">
-          <span>전설</span>
-          <span className="font-semibold text-yellow-400">1%</span>
-        </div>
-        <div className="flex justify-between items-center rounded-xl bg-purple-500/10 border border-purple-500/20 px-3 py-2.5">
-          <span>영웅</span>
-          <span className="font-semibold text-purple-400">7%</span>
-        </div>
-        <div className="flex justify-between items-center rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-2.5">
-          <span>희귀</span>
-          <span className="font-semibold text-blue-400">22%</span>
-        </div>
-        <div className="flex justify-between items-center rounded-xl bg-white/5 border border-white/5 px-3 py-2.5">
-          <span>일반</span>
-          <span className="font-semibold text-white/80">70%</span>
-        </div>
-
-        <hr className="border-white/5 my-3" />
-
-        <div className="space-y-1 text-xs text-white/60 leading-relaxed">
-          <div>• 중복 펫은 조각으로 바뀌어요.</div>
-          <div>• 조각을 모아 특별 가챠를 돌려요.</div>
-          <div>• 선택한 등급의 펫이 랜덤으로 나와요.</div>
-        </div>
-      </div>
-    </div>
-
-    {/* 조각 교환 */}
-    <div className="rounded-2xl bg-black/30 border border-white/5 p-5 space-y-5">
-      <h3 className="text-sm font-semibold text-white">🧩 조각 교환</h3>
-
-      <div className="space-y-2">
-        <div className="flex justify-between text-xs text-white/70">
-          <span>현재 조각</span>
-          <span>{totalFragments} / {nextTarget}</span>
-        </div>
-        <div className="h-2.5 w-full rounded-full bg-slate-800 overflow-hidden border border-white/5">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all duration-700"
-            style={{ width: `${progressRatio * 100}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2 text-sm">
-        {Object.entries(FRAGMENT_EXCHANGE_COST).map(([rarity, cost]) => {
-          const canExchange = totalFragments >= cost;
-          return (
-            <div key={rarity} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 border border-white/5">
-              <span>{rarity} ({cost}조각)</span>
-              <button
-                type="button" // ⛔ form submit 방지
-                disabled={!canExchange}
-                onClick={() => handleExchange(rarity)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                  canExchange
-                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
-                    : "bg-white/10 text-white/30 cursor-not-allowed"
-                }`}
-              >
-                교환
-              </button>
+          {/* 중: 다음 가챠까지 남은 능력치 */}
+          <div className="rounded-2xl bg-black/40 border border-white/5 p-5 shadow-inner flex flex-col justify-between">
+            <div className="text-sm text-white/70">다음 가챠 티켓까지</div>
+            <div className="text-2xl font-bold text-yellow-300">
+              {remainingToNext}점
             </div>
-          );
-        })}
-      </div>
-    </div>
-  </div>
-</section>
+            <div className="h-2 mt-3 rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-purple-400 to-pink-400"
+                style={{ width: `${progressRatio * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* 우: 보유 조각 & 다음 목표 */}
+          <div className="rounded-2xl bg-black/40 border border-white/5 p-5 shadow-inner flex flex-col justify-between">
+            <div>
+              <div className="text-sm text-white/70 mb-1">보유 조각</div>
+              <div className="text-3xl font-extrabold text-white">{totalFragments}<span className="text-base font-medium ml-1 text-white/50">개</span></div>
+            </div>
+
+            {nextTargetLabel ? (
+              <div className="mt-2 p-2 rounded-lg bg-white/5 border border-white/5 text-xs text-white/80">
+                <span className="font-bold text-yellow-300">{nextTargetLabel}</span>까지 <span className="font-bold text-white">{gapToNextTarget}개</span> 남음!
+              </div>
+            ) : (
+              <div className="mt-2 p-2 rounded-lg bg-white/5 border border-white/5 text-xs text-green-300 font-bold">
+                모든 등급 교환 가능!
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* 2단: 가챠 머신 (그라데이션 유지, 선명도 극대화) */}
+        <div className="rounded-3xl bg-gradient-to-br from-purple-800 to-pink-700 p-12 text-center space-y-6 relative overflow-hidden shadow-2xl">
+
+          {/* 배경의 미세한 하이라이트 효과 제거 (선명도 위해 제거) */}
+
+          <div className="relative z-10 space-y-3">
+            {/* 제목 텍스트 그림자(drop-shadow-lg) 제거 */}
+            <h3 className="text-2xl font-black text-yellow-400">
+              ✨ 신비로운 가챠머신 ✨
+            </h3>
+            {/* 부제목 텍스트 투명도 제거 */}
+            <p className="text-base font-semibold text-white">
+              능력치 10점마다 쿠폰 1장 지급
+            </p>
+          </div>
+
+          <div className="relative z-10">
+            <button
+              type="button" // ⛔ form submit 방지
+              onClick={handleDraw}
+              disabled={!canDraw}
+              // 버튼 그림자를 날카로운 shadow-xl로 변경, 모서리는 rounded-lg로 변경
+              className={`w-full max-w-md mx-auto py-4 rounded-lg text-xl font-bold transition-all duration-100 transform active:scale-95 ${canDraw
+                ? "bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:opacity-95 text-white shadow-xl"
+                : "bg-white/10 text-white/40 cursor-not-allowed"
+                }`}
+            >
+              {isDrawing ? (
+                <span className="flex items-center justify-center gap-3">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  뽑는 중...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-3">
+                  <span className="text-base">✩</span>
+                  <span>🎲 가챠 뽑기</span>
+                  <span className="text-base">✩</span>
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* 하단 텍스트 투명도 제거 */}
+          <div className="relative z-10 text-xs text-white mt-4">
+            쿠폰 1장 필요
+          </div>
+        </div>
 
 
 
-<GachaSlotModal
-  isOpen={isSlotOpen}
-  onClose={() => setIsSlotOpen(false)}
-  onResult={handleSlotFinish}
-  resultPet={pendingResult?.pet}
-  rarity={pendingResult?.pet?.rarity}
-/>
+        {/* 3단: 확률 카드와 조각 교환 그리드 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* 출현 확률 */}
+          <div className="rounded-2xl bg-black/30 border border-white/5 p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-white">📊 출현 확률</h3>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between items-center rounded-xl bg-yellow-500/10 border border-yellow-500/20 px-3 py-2.5">
+                <span>전설</span>
+                <span className="font-semibold text-yellow-400">1%</span>
+              </div>
+              <div className="flex justify-between items-center rounded-xl bg-purple-500/10 border border-purple-500/20 px-3 py-2.5">
+                <span>영웅</span>
+                <span className="font-semibold text-purple-400">7%</span>
+              </div>
+              <div className="flex justify-between items-center rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-2.5">
+                <span>희귀</span>
+                <span className="font-semibold text-blue-400">22%</span>
+              </div>
+              <div className="flex justify-between items-center rounded-xl bg-white/5 border border-white/5 px-3 py-2.5">
+                <span>일반</span>
+                <span className="font-semibold text-white/80">70%</span>
+              </div>
+
+              <hr className="border-white/5 my-3" />
+
+              <div className="space-y-1 text-xs text-white/60 leading-relaxed">
+                <div>• 중복 펫은 조각으로 바뀌어요.</div>
+                <div>• 조각을 모아 특별 가챠를 돌려요.</div>
+                <div>• 선택한 등급의 펫이 랜덤으로 나와요.</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 조각 교환 */}
+          <div className="rounded-2xl bg-black/30 border border-white/5 p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-white mb-2">🧩 조각 교환</h3>
+
+            <div className="space-y-3">
+              {Object.entries(FRAGMENT_EXCHANGE_COST).map(([rarity, cost]) => {
+                const canExchange = totalFragments >= cost;
+                // Calculate progress percentage, capped at 100%
+                const progressPercent = Math.min((totalFragments / cost) * 100, 100);
+
+                // Color based on rarity
+                let barGradient = "from-gray-500 to-gray-400";
+                let glowColor = "shadow-gray-500/20";
+                if (rarity === "일반") { barGradient = "from-yellow-400 to-orange-400"; glowColor = "shadow-yellow-500/20"; }
+                if (rarity === "희귀") { barGradient = "from-blue-400 to-cyan-400"; glowColor = "shadow-blue-500/20"; }
+                if (rarity === "영웅") { barGradient = "from-purple-400 to-pink-400"; glowColor = "shadow-purple-500/20"; }
+                if (rarity === "전설") { barGradient = "from-red-500 to-rose-500"; glowColor = "shadow-red-500/20"; }
+
+                return (
+                  <div key={rarity} className="relative rounded-xl bg-black/40 border border-white/5 p-3 overflow-hidden group">
+                    {/* Background Progress Bar */}
+                    <div className="absolute inset-0 pointer-events-none opacity-20">
+                      <div
+                        className={`h-full bg-gradient-to-r ${barGradient} transition-all duration-700 ease-out`}
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+
+                    <div className="relative z-10 flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-white">{rarity}</span>
+                          {canExchange && <span className="text-[10px] bg-green-500/20 text-green-300 px-1.5 py-0.5 rounded">가능</span>}
+                        </div>
+                        <div className="text-xs text-white/50 mt-0.5">
+                          <span className={canExchange ? "text-green-300 font-bold" : ""}>{Math.min(totalFragments, cost)}</span>
+                          <span className="mx-1">/</span>
+                          <span>{cost}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!canExchange}
+                        onClick={() => handleOpenShop(rarity, cost)}
+                        className={`
+                      px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-lg
+                      ${canExchange
+                            ? `bg-gradient-to-r ${barGradient} text-white hover:scale-105 active:scale-95 ${glowColor}`
+                            : "bg-white/5 text-white/20 cursor-not-allowed"}
+                    `}
+                      >
+                        확인
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+
+      <GachaSlotModal
+        isOpen={isSlotOpen}
+        onClose={() => setIsSlotOpen(false)}
+        onResult={handleSlotFinish}
+        resultPet={pendingResult?.pet}
+        rarity={pendingResult?.pet?.rarity}
+      />
 
       <GachaResultModal
         isOpen={isResultOpen}
@@ -424,6 +483,17 @@ export default function GachaSection({
         isDuplicate={lastDrawnPet?.isDuplicate ?? false}
         rewardLabel={lastDrawnPet?.rewardLabel ?? null}
         onClose={handleResultClose}
+      />
+
+      {/* 🛍️ 펫 상점 모달 */}
+      <PetShopModal
+        isOpen={isShopOpen}
+        onClose={() => setIsShopOpen(false)}
+        rarity={shopRarity}
+        cost={shopCost}
+        currentFragments={selectedStudents[0]?.fragments ?? 0}
+        ownedPetIds={selectedStudents[0]?.pets ?? []}
+        onBuy={handleBuyPet}
       />
     </>
   );
