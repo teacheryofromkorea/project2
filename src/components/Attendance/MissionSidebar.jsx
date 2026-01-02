@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import { useLock } from "../../context/LockContext";
 
 function MissionSidebar() {
@@ -22,7 +23,7 @@ function MissionSidebar() {
       .order("order_index", { nullsFirst : true, ascending: true });
 
     if (error) {
-      console.error("미션 불러오기 오류:", error);
+      handleSupabaseError(error, "미션 목록을 불러오지 못했어요.");
       return;
     }
     setMissions(data);
@@ -87,7 +88,7 @@ if (data && data.length > 0) {
     .insert([{ text: newMission, order_index: maxIndex }]);
 
     if (error) {
-      console.error("추가 오류:", error);
+      handleSupabaseError(error, "미션 추가에 실패했어요.");
       return;
     }
 
@@ -107,7 +108,7 @@ if (data && data.length > 0) {
       .eq("id", id);
 
     if (error) {
-      console.error("삭제 오류:", error);
+      handleSupabaseError(error, "미션 삭제에 실패했어요.");
       return;
     }
 
@@ -118,8 +119,8 @@ if (data && data.length > 0) {
       .eq("mission_id", id);
 
     if (statusError) {
-      console.error("상태 삭제 오류:", statusError);
-      // 여기서 바로 return 할 필요는 없음 (화면 갱신은 계속)
+      handleSupabaseError(statusError, "학생 미션 상태 삭제 중 오류가 발생했어요.");
+      // 화면 갱신은 계속
     }
 
     // 3) 화면 갱신
@@ -141,15 +142,17 @@ if (data && data.length > 0) {
     target.order_index = swapWith.order_index;
     swapWith.order_index = tempOrder;
 
-    await supabase
+    const { error: error1 } = await supabase
       .from("missions")
       .update({ order_index: target.order_index })
       .eq("id", target.id);
+    handleSupabaseError(error1, "미션 순서 변경에 실패했어요.");
 
-    await supabase
+    const { error: error2 } = await supabase
       .from("missions")
       .update({ order_index: swapWith.order_index })
       .eq("id", swapWith.id);
+    handleSupabaseError(error2, "미션 순서 변경에 실패했어요.");
 
     fetchMissions();
   };
@@ -164,7 +167,7 @@ if (data && data.length > 0) {
       .eq("id", editMission.id);
 
     if (error) {
-      console.error("업데이트 오류:", error);
+      handleSupabaseError(error, "미션 수정에 실패했어요.");
       return;
     }
 
@@ -347,7 +350,7 @@ if (data && data.length > 0) {
         .in("id", ids);
 
       if (error) {
-        console.error("미션 제목 저장 오류:", error);
+        handleSupabaseError(error, "미션 제목 저장에 실패했어요.");
         return;
       }
     }

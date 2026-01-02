@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { handleSupabaseError } from "../../utils/handleSupabaseError";
 
 /**
  * useEndRoutine
@@ -28,11 +29,16 @@ export default function useEndRoutine() {
   const fetchRoutineItems = useCallback(async () => {
     if (!titleId) return;
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("end_routine_items")
       .select("*")
       .eq("title_id", titleId)
       .order("order_index", { ascending: true });
+
+    if (error) {
+      handleSupabaseError(error, "하교시간 루틴 목록을 불러오지 못했어요.");
+      return;
+    }
 
     setRoutineItems(data || []);
   }, [titleId]);
@@ -47,7 +53,7 @@ export default function useEndRoutine() {
       .limit(1);
 
     if (error) {
-      console.error("하교 루틴 제목 조회 실패:", error);
+      handleSupabaseError(error, "하교시간 루틴 제목을 불러오지 못했어요.");
       return;
     }
 
@@ -62,7 +68,7 @@ export default function useEndRoutine() {
         .single();
 
       if (insertError) {
-        console.error("하교 루틴 제목 생성 실패:", insertError);
+        handleSupabaseError(insertError, "하교시간 루틴 제목 생성에 실패했어요.");
         return;
       }
 
@@ -81,11 +87,12 @@ export default function useEndRoutine() {
     if (!titleId) return;
     if (!newContent.trim()) return;
 
-    await supabase.from("end_routine_items").insert({
+    const { error } = await supabase.from("end_routine_items").insert({
       title_id: titleId,
       text: newContent,
       order_index: routineItems.length,
     });
+    handleSupabaseError(error, "하교시간 루틴 추가에 실패했어요.");
 
     setNewContent("");
     fetchRoutineItems();
@@ -93,7 +100,8 @@ export default function useEndRoutine() {
 
   const deleteRoutineItem = useCallback(
     async (id) => {
-      await supabase.from("end_routine_items").delete().eq("id", id);
+      const { error } = await supabase.from("end_routine_items").delete().eq("id", id);
+      handleSupabaseError(error, "하교시간 루틴 삭제에 실패했어요.");
       fetchRoutineItems();
     },
     [fetchRoutineItems]
@@ -112,15 +120,17 @@ export default function useEndRoutine() {
       const target =
         direction === "up" ? list[index - 1] : list[index + 1];
 
-      await supabase
+      const { error: error1 } = await supabase
         .from("end_routine_items")
         .update({ order_index: target.order_index })
         .eq("id", current.id);
+      handleSupabaseError(error1, "하교시간 루틴 순서 변경에 실패했어요.");
 
-      await supabase
+      const { error: error2 } = await supabase
         .from("end_routine_items")
         .update({ order_index: current.order_index })
         .eq("id", target.id);
+      handleSupabaseError(error2, "하교시간 루틴 순서 변경에 실패했어요.");
 
       fetchRoutineItems();
     },
@@ -130,10 +140,11 @@ export default function useEndRoutine() {
   const updateRoutine = useCallback(async () => {
     if (!editRoutine || !editText.trim()) return;
 
-    await supabase
+    const { error } = await supabase
       .from("end_routine_items")
       .update({ text: editText })
       .eq("id", editRoutine.id);
+    handleSupabaseError(error, "하교시간 루틴 수정에 실패했어요.");
 
     setEditRoutine(null);
     setEditText("");
@@ -143,10 +154,15 @@ export default function useEndRoutine() {
   const saveRoutineTitle = useCallback(async () => {
     if (!tempTitle.trim() || !titleId) return;
 
-    await supabase
+    const { error } = await supabase
       .from("end_routine_title")
       .update({ title: tempTitle })
       .eq("id", titleId);
+
+    if (error) {
+      handleSupabaseError(error, "하교시간 루틴 제목 저장에 실패했어요.");
+      return;
+    }
 
     setRoutineTitle(tempTitle);
   }, [tempTitle, titleId]);

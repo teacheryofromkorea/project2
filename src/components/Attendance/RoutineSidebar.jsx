@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import { useLock } from "../../context/LockContext";
 
 function RoutineSidebar() {
@@ -23,7 +24,12 @@ useEffect(() => {
       .select("*")
       .order("order_index", { ascending: true });
 
-    if (!error && data) {
+    if (error) {
+      handleSupabaseError(error, "루틴 목록을 불러오지 못했어요.");
+      return;
+    }
+
+    if (data) {
       setRoutineItems(data);
 
       // 🔥 DB에서 제목 가져오기
@@ -84,10 +90,13 @@ useEffect(() => {
       .select()
       .single();
 
-    if (!error) {
-      setRoutineItems([...routineItems, data]);
-      setNewRoutine("");
+    if (error) {
+      handleSupabaseError(error, "루틴 추가에 실패했어요.");
+      return;
     }
+
+    setRoutineItems([...routineItems, data]);
+    setNewRoutine("");
   };
 
   const deleteRoutine = async (index) => {
@@ -95,13 +104,25 @@ useEffect(() => {
     const id = routineItems[index].id;
 
     // 1) 루틴 삭제
-    await supabase.from("routines").delete().eq("id", id);
+    const { error: deleteError } = await supabase
+      .from("routines")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      handleSupabaseError(deleteError, "루틴 삭제에 실패했어요.");
+      return;
+    }
 
     // 2) 이 루틴에 대한 학생별 상태도 같이 삭제
-    await supabase
+    const { error: statusError } = await supabase
       .from("student_routine_status")
       .delete()
       .eq("routine_id", id);
+
+    if (statusError) {
+      handleSupabaseError(statusError, "학생 루틴 상태 삭제 중 오류가 발생했어요.");
+    }
 
     // 3) 프런트 쪽 목록 정리 및 order_index 재정렬
     const updated = routineItems.filter((_, i) => i !== index);
@@ -113,10 +134,15 @@ useEffect(() => {
     setRoutineItems(reordered);
 
     for (const item of reordered) {
-      await supabase
+      const { error } = await supabase
         .from("routines")
         .update({ order_index: item.order_index })
         .eq("id", item.id);
+
+      if (error) {
+        handleSupabaseError(error, "루틴 순서 저장에 실패했어요.");
+        break;
+      }
     }
   };
   const moveRoutine = async (index, direction) => {
@@ -140,10 +166,15 @@ useEffect(() => {
 
     // DB에도 반영
     for (const item of reordered) {
-      await supabase
+      const { error } = await supabase
         .from("routines")
         .update({ order_index: item.order_index })
         .eq("id", item.id);
+
+      if (error) {
+        handleSupabaseError(error, "루틴 순서 변경에 실패했어요.");
+        break;
+      }
     }
   };
 
@@ -305,10 +336,15 @@ useEffect(() => {
     if (routineItems.length > 0) {
       const ids = routineItems.map((item) => item.id);
 
-      await supabase
+      const { error } = await supabase
         .from("routines")
         .update({ routine_title: routineTitle })
         .in("id", ids);
+
+      if (error) {
+        handleSupabaseError(error, "루틴 제목 저장에 실패했어요.");
+        return;
+      }
     }
 
     setIsEditing(false);
@@ -333,10 +369,15 @@ useEffect(() => {
                     if (locked) return;
                     const id = routineItems[editRoutineIndex].id;
 
-                    await supabase
+                    const { error } = await supabase
                       .from("routines")
                       .update({ text: editText })
                       .eq("id", id);
+
+                    if (error) {
+                      handleSupabaseError(error, "루틴 수정에 실패했어요.");
+                      return;
+                    }
 
                     const updated = [...routineItems];
                     updated[editRoutineIndex].text = editText;
@@ -369,7 +410,15 @@ useEffect(() => {
                     if (locked) return;
                     const id = routineItems[editRoutineIndex].id;
 
-                    await supabase.from("routines").update({ text: editText }).eq("id", id);
+                    const { error } = await supabase
+                      .from("routines")
+                      .update({ text: editText })
+                      .eq("id", id);
+
+                    if (error) {
+                      handleSupabaseError(error, "루틴 수정에 실패했어요.");
+                      return;
+                    }
 
                     const updated = [...routineItems];
                     updated[editRoutineIndex].text = editText;

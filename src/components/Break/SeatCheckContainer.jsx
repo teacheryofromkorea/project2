@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { handleSupabaseError } from "../../utils/handleSupabaseError";
 
 /*
   SeatCheckContainer 컴포넌트는 다음과 같은 로직으로 동작합니다:
@@ -48,7 +49,7 @@ export default function SeatCheckContainer({ blockId, students }) {
       .eq("block_id", targetBlockId);
 
     if (error) {
-      console.error("착석 상태 불러오기 에러:", error);
+      handleSupabaseError(error, "착석 상태를 불러오지 못했어요.");
       return {};
     }
 
@@ -113,13 +114,12 @@ export default function SeatCheckContainer({ blockId, students }) {
     setIsSaving(false);
 
     if (error) {
-      console.error("착석 상태 저장 실패:", error);
+      handleSupabaseError(error, "착석 상태 저장에 실패했어요.");
       // 실패 시 UI 되돌리기
       setSeatStatus((prev) => ({
         ...prev,
         [studentId]: { seated: current, time: prev[studentId]?.time || null },
       }));
-      alert("저장 중 오류가 발생했어요. 다시 시도해 주세요.");
     }
   };
 
