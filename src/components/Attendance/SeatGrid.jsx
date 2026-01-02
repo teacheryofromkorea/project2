@@ -20,7 +20,7 @@ function SeatGrid({
 
   return (
     <div
-      className="grid gap-4"
+      className="grid gap-4 h-full w-full"
       style={{
         gridTemplateRows: `repeat(${maxRow}, minmax(0, 1fr))`,
         gridTemplateColumns: `repeat(${totalCols || maxCol}, minmax(0, 1fr))`,

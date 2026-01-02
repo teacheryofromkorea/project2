@@ -17,62 +17,62 @@ function RoutineSidebar() {
   const [editText, setEditText] = useState("");
 
   // 📌 Supabase에서 루틴 불러오기
-useEffect(() => {
-  const fetchRoutines = async () => {
-    const { data, error } = await supabase
-      .from("routines")
-      .select("*")
-      .order("order_index", { ascending: true });
+  useEffect(() => {
+    const fetchRoutines = async () => {
+      const { data, error } = await supabase
+        .from("routines")
+        .select("*")
+        .order("order_index", { ascending: true });
 
-    if (error) {
-      handleSupabaseError(error, "루틴 목록을 불러오지 못했어요.");
-      return;
-    }
-
-    if (data) {
-      setRoutineItems(data);
-
-      // 🔥 DB에서 제목 가져오기
-      if (data.length > 0 && data[0].routine_title) {
-        setRoutineTitle(data[0].routine_title);
-      }
-    }
-  };
-
-  fetchRoutines();
-}, []);
-
-// ESC 닫기
-// ESC 닫기
-useEffect(() => {
-  const handleKey = (e) => {
-    if (e.key === "Escape") {
-
-      // 🔹 작은 모달 우선 닫기
-      if (editRoutineIndex !== null) {
-        setEditRoutineIndex(null);
-        setEditText("");
+      if (error) {
+        handleSupabaseError(error, "루틴 목록을 불러오지 못했어요.");
         return;
       }
 
-      // 🔹 그 다음 큰 모달 닫기
-      if (isEditing) {
-        setIsEditing(false);
+      if (data) {
+        setRoutineItems(data);
+
+        // 🔥 DB에서 제목 가져오기
+        if (data.length > 0 && data[0].routine_title) {
+          setRoutineTitle(data[0].routine_title);
+        }
       }
+    };
+
+    fetchRoutines();
+  }, []);
+
+  // ESC 닫기
+  // ESC 닫기
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "Escape") {
+
+        // 🔹 작은 모달 우선 닫기
+        if (editRoutineIndex !== null) {
+          setEditRoutineIndex(null);
+          setEditText("");
+          return;
+        }
+
+        // 🔹 그 다음 큰 모달 닫기
+        if (isEditing) {
+          setIsEditing(false);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isEditing, editRoutineIndex]);
+
+  useEffect(() => {
+    if (locked) {
+      setIsEditing(false);
+      setEditRoutineIndex(null);
+      setEditText("");
     }
-  };
-
-  window.addEventListener("keydown", handleKey);
-  return () => window.removeEventListener("keydown", handleKey);
-}, [isEditing, editRoutineIndex]);
-
-useEffect(() => {
-  if (locked) {
-    setIsEditing(false);
-    setEditRoutineIndex(null);
-    setEditText("");
-  }
-}, [locked]);
+  }, [locked]);
 
 
 
@@ -183,44 +183,42 @@ useEffect(() => {
       <aside
         className="
           relative
-          bg-[#c8ae9a]
+          bg-white border border-gray-200 shadow-2xl
           rounded-2xl
           p-6
-          shadow-[0_10px_30px_rgba(0,0,0,0.15)]
           flex flex-col
-          
         "
       >
-        {/* 메모지 상단 테이프 */}
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#C5D8B4]/80 rounded-md shadow-sm"></div>
-
-        <h2 className="text-2xl font-extrabold mb-4 text-gray-800 tracking-tight">
+        <h2 className="text-xl font-extrabold mb-6 text-gray-900 tracking-tight flex items-center gap-2">
+          <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
           {routineTitle}
         </h2>
 
-<ul className="space-y-2 flex-1">
+        <ul className="space-y-2 flex-1">
           {routineItems.map((item, idx) => (
             <li key={idx}>
-<button
+
+              <button
                 className="
                   relative w-full
-                  bg-yellow-50 /* 메모지 색상 */
-                  bg-[linear-gradient(transparent_95%,rgba(0,0,0,0.05)_95%)] /* 줄무늬 추가 */
-                  bg-[length:100%_28px] /* 줄무늬 간격 설정 */
+                  bg-slate-50 hover:bg-white
+                  border border-slate-200 hover:border-indigo-300
                   rounded-xl
-                  px-4
-                  py-3 /* 패딩 y값을 3으로 변경 (이전 4) */
-                  text-lg font-semibold
-                  text-black
-                  shadow-sm /* 그림자 크기를 sm으로 변경 (이전 md/lg) */
-                  border border-yellow-200 /* 테두리 추가 */
-                  hover:shadow-md transition /* 호버 시 그림자 크기만 md로 변경 */
+                  px-4 py-3
+                  text-left
+                  transition-all duration-200
+                  group
+                  shadow-sm hover:shadow-md
                 "
               >
-                <span className="leading-relaxed block">
-                  {item.text}
-                </span>
-</button>
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <span className="text-slate-700 text-lg font-bold group-hover:text-indigo-900 transition-colors leading-relaxed block">
+                      {item.text}
+                    </span>
+                  </div>
+                </div>
+              </button>
 
             </li>
           ))}
@@ -229,11 +227,10 @@ useEffect(() => {
 
         <button
           disabled={locked}
-          className={`mt-4 w-full text-sm font-semibold py-2 rounded-full transition
-            ${
-              locked
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-[#5E8C61] text-white hover:bg-blue-600"
+          className={`mt-6 w-full text-sm font-semibold py-3 rounded-xl transition-all border
+            ${locked
+              ? "bg-gray-100 text-gray-400 border-transparent cursor-not-allowed"
+              : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700 hover:border-indigo-300 hover:shadow-sm"
             }
           `}
           onClick={() => {
@@ -241,9 +238,8 @@ useEffect(() => {
             setIsEditing(true);
           }}
         >
-          ✏️ 루틴 편집
+          Edit Routines
         </button>
-        <div className="absolute inset-0 rounded-2xl pointer-events-none shadow-inner"></div>
       </aside>
 
       {isEditing && (
@@ -328,30 +324,30 @@ useEffect(() => {
               추가
             </button>
 
-<button
-  className="w-full bg-gray-300 py-2 rounded-full font-semibold"
-  onClick={async () => {
-    if (locked) return;
-    // 🔥 제목 저장: 모든 루틴 row의 routine_title 업데이트
-    if (routineItems.length > 0) {
-      const ids = routineItems.map((item) => item.id);
+            <button
+              className="w-full bg-gray-300 py-2 rounded-full font-semibold"
+              onClick={async () => {
+                if (locked) return;
+                // 🔥 제목 저장: 모든 루틴 row의 routine_title 업데이트
+                if (routineItems.length > 0) {
+                  const ids = routineItems.map((item) => item.id);
 
-      const { error } = await supabase
-        .from("routines")
-        .update({ routine_title: routineTitle })
-        .in("id", ids);
+                  const { error } = await supabase
+                    .from("routines")
+                    .update({ routine_title: routineTitle })
+                    .in("id", ids);
 
-      if (error) {
-        handleSupabaseError(error, "루틴 제목 저장에 실패했어요.");
-        return;
-      }
-    }
+                  if (error) {
+                    handleSupabaseError(error, "루틴 제목 저장에 실패했어요.");
+                    return;
+                  }
+                }
 
-    setIsEditing(false);
-  }}
->
-  닫기
-</button>
+                setIsEditing(false);
+              }}
+            >
+              닫기
+            </button>
           </div>
 
           {editRoutineIndex !== null && (
