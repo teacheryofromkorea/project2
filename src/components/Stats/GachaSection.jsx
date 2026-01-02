@@ -11,6 +11,8 @@ import { getActivePityRule } from "../../constants/pitySystem";
 import GachaResultModal from "./GachaResultModal";
 import GachaSlotModal from "./GachaSlotModal";
 import PetShopModal from "./PetShopModal";
+import confetti from "canvas-confetti";
+import { toast } from "react-hot-toast";
 
 // ♻️ 중복 교환 시 조각 환급 비율 (50%)
 const DUPLICATE_EXCHANGE_REFUND_RATE = 0.5;
@@ -160,13 +162,26 @@ export default function GachaSection({
     if (onPetAcquired) {
       onPetAcquired(student.id, pet.id);
     }
-    if (onStudentsUpdated) {
-      await onStudentsUpdated();
+    if (onPetAcquired) {
+      onPetAcquired(student.id, pet.id);
     }
+    // ❗ 학생 데이터 동기화(onStudentsUpdated)는 결과 모달이 닫힌 뒤에 수행 (리마운트 방지)
 
-    // 4. 알림 (선택적)
-    // alert(`${pet.name} 입양 완료!`); 
-    // -> UX상 그냥 모달 유지하고 버튼이 "보유중"으로 바뀌는게 자연스러움
+    // 4. 알림 및 효과
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      zIndex: 9999, // 모달 위에 뜨도록
+    });
+
+    // 결과 모달 띄우기 (PetShopModal 위에 뜨도록 JSX 순서 조정 필요)
+    setLastDrawnPet({
+      pet: pet,
+      isDuplicate: false,
+      rewardLabel: null,
+    });
+    setIsResultOpen(true);
   };
 
   const handleDraw = async () => {
@@ -242,21 +257,25 @@ export default function GachaSection({
 
   const handleSlotFinish = () => {
     setIsSlotOpen(false);
-    setLastDrawnPet(pendingResult);
+
+    // 🎯 Use pendingResult which contains isDuplicate logic
+    const finalResult = pendingResult;
+
+    setLastDrawnPet(finalResult);
 
     // 🎯 마지막으로 뽑은 펫 id 즉시 전달 (NEW 배지 / glow)
-    if (pendingResult?.pet?.id && onLastDrawnPetChange) {
-      onLastDrawnPetChange(pendingResult.pet.id);
+    if (finalResult?.pet?.id && onLastDrawnPetChange) {
+      onLastDrawnPetChange(finalResult.pet.id);
     }
 
     // ⚡ NEW 배지 즉시 반영을 위한 낙관적 업데이트
     if (
-      pendingResult?.pet &&
-      !pendingResult.isDuplicate &&
+      finalResult?.pet &&
+      !finalResult.isDuplicate &&
       onPetAcquired &&
       selectedStudents.length === 1
     ) {
-      onPetAcquired(selectedStudents[0].id, pendingResult.pet.id);
+      onPetAcquired(selectedStudents[0].id, finalResult.pet.id);
     }
 
     setIsResultOpen(true);
@@ -398,8 +417,8 @@ export default function GachaSection({
 
               <div className="space-y-1 text-xs text-white/60 leading-relaxed">
                 <div>• 중복 펫은 조각으로 바뀌어요.</div>
-                <div>• 조각을 모아 특별 가챠를 돌려요.</div>
-                <div>• 선택한 등급의 펫이 랜덤으로 나와요.</div>
+                <div>• 조각을 모아 원하는 펫을 확정 입양하세요!</div>
+                <div>• 상점에서 모든 펫을 모아보세요.</div>
               </div>
             </div>
           </div>
@@ -465,7 +484,7 @@ export default function GachaSection({
             </div>
           </div>
         </div>
-      </section>
+      </section >
 
 
 
@@ -477,15 +496,7 @@ export default function GachaSection({
         rarity={pendingResult?.pet?.rarity}
       />
 
-      <GachaResultModal
-        isOpen={isResultOpen}
-        pet={lastDrawnPet?.pet ?? null}
-        isDuplicate={lastDrawnPet?.isDuplicate ?? false}
-        rewardLabel={lastDrawnPet?.rewardLabel ?? null}
-        onClose={handleResultClose}
-      />
-
-      {/* 🛍️ 펫 상점 모달 */}
+      {/* 🛍️ 펫 상점 모달 (먼저 렌더링 -> 아래에 깔림) */}
       <PetShopModal
         isOpen={isShopOpen}
         onClose={() => setIsShopOpen(false)}
@@ -494,6 +505,15 @@ export default function GachaSection({
         currentFragments={selectedStudents[0]?.fragments ?? 0}
         ownedPetIds={selectedStudents[0]?.pets ?? []}
         onBuy={handleBuyPet}
+      />
+
+      {/* 🎁 결과 모달 (나중에 렌더링 -> 상점 위에 뜸) */}
+      <GachaResultModal
+        isOpen={isResultOpen}
+        pet={lastDrawnPet?.pet ?? null}
+        isDuplicate={lastDrawnPet?.isDuplicate ?? false}
+        rewardLabel={lastDrawnPet?.rewardLabel ?? null}
+        onClose={handleResultClose}
       />
     </>
   );

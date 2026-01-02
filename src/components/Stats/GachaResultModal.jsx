@@ -1,18 +1,7 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 
-const rarityBackground = {
-  common: "from-gray-100 to-gray-200",
-  rare: "from-blue-100 to-indigo-200",
-  epic: "from-purple-100 to-fuchsia-200",
-  legendary: "from-yellow-100 via-amber-100 to-orange-200",
-};
 
-const rarityAnimation = {
-  common: "animate-fade-in",
-  rare: "animate-float-in",
-  epic: "animate-dimension-in",
-  legendary: "animate-legendary-impact",
-};
 
 /**
  * 🎁 GachaResultModal (Figma 카드 스타일)
@@ -33,118 +22,228 @@ export default function GachaResultModal({
   if (!isOpen || !pet) return null;
 
   useEffect(() => {
-    // ESC 닫기
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const rarityStyle = {
+  // 🎨 등급별 테마 설정
+  const theme = {
     common: {
-      label: "COMMON",
-      glow: "rarity-common",
-      badge: "🟢",
+      bg: "bg-white",
+      border: "border-gray-200",
+      text: "text-gray-900",
+      subText: "text-gray-500",
+      badgeData: { label: "일반", icon: "🌱", color: "text-green-600 bg-green-100" },
+      glow: "shadow-gray-200",
+      btn: "bg-gray-900 text-white hover:bg-gray-800",
+      animation: "animate-pop-in",
     },
     rare: {
-      label: "RARE",
-      glow: "rarity-rare",
-      badge: "🔵",
+      bg: "bg-gradient-to-br from-blue-50 to-indigo-50",
+      border: "border-blue-200",
+      text: "text-blue-900",
+      subText: "text-blue-600/80",
+      badgeData: { label: "희귀", icon: "💎", color: "text-blue-600 bg-blue-100" },
+      glow: "shadow-blue-200",
+      btn: "bg-blue-600 text-white hover:bg-blue-500",
+      animation: "animate-float-up",
     },
     epic: {
-      label: "EPIC",
-      glow: "rarity-epic",
-      badge: "🟣",
+      bg: "bg-[#1a0b2e]", // Deep Purple Dark Mode style for Epic
+      border: "border-purple-500/50",
+      text: "text-purple-100",
+      subText: "text-purple-300/70",
+      badgeData: { label: "영웅", icon: "🔮", color: "text-purple-200 bg-purple-900/50 border border-purple-500/30" },
+      glow: "shadow-purple-500/40",
+      btn: "bg-purple-600 text-white hover:bg-purple-500",
+      animation: "animate-flip-in",
     },
     legendary: {
-      label: "LEGENDARY",
-      glow: "rarity-legendary",
-      badge: "🟡",
+      bg: "bg-gradient-to-b from-amber-900 to-black",
+      border: "border-yellow-500",
+      text: "text-yellow-100",
+      subText: "text-yellow-200/60",
+      badgeData: { label: "전설", icon: "👑", color: "text-yellow-100 bg-yellow-900/50 border border-yellow-500" },
+      glow: "shadow-yellow-500/50",
+      btn: "bg-gradient-to-r from-yellow-600 to-amber-600 text-white hover:brightness-110",
+      animation: "animate-legendary-entry",
     },
   }[pet.rarity];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Dim */}
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+      {/* Dim Overlay */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-500 pointer-events-auto"
         onClick={onClose}
       />
 
-      {/* Card */}
+      {/* ✨ Legendary Background Rays (Screen Wide) */}
+      {pet.rarity === "legendary" && (
+        <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
+          <div className="w-[150vw] h-[150vw] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(255,215,0,0.1)_20deg,transparent_40deg,rgba(255,215,0,0.1)_60deg,transparent_80deg,rgba(255,215,0,0.1)_100deg,transparent_120deg,rgba(255,215,0,0.1)_140deg,transparent_160deg,rgba(255,215,0,0.1)_180deg,transparent_200deg,rgba(255,215,0,0.1)_220deg,transparent_240deg,rgba(255,215,0,0.1)_260deg,transparent_280deg,rgba(255,215,0,0.1)_300deg,transparent_320deg,rgba(255,215,0,0.1)_340deg,transparent_360deg)] animate-spin-slow-custom opacity-50" />
+        </div>
+      )}
+
+      {/* 🃏 Card Container */}
       <div
-        className={`relative z-10 w-[360px] rounded-3xl bg-gradient-to-b ${
-          rarityBackground[pet.rarity]
-        } p-7 shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${
-          rarityAnimation[pet.rarity]
-        }`}
+        className={`
+          relative z-10 w-[380px] rounded-[32px] p-8
+          flex flex-col items-center pointer-events-auto
+          shadow-2xl transition-all duration-500
+          ${theme.bg} border-2 ${theme.border}
+          ${pet.rarity === "legendary" ? "shadow-[0_0_80px_rgba(234,179,8,0.4)]" : ""}
+          ${pet.rarity === "epic" ? "shadow-[0_0_50px_rgba(168,85,247,0.3)]" : ""}
+          ${theme.animation}
+        `}
       >
+        {/* ✨ Background Effects per Rarity */}
+        {pet.rarity === "rare" && (
+          <div className="absolute inset-0 overflow-hidden rounded-[30px] pointer-events-none">
+            <div className="absolute top-0 left-[-100%] w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg] animate-shine" />
+          </div>
+        )}
+
         {pet.rarity === "epic" && (
-          <div className="absolute inset-0 rounded-3xl bg-purple-300/10 blur-2xl animate-pulse" />
+          <div className="absolute inset-0 overflow-hidden rounded-[30px] pointer-events-none">
+            <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)] animate-pulse" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 blur-[50px] rounded-full" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-500/20 blur-[50px] rounded-full" />
+          </div>
         )}
 
-        {pet.rarity === "legendary" && (
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-yellow-300/20 via-orange-200/20 to-pink-300/20 animate-pulse" />
-        )}
-
-        {/* Rarity */}
-        <div className="mb-4 flex flex-col items-center justify-center gap-2 text-[11px] font-extrabold tracking-[0.3em] text-gray-400">
-          <div className="flex items-center gap-2">
-            <span>{rarityStyle.badge}</span>
-            {rarityStyle.label}
-          </div>
-          <div className="mt-1 text-[10px] font-bold tracking-widest text-gray-300">
-            {isDuplicate ? "DUPLICATE" : "NEW PET"}
-          </div>
+        {/* 🏷️ Badge */}
+        <div className={`
+          flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase mb-6
+          ${theme.badgeData.color}
+        `}>
+          <span>{theme.badgeData.icon}</span>
+          <span>{theme.badgeData.label}</span>
         </div>
 
-        {/* Pet */}
-        <div className="relative mb-6 flex justify-center">
-          <div
-            className={`flex h-36 w-36 items-center justify-center rounded-full bg-white/70 text-7xl shadow-xl backdrop-blur ${rarityStyle.glow} animate-pop-in`}
-          >
-            {pet.emoji || "🐾"}
+        {/* 🦁 Pet Circle */}
+        <div className="relative mb-6">
+          {/* Epic/Legendary Back Glow */}
+          {(pet.rarity === "epic" || pet.rarity === "legendary") && (
+            <div className={`absolute inset-0 rounded-full blur-2xl opacity-50 scale-110 ${pet.rarity === "legendary" ? "bg-yellow-500" : "bg-purple-500"}`} />
+          )}
+
+          <div className={`
+            relative z-10 w-40 h-40 rounded-full flex items-center justify-center text-8xl shadow- inner
+            ${pet.rarity === "legendary" ? "bg-gradient-to-br from-yellow-300 to-amber-600 border-4 border-yellow-200" :
+              pet.rarity === "epic" ? "bg-gradient-to-br from-purple-400 to-indigo-600 border-4 border-purple-300/50" :
+                pet.rarity === "rare" ? "bg-gradient-to-br from-blue-400 to-cyan-300 border-4 border-white" :
+                  "bg-gray-100 border-4 border-white"}
+            shadow-xl
+          `}>
+            <span className="drop-shadow-md transform hover:scale-110 transition-transform duration-300">{pet.emoji}</span>
           </div>
+
+          {/* Legendary Crown/Sparkles */}
+          {pet.rarity === "legendary" && (
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-4xl animate-bounce pointer-events-none">👑</div>
+          )}
         </div>
 
-        {/* Name */}
-        <div className="mb-2 text-center text-xl font-black text-gray-900">
+        {/* 📝 Name */}
+        <h2 className={`text-2xl font-black mb-2 text-center ${theme.text}`}>
           {pet.name}
-        </div>
+        </h2>
 
-        {/* Description */}
-        <div className="mb-5 px-4 text-center text-sm leading-relaxed text-gray-500">
-          {pet.description || "새로운 친구를 획득했어요!"}
-        </div>
+        {/* 📄 Description */}
+        <p className={`text-sm text-center mb-6 leading-relaxed px-2 ${theme.subText}`}>
+          {pet.description || "새로운 친구를 획득했습니다! 이 친구가 마음에 드시나요?"}
+        </p>
 
-        {/* Duplicate Reward */}
+        {/* ♻️ Duplicate Info */}
         {isDuplicate && (
-          <div className="mb-5 rounded-2xl bg-gradient-to-r from-yellow-50 to-amber-50 px-4 py-3 text-center">
-            <div className="text-sm font-extrabold text-amber-700">
-              ♻️ 중복 보상
+          <div className={`
+            w-full mb-6 p-4 rounded-xl text-center
+            ${pet.rarity === "legendary" || pet.rarity === "epic" ? "bg-white/10" : "bg-gray-50"}
+          `}>
+            <div className={`text-xs font-bold mb-1 ${pet.rarity === "legendary" || pet.rarity === "epic" ? "text-white/90" : "text-gray-900"}`}>
+              이미 함께하고 있는 친구네요!
             </div>
-            <div className="mt-1 text-xs font-medium text-amber-600">
-              이미 보유한 펫이에요! {rewardLabel}을 획득했어요.
+            <div className={`text-sm font-bold ${pet.rarity === "legendary" || pet.rarity === "epic" ? "text-yellow-300" : "text-indigo-600"}`}>
+              {rewardLabel} 획득 완료
             </div>
           </div>
         )}
 
-        {/* LEGENDARY Emphasis */}
-        {pet.rarity === "legendary" && (
-          <div className="mb-4 text-center text-xs font-extrabold tracking-widest text-amber-600 animate-pulse">
-            ✨ LEGENDARY AURA ACTIVATED ✨
-          </div>
-        )}
-
-        {/* CTA */}
+        {/* ✅ Button */}
         <button
           onClick={onClose}
-          className="mt-2 w-full rounded-2xl bg-gray-900 py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:bg-gray-800 active:scale-95"
-          autoFocus
+          className={`
+            relative z-50 w-full py-4 rounded-2xl font-bold text-lg shadow-lg
+            transform transition-all duration-200 hover:scale-[1.02] active:scale-95
+            ${theme.btn}
+          `}
         >
           확인
         </button>
       </div>
-    </div>
+
+      <style>{`
+        @keyframes shine {
+          0% { left: -100%; opacity: 0; }
+          50% { opacity: 0.5; }
+          100% { left: 200%; opacity: 0; }
+        }
+        .animate-shine {
+          animation: shine 2s infinite linear;
+        }
+
+        @keyframes spin-slow-custom {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow-custom {
+          animation: spin-slow-custom 20s linear infinite;
+        }
+
+        /* 1. Common: Pop In */
+        .animate-pop-in {
+          animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn {
+          from { opacity: 0; transform: scale(0.8); }
+          to { opacity: 1; transform: scale(1); }
+        }
+
+        /* 2. Rare: Float Up (Smooth) */
+        .animate-float-up {
+          animation: floatUp 0.6s ease-out forwards;
+        }
+        @keyframes floatUp {
+          from { opacity: 0; transform: translateY(50px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* 3. Epic: 3D Flip (Dramatic - Slower) */
+        .animate-flip-in {
+          animation: flipIn 1.0s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+          perspective: 1000px;
+        }
+        @keyframes flipIn {
+          0% { opacity: 0; transform: rotateX(90deg) scale(0.5); }
+          60% { transform: rotateX(-10deg) scale(1.05); }
+          100% { opacity: 1; transform: rotateX(0) scale(1); }
+        }
+
+        /* 4. Legendary: Impact (Explosive - Much Slower) */
+        .animate-legendary-entry {
+          animation: legendaryEntry 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        @keyframes legendaryEntry {
+          0% { opacity: 0; transform: scale(3); filter: blur(10px); }
+          40% { opacity: 1; transform: scale(0.95); filter: blur(0); }
+          60% { transform: scale(1.02); }
+          100% { transform: scale(1); }
+        }
+      `}</style>
+    </div>,
+    document.body
   );
 }
 // animation helpers expected:

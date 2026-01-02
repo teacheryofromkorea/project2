@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 const BASE_TIMING = {
   SPIN: 2200,
@@ -62,7 +63,7 @@ export default function GachaSlotModal({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {impact && (
         <div className="absolute inset-0 z-40 bg-white animate-gacha-flash pointer-events-none" />
@@ -211,14 +212,13 @@ export default function GachaSlotModal({
                       shadow-[0_20px_60px_rgba(0,0,0,0.45)]
                       flex flex-col items-center justify-center
                       text-gray-900 font-bold
-                      ${
-                        rarity === "epic"
-                          ? "animate-epic-card-emerge"
-                          : rarity === "rare"
+                      ${rarity === "epic"
+                        ? "animate-epic-card-emerge"
+                        : rarity === "rare"
                           ? "animate-rare-card-rise"
                           : rarity === "common"
-                          ? "animate-common-pop"
-                          : ""
+                            ? "animate-common-pop"
+                            : ""
                       }
                     `}
                   >
@@ -239,11 +239,10 @@ export default function GachaSlotModal({
             <button
               onClick={handlePull}
               disabled={disabled || phase === "spinning"}
-              className={`px-12 py-5 rounded-2xl text-lg font-bold transition-all ${
-                disabled || phase === "spinning"
-                  ? "bg-white/10 text-white/40 cursor-not-allowed"
-                  : "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_10px_30px_rgba(168,85,247,0.6)] hover:scale-[1.04]"
-              }`}
+              className={`px-12 py-5 rounded-2xl text-lg font-bold transition-all ${disabled || phase === "spinning"
+                ? "bg-white/10 text-white/40 cursor-not-allowed"
+                : "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_10px_30px_rgba(168,85,247,0.6)] hover:scale-[1.04]"
+                }`}
             >
               🎲 가챠 뽑기
             </button>
@@ -648,7 +647,8 @@ export default function GachaSlotModal({
   
         `}</style>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
