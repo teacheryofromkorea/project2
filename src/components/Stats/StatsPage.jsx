@@ -3,6 +3,8 @@ import StudentSelectPanel from "./StudentSelectPanel";
 import StatsDashboard from "./StatsDashboard";
 import { supabase } from "../../lib/supabaseClient";
 
+const LAST_SELECTED_STUDENT_KEY = "stats:lastSelectedStudentId";
+
 function StatsPage() {
   const [students, setStudents] = useState([]);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
@@ -16,7 +18,7 @@ function StatsPage() {
     // 1️⃣ 학생 기본 정보 fetch
     const { data: studentsData, error: studentsError } = await supabase
       .from("students")
-      .select("id, name, number, gacha_tickets, duplicate_count, gacha_progress")
+      .select("id, name, number, gacha_tickets, duplicate_count, gacha_progress, fragments")
       .order("number", { ascending: true });
 
     if (studentsError || !studentsData) {
@@ -56,12 +58,18 @@ function StatsPage() {
     setStudents(mergedStudents);
 
     // 5️⃣ 단일 선택 기본값 유지
-    if (
-      mergedStudents.length > 0 &&
-      !selectedStudentId &&
-      !isMultiSelectMode
-    ) {
-      setSelectedStudentId(mergedStudents[0].id);
+    if (mergedStudents.length > 0 && !isMultiSelectMode) {
+      const savedStudentId = localStorage.getItem(LAST_SELECTED_STUDENT_KEY);
+
+      const exists = savedStudentId
+        ? mergedStudents.some((s) => s.id === savedStudentId)
+        : false;
+
+      if (exists) {
+        setSelectedStudentId(savedStudentId);
+      } else {
+        setSelectedStudentId(mergedStudents[0].id);
+      }
     }
 
     setLoading(false);
@@ -78,11 +86,11 @@ function StatsPage() {
       prev.map((student) =>
         student.id === studentId
           ? {
-              ...student,
-              pets: student.pets.includes(petId)
-                ? student.pets
-                : [...student.pets, petId],
-            }
+            ...student,
+            pets: student.pets.includes(petId)
+              ? student.pets
+              : [...student.pets, petId],
+          }
           : student
       )
     );
@@ -91,6 +99,12 @@ function StatsPage() {
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  useEffect(() => {
+    if (selectedStudentId && !isMultiSelectMode) {
+      localStorage.setItem(LAST_SELECTED_STUDENT_KEY, selectedStudentId);
+    }
+  }, [selectedStudentId, isMultiSelectMode]);
 
   const toggleStudentSelection = (studentId) => {
     setSelectedStudentIds((prev) =>

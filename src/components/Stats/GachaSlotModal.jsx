@@ -51,7 +51,10 @@ export default function GachaSlotModal({
         setPhase("result");
         setTimeout(() => setImpact(false), BASE_TIMING.IMPACT);
         setTimeout(() => {
-          onResult?.(resultPet);
+          onResult?.({
+            pet: resultPet,
+            rarity,
+          });
         }, BASE_TIMING.RESULT_DELAY);
       }, pauseTime);
     }, BASE_TIMING.SPIN);
