@@ -34,10 +34,12 @@ import useCurrentTimeBlock from "./hooks/useCurrentTimeBlock";
 
 function AttendanceLayout() {
   return (
-    <div className="grid grid-cols-[260px,1fr,260px] gap-4">
-      <RoutineSidebar />
-      <AttendanceBoard />
-      <MissionSidebar />
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="grid grid-cols-[260px,1fr,260px] gap-6 w-full max-w-[1700px] flex-1 mx-auto min-h-0">
+        <RoutineSidebar />
+        <AttendanceBoard />
+        <MissionSidebar />
+      </div>
     </div>
   );
 }
@@ -155,7 +157,7 @@ function AppContent() {
           onUserNavigate={handleUserNavigate}
         />
 
-        <main className="flex-1 min-h-0 px-8 pb-8 pt-4">
+        <main className="flex-1 flex flex-col min-h-0 px-8 pb-10 pt-4">
           <Routes>
             {/* 기본 경로 → 출석 탭 */}
             <Route path="/" element={<Navigate to="/attendance" replace />} />

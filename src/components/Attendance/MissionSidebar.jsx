@@ -180,7 +180,7 @@ function MissionSidebar() {
     <>
       <aside
         className="
-    relative
+    relative h-full
     bg-white border border-gray-200 shadow-2xl
     rounded-2xl
     p-6
@@ -193,7 +193,7 @@ function MissionSidebar() {
           {missionTitle}
         </h2>
 
-        <ul className="space-y-2 flex-1">
+        <ul className="space-y-2 flex-1 flex flex-col justify-center min-h-0 overflow-y-auto px-1">
           {missions.map((item, idx) => (
             <li key={item.id}>
               <div
