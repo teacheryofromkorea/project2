@@ -43,70 +43,70 @@ function Seat({
   }
 
   return (
-    <button
+    <div
       onClick={handleSeatClick}
       className={`
         group relative w-full h-full min-h-[100px] rounded-2xl transition-all duration-200 ease-out
-        flex flex-col items-center justify-center
+        flex flex-col items-center justify-center cursor-pointer
         ${isPresent
           ? "bg-gradient-to-br from-indigo-50 to-purple-50 shadow-md border border-purple-300"
           : "bg-white/90 backdrop-blur-sm border border-gray-200 opacity-90 hover:opacity-100 hover:bg-white hover:scale-[1.02] hover:shadow-lg"
         }
       `}
     >
-      {/* Active Indicator (Soft Inner Glow) */}
-      {isPresent && (
-        <div className="absolute inset-0 rounded-2xl bg-white/30 pointer-events-none" />
-      )}
+      {/* 1. 상단: 번호 뱃지 (크기 소폭 축소) */}
+      <div
+        className={`w-5 h-5 rounded-full ring-2 ring-white shadow-sm flex items-center justify-center flex-none ${student.gender === "male"
+          ? "bg-blue-500"
+          : student.gender === "female"
+            ? "bg-pink-500"
+            : "bg-emerald-500"
+          }`}
+      >
+        {student.number != null && (
+          <span className="text-[10px] font-black text-white leading-none">
+            {student.number}
+          </span>
+        )}
+      </div>
 
-      {/* Content */}
-      <div className="flex flex-col items-center relative z-10 transition-transform duration-300 group-hover:-translate-y-1">
-
-        {/* Avatar Dot */}
+      {/* 2. 중간: 이름 (4글자 초강력 압축) */}
+      <div className="flex-none flex items-center justify-center w-full">
         <div
-          className={`w-2.5 h-2.5 rounded-full mb-3 ring-2 ring-white shadow-sm ${student.gender === "male"
-            ? "bg-blue-500"
-            : student.gender === "female"
-              ? "bg-pink-500"
-              : "bg-emerald-500"
-            }`}
-        />
-
-        <div
-          className={`text-lg font-extrabold tracking-tight transition-colors ${isPresent
-            ? "text-gray-900"
-            : "text-slate-600"
+          className={`font-black transition-all duration-200 text-center w-full break-keep ${student.name.length >= 4
+            ? "text-sm tracking-tighter leading-none px-0.5"
+            : "text-lg tracking-tight"
+            } ${isPresent
+              ? "text-gray-900"
+              : "text-slate-600"
             }`}
         >
           {student.name}
         </div>
-
-        {student.number != null && (
-          <div className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wider">
-            {student.number.toString().padStart(2, '0')}
-          </div>
-        )}
       </div>
 
-      {/* Mission Button (Pastel Style) */}
-      {isPresent && (
-        <div className="absolute bottom-3 left-0 w-full flex justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+      {/* 3. 하단: 미션 버튼 (높이 축소) */}
+      <div className="w-full px-1 flex-none h-6 mt-0.5">
+        {isPresent ? (
           <button
             onClick={(e) => {
-              e.stopPropagation();
+              e.stopPropagation(); // ⛔ 출석 토글 방지
               onOpenMission?.(student);
             }}
             className={`
-              px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white rounded-full
-              bg-gradient-to-r from-indigo-500 to-purple-500 shadow-sm hover:shadow-md hover:scale-105 transition-all
+              w-full h-full text-[9px] font-bold uppercase tracking-wider text-white rounded-lg
+              bg-gradient-to-r from-indigo-500 to-purple-500 shadow-sm hover:shadow-md active:scale-95 transition-all
               ${highlightMission ? "animate-pulse ring-2 ring-purple-300" : ""}
             `}
           >
-            Mission
+            미션
           </button>
-        </div>
-      )}
-    </button>
+        ) : (
+          /* 결석 시에도 최소 공간 유지 (너무 납작해지지 않게) */
+          <div className="w-full h-full opacity-0 pointer-events-none" />
+        )}
+      </div>
+    </div>
   );
 }
 
