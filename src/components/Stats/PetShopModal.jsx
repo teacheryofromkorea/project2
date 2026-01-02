@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { petsData, petSets } from "../../constants/pets";
 
 // 🔤 내부 rarity -> 한글 표시 매핑
@@ -35,7 +36,7 @@ export default function PetShopModal({
         return petSets.find((s) => s.id === setId)?.name || "알 수 없음";
     };
 
-    return (
+    return createPortal(
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
             onClick={onClose}
@@ -128,6 +129,7 @@ export default function PetShopModal({
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
