@@ -127,52 +127,66 @@ function AppContent() {
   };
 
   return (
-    <div
-      className={
-        `min-h-screen flex flex-col text-gray-900 ` +
-        (isStatsPage
-          ? "bg-gradient-to-br from-[#2b145f] via-[#3b1d7a] to-[#5b2fa6]"
-          : "bg-gradient-to-br from-pink-200 via-purple-200 to-orange-200")
-      }
-    >
-      <Toaster position="top-center" />
-      <TopNav
-        autoSwitchEnabled={autoSwitchEnabled}
-        onToggleAutoSwitch={() => setAutoSwitchEnabled((v) => !v)}
-        onUserNavigate={handleUserNavigate}
-      />
+    <div className="min-h-screen flex flex-col text-slate-800 bg-slate-50 relative overflow-x-hidden">
 
-      <main className="flex-1 min-h-0 px-8 pb-8 pt-4">
-        <Routes>
-          {/* 기본 경로 → 출석 탭 */}
-          <Route path="/" element={<Navigate to="/attendance" replace />} />
+      {/* Background Layer: Artistic Mesh Gradient (MMCA Style) */}
+      {!isStatsPage && (
+        <div className="fixed inset-0 z-0 pointer-events-none bg-slate-50">
+          {/* Noise Texture Overlay */}
+          <div className="absolute inset-0 opacity-[0.03] mix-blend-multiply pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
 
-          {/* 출석 */}
-          <Route path="/attendance" element={<AttendanceLayout />} />
+          {/* Vibrant Color Orbs (Higher Intensity) */}
+          <div className="absolute top-[15%] left-[20%] w-[65vw] h-[65vw] bg-blue-600/40 rounded-full blur-[130px] animate-pulse-slow" />
+          <div className="absolute top-[-5%] left-[-5%] w-[45vw] h-[45vw] bg-rose-600/35 rounded-full blur-[110px] animate-pulse-slow" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-[-5%] right-[5%] w-[50vw] h-[50vw] bg-amber-500/30 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '3s' }} />
+          <div className="absolute bottom-[15%] left-[-5%] w-[40vw] h-[40vw] bg-cyan-500/35 rounded-full blur-[100px] animate-pulse-slow" style={{ animationDelay: '2s' }} />
 
-          {/* 쉬는시간 */}
-          <Route path="/break" element={<BreakTimeBoard />} />
+          {/* Central Mixing Point */}
+          <div className="absolute top-[35%] right-[15%] w-[40vw] h-[40vw] bg-indigo-600/25 rounded-full blur-[140px] animate-pulse-slow" style={{ animationDelay: '4s' }} />
+        </div>
+      )}
 
-          {/* 설정 */}
-          <Route path="/settings" element={<SettingsLayout />}>
-            <Route path="students" element={<StudentsPage />} />
-            <Route path="timetable" element={<TimeTablePage />} />
-            <Route path="seating" element={<SeatingPlanPage />} />
-            <Route path="general" element={<GeneralPage />} />
-          </Route>
+      {/* Main Content Wrapper */}
+      <div className="relative z-10 flex-1 flex flex-col">
+        <Toaster position="top-center" />
+        <TopNav
+          autoSwitchEnabled={autoSwitchEnabled}
+          onToggleAutoSwitch={() => setAutoSwitchEnabled((v) => !v)}
+          onUserNavigate={handleUserNavigate}
+        />
 
-          {/* 기타 탭 */}
-          <Route path="/lunch" element={<LunchTimeBoard />} />
-          <Route path="/class" element={<ClassPage />} />
-          <Route path="/end" element={<EndTimeBoard />} />
-          <Route path="/stats" element={<StatsPage />} />
-          <Route path="/overview" element={<OverviewPage />} />
-          <Route path="/tools" element={<ToolsPage />} />
+        <main className="flex-1 min-h-0 px-8 pb-8 pt-4">
+          <Routes>
+            {/* 기본 경로 → 출석 탭 */}
+            <Route path="/" element={<Navigate to="/attendance" replace />} />
 
-          {/* 존재하지 않는 경로 → 출석 */}
-          <Route path="*" element={<Navigate to="/attendance" replace />} />
-        </Routes>
-      </main>
+            {/* 출석 */}
+            <Route path="/attendance" element={<AttendanceLayout />} />
+
+            {/* 쉬는시간 */}
+            <Route path="/break" element={<BreakTimeBoard />} />
+
+            {/* 설정 */}
+            <Route path="/settings" element={<SettingsLayout />}>
+              <Route path="students" element={<StudentsPage />} />
+              <Route path="timetable" element={<TimeTablePage />} />
+              <Route path="seating" element={<SeatingPlanPage />} />
+              <Route path="general" element={<GeneralPage />} />
+            </Route>
+
+            {/* 기타 탭 */}
+            <Route path="/lunch" element={<LunchTimeBoard />} />
+            <Route path="/class" element={<ClassPage />} />
+            <Route path="/end" element={<EndTimeBoard />} />
+            <Route path="/stats" element={<StatsPage />} />
+            <Route path="/overview" element={<OverviewPage />} />
+            <Route path="/tools" element={<ToolsPage />} />
+
+            {/* 존재하지 않는 경로 → 출석 */}
+            <Route path="*" element={<Navigate to="/attendance" replace />} />
+          </Routes>
+        </main>
+      </div>
     </div>
   );
 }

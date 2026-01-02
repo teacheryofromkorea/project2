@@ -30,8 +30,8 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
     <header
       className={
         isStatsPage
-          ? "bg-slate-900/80 border-b border-white/10"
-          : "bg-white/60 backdrop-blur border-b border-white/50"
+          ? "bg-white/60 backdrop-blur-md border-b border-white/40"
+          : "bg-white/40 backdrop-blur-xl border-b border-white/60 shadow-[0_4px_30px_rgba(0,0,0,0.03)]"
       }
     >
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
@@ -46,17 +46,12 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
                 onUserNavigate(tab.path);
               }}
               disabled={locked}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
-                locked
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${locked
                   ? "text-gray-400 cursor-not-allowed"
                   : isActive(tab.path)
-                  ? isStatsPage
-                    ? "bg-purple-600 text-white shadow"
-                    : "bg-pink-500 text-white shadow"
-                  : isStatsPage
-                  ? "text-gray-300 hover:bg-white/10"
-                  : "text-gray-600 hover:bg-white"
-              }`}
+                    ? "bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                }`}
             >
               {tab.label}
             </button>
@@ -75,14 +70,12 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
             <button
               type="button" // ⛔ submit 방지
               onClick={onToggleAutoSwitch}
-              className={`relative w-10 h-5 rounded-full transition ${
-                autoSwitchEnabled ? "bg-green-500" : "bg-gray-300"
-              }`}
+              className={`relative w-10 h-5 rounded-full transition ${autoSwitchEnabled ? "bg-green-500" : "bg-gray-300"
+                }`}
             >
               <span
-                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition ${
-                  autoSwitchEnabled ? "left-5" : "left-0.5"
-                }`}
+                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition ${autoSwitchEnabled ? "left-5" : "left-0.5"
+                  }`}
               />
             </button>
           </div>

@@ -168,119 +168,132 @@ function AttendanceBoard() {
     };
   }, []);
 
-const markPresent = async (id) => {
-  const today = new Date().toISOString().split("T")[0]; // today 변수 재정의
+  const markPresent = async (id) => {
+    const today = new Date().toISOString().split("T")[0]; // today 변수 재정의
 
-  const isPresent = attendanceStatus.some(
-    (a) => a.student_id === id && a.present
-  );
-
-  const { error } = await supabase
-    .from("student_attendance_status")
-    .upsert(
-      {
-        student_id: id,
-        date: today,
-        present: !isPresent,
-      },
-      { onConflict: "student_id,date" }
+    const isPresent = attendanceStatus.some(
+      (a) => a.student_id === id && a.present
     );
 
-  handleSupabaseError(error, "출석 저장에 실패했어요.");
-  await fetchAttendance();
-  await fetchStatus();
-};
+    const { error } = await supabase
+      .from("student_attendance_status")
+      .upsert(
+        {
+          student_id: id,
+          date: today,
+          present: !isPresent,
+        },
+        { onConflict: "student_id,date" }
+      );
+
+    handleSupabaseError(error, "출석 저장에 실패했어요.");
+    await fetchAttendance();
+    await fetchStatus();
+  };
 
 
   return (
     <>
-    {/* 교실 배경 컨테이너 (85vh 고정 + 스크롤) */}
-    <div className="relative w-full h-[85vh] overflow-y-auto bg-gradient-to-b from-[#f5f4f2] to-[#eceae6]">
-      {/* subtle paper texture */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.035]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(45deg, rgba(0,0,0,0.04) 0px, rgba(0,0,0,0.04) 1px, transparent 1px, transparent 6px)",
-        }}
-      />
+      {/* 교실 배경 컨테이너 (Full height fill) - Light Gemini Style */}
+      <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden">
+        {/* Decorative ambient blobs (Light Mode) */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-purple-200/40 rounded-full blur-[100px]" />
+          <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-200/40 rounded-full blur-[100px]" />
+        </div>
 
 
-      {/* 칠판 영역 (헤더 아래, 좌석 위) */}
-      <div className="relative z-10 px-10 pt-6">
-        <div className="max-w-5xl mx-auto rounded-2xl bg-[#495750] shadow-sm">
-          <div className="px-6 py-4 flex items-center">
-<div className="flex items-center justify-center h-full w-full">
-  <div className="text-sm font-extrabold text-gray-300 tracking-wide">
-    칠판
-  </div>
-</div>
+        {/* 상단 헤더 영역 (HUD Style - Wide) */}
+        <div className="relative z-10 px-4 pt-5">
+          <div className="w-full">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-sm">
+                  Attendance <span className="text-indigo-600">Status</span>
+                </h1>
 
+              </div>
+
+              {/* 우측 상단 상태 요약 카드 (Slim Row Style) */}
+              <div className="flex gap-2">
+                <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total</span>
+                  <span className="text-base font-extrabold text-gray-900 leading-none">{students.length}</span>
+                </div>
+
+                <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-6 h-6 bg-purple-100/40 rounded-full blur-xl -mr-2 -mt-2" />
+                  <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider relative z-10">Active</span>
+                  <span className="text-base font-extrabold text-purple-700 relative z-10 leading-none">
+                    {Object.values(attendanceStatus).filter(Boolean).length}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* 좌석 영역 래퍼 */}
-      <div className="relative z-10 min-h-full px-10 pt-5 pb-16 flex justify-center items-start">
+        {/* 좌석 영역 래퍼 (Wide Layout) */}
+        <div className="relative z-10 flex-1 px-4 py-4 flex flex-col justify-center items-center min-h-0">
 
-        {/* 좌석 무대 */}
-        <div className="relative w-full max-w-5xl rounded-3xl bg-white/80 backdrop-blur-lg shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-10">
-          <div className="h-2" />
-          <SeatGrid
-            seats={seats}
-            attendanceMap={attendanceStatus.reduce((acc, row) => {
-              acc[row.student_id] = row.present;
-              return acc;
-            }, {})}
-            onToggleAttendance={(student) => {
-              const isPresent = attendanceStatus.some(
-                (a) => a.student_id === student.id && a.present
-              );
+          {/* 좌석 무대 - Frosted White Glass (Wide Expansion) */}
+          <div className="relative w-full h-full rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 p-6 sm:p-8 shadow-xl flex flex-col min-h-0">
+            <div className="h-2" />
+            <SeatGrid
+              seats={seats}
+              attendanceMap={attendanceStatus.reduce((acc, row) => {
+                acc[row.student_id] = row.present;
+                return acc;
+              }, {})}
+              onToggleAttendance={(student) => {
+                const isPresent = attendanceStatus.some(
+                  (a) => a.student_id === student.id && a.present
+                );
 
-              setPendingStudent(student);
-              setConfirmType(isPresent ? "cancel" : "present");
-            }}
-            onOpenMission={(student) => {
-              setSelectedStudent(student);
-              setModalType("task");
-            }}
-          />
+                setPendingStudent(student);
+                setConfirmType(isPresent ? "cancel" : "present");
+              }}
+              onOpenMission={(student) => {
+                setSelectedStudent(student);
+                setModalType("task");
+              }}
+            />
+          </div>
+
         </div>
-
       </div>
-    </div>
 
-    {/* 모달 UI 부분은 동일 */}
-          {/* 학생 루틴/미션 모달 */}
-<StudentTaskModal
-  isOpen={modalType === "task"}
-  onClose={() => {
-    setModalType(null);
-  }}
-  onSaved={() => {
-    fetchStatus();
-    fetchAttendance();
-  }}
-  student={selectedStudent}
-  routines={routines}   // 루틴 데이터 연결
-  missions={missions}   // 미션 데이터 연결
-/>
+      {/* 모달 UI 부분은 동일 */}
+      {/* 학생 루틴/미션 모달 */}
+      <StudentTaskModal
+        isOpen={modalType === "task"}
+        onClose={() => {
+          setModalType(null);
+        }}
+        onSaved={() => {
+          fetchStatus();
+          fetchAttendance();
+        }}
+        student={selectedStudent}
+        routines={routines}   // 루틴 데이터 연결
+        missions={missions}   // 미션 데이터 연결
+      />
 
-{confirmType && pendingStudent && (
-  <AttendanceConfirmModal
-    type={confirmType}
-    student={pendingStudent}
-    onClose={() => {
-      setConfirmType(null);
-      setPendingStudent(null);
-    }}
-    onConfirm={async () => {
-      await markPresent(pendingStudent.id);
-      setConfirmType(null);
-      setPendingStudent(null);
-    }}
-  />
-)}
+      {confirmType && pendingStudent && (
+        <AttendanceConfirmModal
+          type={confirmType}
+          student={pendingStudent}
+          onClose={() => {
+            setConfirmType(null);
+            setPendingStudent(null);
+          }}
+          onConfirm={async () => {
+            await markPresent(pendingStudent.id);
+            setConfirmType(null);
+            setPendingStudent(null);
+          }}
+        />
+      )}
     </>
   );
 }

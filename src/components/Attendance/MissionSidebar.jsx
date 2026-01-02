@@ -10,9 +10,9 @@ function MissionSidebar() {
   const [editMission, setEditMission] = useState(null);
   const [editText, setEditText] = useState("");
   const [missionTitle, setMissionTitle] = useState("오늘의 미션");
-  
+
   const { locked } = useLock();
-  
+
   // -------------------------
   // 1) SUPABASE: 미션 불러오기
   // -------------------------
@@ -20,17 +20,17 @@ function MissionSidebar() {
     const { data, error } = await supabase
       .from("missions")
       .select("*")
-      .order("order_index", { nullsFirst : true, ascending: true });
+      .order("order_index", { nullsFirst: true, ascending: true });
 
     if (error) {
       handleSupabaseError(error, "미션 목록을 불러오지 못했어요.");
       return;
     }
     setMissions(data);
-if (data && data.length > 0) {
-  const titleRow = data.find((m) => m.mission_title !== null);
-  setMissionTitle(titleRow?.mission_title ?? "오늘의 미션");
-}
+    if (data && data.length > 0) {
+      const titleRow = data.find((m) => m.mission_title !== null);
+      setMissionTitle(titleRow?.mission_title ?? "오늘의 미션");
+    }
   };
 
   useEffect(() => {
@@ -76,16 +76,16 @@ if (data && data.length > 0) {
     if (locked) return;
     if (newMission.trim() === "") return;
 
-  // 현재 미션 중 가장 큰 order_index 찾기
-  const maxIndex =
-    missions.length > 0
-      ? Math.max(...missions.map((m) => m.order_index ?? 0)) + 1
-      : 0;
+    // 현재 미션 중 가장 큰 order_index 찾기
+    const maxIndex =
+      missions.length > 0
+        ? Math.max(...missions.map((m) => m.order_index ?? 0)) + 1
+        : 0;
 
-  // order_index 포함해서 insert
-  const { error } = await supabase
-    .from("missions")
-    .insert([{ text: newMission, order_index: maxIndex }]);
+    // order_index 포함해서 insert
+    const { error } = await supabase
+      .from("missions")
+      .insert([{ text: newMission, order_index: maxIndex }]);
 
     if (error) {
       handleSupabaseError(error, "미션 추가에 실패했어요.");
@@ -178,20 +178,18 @@ if (data && data.length > 0) {
 
   return (
     <>
-<aside
-  className="
+      <aside
+        className="
     relative
-    bg-[#c8ae9a]
+    bg-white border border-gray-200 shadow-2xl
     rounded-2xl
     p-6
-    shadow-[0_10px_30px_rgba(0,0,0,0.15)]
     flex flex-col
   "
->
+      >
 
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-yellow-200/80 rounded-md shadow-sm"></div>
-        
-        <h2 className="text-2xl font-extrabold mb-4  text-gray-800 tracking-tight">
+        <h2 className="text-xl font-extrabold mb-6 text-gray-900 tracking-tight flex items-center gap-2">
+          <span className="w-1.5 h-6 bg-pink-600 rounded-full"></span>
           {missionTitle}
         </h2>
 
@@ -201,21 +199,19 @@ if (data && data.length > 0) {
               <div
                 className="
                   relative w-full
-                  bg-yellow-50 /* 메모지 색상 */
-                  bg-[linear-gradient(transparent_95%,rgba(0,0,0,0.05)_95%)]
-                  bg-[length:100%_28px]
+                  bg-slate-50 hover:bg-white
+                  border border-slate-200 hover:border-pink-300
                   rounded-xl
                   px-4 py-3
-                  text-lg font-semibold
                   text-center
-                  shadow-sm
-                  border border-yellow-200
-                  hover:shadow-md transition
+                  transition-all duration-200
+                  group
+                  shadow-sm hover:shadow-md
                 "
               >
 
                 {/* 메모 내용 */}
-                <div className="leading-relaxed block">
+                <div className="text-slate-700 text-lg font-bold group-hover:text-pink-900 transition-colors leading-relaxed block">
                   {item.text}
                 </div>
               </div>
@@ -225,19 +221,18 @@ if (data && data.length > 0) {
 
         <button
           disabled={locked}
-          className={`mt-4 w-full text-sm font-semibold py-2 rounded-full transition
-    ${
-      locked
-        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-        : "bg-[#5E8C61] text-white hover:bg-[#4A704D]" /* 버튼 색상 */
-    }
+          className={`mt-6 w-full text-sm font-semibold py-3 rounded-xl transition-all border
+    ${locked
+              ? "bg-gray-100 text-gray-400 border-transparent cursor-not-allowed"
+              : "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100 hover:text-pink-700 hover:border-pink-300 hover:shadow-sm"
+            }
   `}
           onClick={() => {
             if (locked) return;
             setIsEditing(true);
           }}
         >
-          ✏️ 미션 편집
+          Edit Missions
         </button>
 
       </aside>
@@ -321,9 +316,9 @@ if (data && data.length > 0) {
               className="w-full border rounded-lg px-3 py-2 mb-3"
               placeholder="새 미션 입력"
               value={newMission}
-                autoComplete="off"
-  autoCorrect="off"
-  spellCheck="false"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
               onChange={(e) => setNewMission(e.target.value)}
             />
 
@@ -337,30 +332,30 @@ if (data && data.length > 0) {
               추가
             </button>
 
-<button
-  className="w-full bg-gray-300 py-2 rounded-full font-semibold"
-  onClick={async () => {
-    if (locked) return;
-    if (missions.length > 0) {
-      const ids = missions.map((item) => item.id);
+            <button
+              className="w-full bg-gray-300 py-2 rounded-full font-semibold"
+              onClick={async () => {
+                if (locked) return;
+                if (missions.length > 0) {
+                  const ids = missions.map((item) => item.id);
 
-      const { error } = await supabase
-        .from("missions")
-        .update({ mission_title: missionTitle })
-        .in("id", ids);
+                  const { error } = await supabase
+                    .from("missions")
+                    .update({ mission_title: missionTitle })
+                    .in("id", ids);
 
-      if (error) {
-        handleSupabaseError(error, "미션 제목 저장에 실패했어요.");
-        return;
-      }
-    }
+                  if (error) {
+                    handleSupabaseError(error, "미션 제목 저장에 실패했어요.");
+                    return;
+                  }
+                }
 
-    setIsEditing(false);
-    fetchMissions(); // 제목/목록 다시 불러오기
-  }}
->
-  닫기
-</button>
+                setIsEditing(false);
+                fetchMissions(); // 제목/목록 다시 불러오기
+              }}
+            >
+              닫기
+            </button>
           </div>
 
           {editMission && (
