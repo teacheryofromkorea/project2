@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import StatCardsGrid from "./StatCardsGrid";
 import ReasonModal from "./ReasonModal";
+import CompetencySettingsModal from "./CompetencySettingsModal";
+import { Settings } from "lucide-react";
+
 // 🎟️ 가챠 쿠폰 지급 기준: 능력치 5 누적당 1장
 const STAT_PER_GACHA = 5;
 
@@ -21,6 +24,8 @@ function CoreStatsSection({
   const [pendingStat, setPendingStat] = useState(null);
   const [pendingTargetIds, setPendingTargetIds] = useState([]);
   const [reason, setReason] = useState("");
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const targetStudentIds = isMultiSelectMode
     ? selectedStudentIds
@@ -43,18 +48,18 @@ function CoreStatsSection({
       ? `${selectedStudent.name}의 핵심 역량`
       : "핵심 역량";
 
-  useEffect(() => {
-    async function loadTemplates() {
-      const { data, error } = await supabase
-        .from("stat_templates")
-        .select("*")
-        .order("order_index", { ascending: true });
+  const loadTemplates = async () => {
+    const { data, error } = await supabase
+      .from("stat_templates")
+      .select("*")
+      .order("order_index", { ascending: true });
 
-      if (!error) {
-        setStatTemplates(data || []);
-      }
+    if (!error) {
+      setStatTemplates(data || []);
     }
+  };
 
+  useEffect(() => {
     loadTemplates();
   }, []);
 
@@ -126,16 +131,16 @@ function CoreStatsSection({
       if (nextValue === currentValue) continue;
 
       // 1️⃣ student_stats upsert
-await supabase.from("student_stats").upsert(
-  {
-    student_id: studentId,
-    stat_template_id: pendingStat.id,
-    value: nextValue,
-  },
-  {
-    onConflict: "student_id,stat_template_id",
-  }
-);
+      await supabase.from("student_stats").upsert(
+        {
+          student_id: studentId,
+          stat_template_id: pendingStat.id,
+          value: nextValue,
+        },
+        {
+          onConflict: "student_id,stat_template_id",
+        }
+      );
 
       // 2️⃣ 로그 기록
       await supabase.from("student_stat_logs").insert({
@@ -215,6 +220,25 @@ await supabase.from("student_stats").upsert(
     setReasonModalOpen(false);
   };
 
+  const handleUpdateMaxValue = async (newMax) => {
+    // 모든 템플릿의 max_value를 업데이트한다고 가정
+    // 실제로는 개별 템플릿 업데이트도 가능하겠지만, UX 단순화를 위해 일괄 적용
+    const updates = statTemplates.map((tpl) => ({
+      id: tpl.id,
+      max_value: newMax,
+    }));
+
+    for (const update of updates) {
+      await supabase
+        .from("stat_templates")
+        .update({ max_value: update.max_value })
+        .eq("id", update.id);
+    }
+
+    await loadTemplates(); // 최신 템플릿 정보 다시 로드
+    setSettingsOpen(false);
+  };
+
   if (loading) {
     return (
       <section className="bg-transparent">
@@ -226,9 +250,21 @@ await supabase.from("student_stats").upsert(
     );
   }
 
+  // 대표 Max Value 가져오기 (없으면 기본 10)
+  const currentMax = statTemplates.length > 0 ? statTemplates[0].max_value : 10;
+
   return (
     <section className="bg-transparent">
-      <h2 className="text-lg font-semibold mb-6 text-white">{title}</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold text-white">{title}</h2>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition"
+          title="최대 수치 설정"
+        >
+          <Settings size={18} />
+        </button>
+      </div>
 
       <StatCardsGrid
         statTemplates={statTemplates}
@@ -248,6 +284,13 @@ await supabase.from("student_stats").upsert(
         onChangeReason={setReason}
         onConfirm={handleConfirmReason}
         onClose={() => setReasonModalOpen(false)}
+      />
+
+      <CompetencySettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        currentMax={currentMax}
+        onUpdate={handleUpdateMaxValue}
       />
     </section>
   );

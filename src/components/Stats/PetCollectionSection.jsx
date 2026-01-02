@@ -76,22 +76,19 @@ export default function PetCollectionSection({
           return (
             <div
               key={pet.id}
-              className={`relative rounded-xl border p-4 text-center ${
-                owned ? "cursor-pointer" : "cursor-not-allowed"
-              }
+              className={`relative rounded-xl border p-4 text-center ${owned ? "cursor-pointer" : "cursor-not-allowed"
+                }
 transition-all duration-300 ease-out
-${
-  owned
-    ? `bg-white text-gray-900 shadow-lg ${rarityGlow}
+${owned
+                  ? `bg-white text-gray-900 shadow-lg ${rarityGlow}
        hover:-translate-y-2 hover:scale-[1.04]
        hover:shadow-2xl`
-    : "bg-[#24123f] border-white/10 text-white/40"
-}
-${
-  isNewlyDrawn
-    ? "ring-4 ring-emerald-300/70 shadow-[0_0_45px_rgba(16,185,129,0.55)] scale-[1.06]"
-    : ""
-}
+                  : "bg-[#24123f] border-white/10 text-white/40"
+                }
+${isNewlyDrawn
+                  ? "ring-4 ring-emerald-300/70 shadow-[0_0_45px_rgba(16,185,129,0.55)] scale-[1.06]"
+                  : ""
+                }
 group`}
               onClick={() => {
                 if (owned) setSelectedPet(pet);
@@ -105,13 +102,12 @@ group`}
 
               {owned && pet.rarity !== "common" && (
                 <div className={`absolute inset-0 rounded-xl ring-2 ring-offset-2 ring-offset-transparent
-    ${
-      pet.rarity === "rare"
-        ? "ring-blue-400/40"
-        : pet.rarity === "epic"
-        ? "ring-purple-400/50"
-        : "ring-yellow-300/60"
-    }`} />
+    ${pet.rarity === "rare"
+                    ? "ring-blue-400/40"
+                    : pet.rarity === "epic"
+                      ? "ring-purple-400/50"
+                      : "ring-yellow-300/60"
+                  }`} />
               )}
 
               {/* 잠금 오버레이 */}
@@ -137,7 +133,7 @@ ${owned ? "group-hover:scale-125 group-hover:rotate-6" : "scale-90"}
               </div>
 
               {/* 별 */}
-              <div className="flex justify-center gap-0.5 text-yellow-400 text-xs">
+              <div className="relative z-10 flex justify-center gap-0.5 text-yellow-400 text-xs">
                 {Array.from({ length: starCount }).map((_, i) => (
                   <span key={i}>★</span>
                 ))}
@@ -146,11 +142,16 @@ ${owned ? "group-hover:scale-125 group-hover:rotate-6" : "scale-90"}
           );
         })}
       </div>
-      <PetDetailModal
-        pet={selectedPet}
-        isOpen={!!selectedPet}
-        onClose={() => setSelectedPet(null)}
-      />
-    </section>
+
+      {
+        selectedPet && (
+          <PetDetailModal
+            pet={selectedPet}
+            isOpen={true}
+            onClose={() => setSelectedPet(null)}
+          />
+        )
+      }
+    </section >
   );
 }
