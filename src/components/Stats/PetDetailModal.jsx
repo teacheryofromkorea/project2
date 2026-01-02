@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 export default function PetDetailModal({ pet, isOpen, onClose }) {
   if (!isOpen || !pet) return null;
@@ -33,20 +34,22 @@ export default function PetDetailModal({ pet, isOpen, onClose }) {
     },
   }[pet.rarity];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md animate-fadeIn">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fadeIn" onClick={onClose}>
       <div
         className={`relative w-[360px] rounded-[28px]
   bg-gradient-to-br from-[#24123f] via-[#1b0f2e] to-[#120b24]
   p-7 text-white
   transition-all duration-500 ease-out
   animate-scaleIn
-  ${rarityStyle.glow}`}
+  ${rarityStyle.glow}
+  shadow-2xl border border-white/10`}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-white/50 hover:text-white transition"
+          className="absolute right-4 top-4 text-white/50 hover:text-white transition p-2"
         >
           ✕
         </button>
@@ -62,15 +65,15 @@ export default function PetDetailModal({ pet, isOpen, onClose }) {
         </div>
 
         {/* Name */}
-        <h2 className="text-xl font-semibold text-center mb-1">
+        <h2 className="text-2xl font-bold text-center mb-1 text-white">
           {pet.name}
         </h2>
 
         {/* Rarity badge */}
-        <div className="flex justify-center mb-4">
+        <div className="flex justify-center mb-6">
           <span
-            className={`rounded-full px-4 py-1 text-xs tracking-[0.3em]
-  bg-white/10 backdrop-blur-md border border-white/10
+            className={`rounded-full px-4 py-1.5 text-xs font-bold tracking-[0.2em] uppercase
+  bg-white/5 backdrop-blur-md border border-white/10
   ${rarityStyle.text}`}
           >
             {rarityStyle.label}
@@ -78,17 +81,18 @@ export default function PetDetailModal({ pet, isOpen, onClose }) {
         </div>
 
         {/* Description */}
-        <p className="text-center text-sm leading-relaxed text-white/85 px-3 mt-1">
+        <p className="text-center text-sm leading-relaxed text-blue-100/70 px-4 mt-2 mb-6">
           {pet.description}
         </p>
 
         {/* Footer */}
-        <div className="mt-5 flex justify-center">
-          <span className="text-xs text-white/40">
+        <div className="mt-auto flex justify-center border-t border-white/5 pt-4">
+          <span className="text-[10px] text-white/30 tracking-widest font-light">
             SET · {pet.setId.toUpperCase()}
           </span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
