@@ -47,27 +47,29 @@ function Seat({
       onClick={handleSeatClick}
       className={`
         group relative w-full h-full min-h-[100px] rounded-2xl transition-all duration-200 ease-out
-        flex flex-col items-center justify-center cursor-pointer
+        flex flex-col items-center justify-between cursor-pointer overflow-hidden
         ${isPresent
           ? "bg-gradient-to-br from-indigo-50 to-purple-50 shadow-md border border-purple-300"
           : "bg-white/90 backdrop-blur-sm border border-gray-200 opacity-90 hover:opacity-100 hover:bg-white hover:scale-[1.02] hover:shadow-lg"
         }
       `}
     >
-      {/* 1. 상단: 번호 뱃지 (크기 소폭 축소) */}
-      <div
-        className={`w-5 h-5 rounded-full ring-2 ring-white shadow-sm flex items-center justify-center flex-none ${student.gender === "male"
-          ? "bg-blue-500"
-          : student.gender === "female"
-            ? "bg-pink-500"
-            : "bg-emerald-500"
-          }`}
-      >
-        {student.number != null && (
-          <span className="text-[10px] font-black text-white leading-none">
-            {student.number}
-          </span>
-        )}
+      {/* 1. 상단: 번호 뱃지 (상단 여백 추가) */}
+      <div className="pt-3 flex-none">
+        <div
+          className={`w-5 h-5 rounded-full ring-2 ring-white shadow-sm flex items-center justify-center ${student.gender === "male"
+            ? "bg-blue-500"
+            : student.gender === "female"
+              ? "bg-pink-500"
+              : "bg-emerald-500"
+            }`}
+        >
+          {student.number != null && (
+            <span className="text-[10px] font-black text-white leading-none">
+              {student.number}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* 2. 중간: 이름 (4글자 초강력 압축) */}
@@ -85,8 +87,8 @@ function Seat({
         </div>
       </div>
 
-      {/* 3. 하단: 미션 버튼 (높이 축소) */}
-      <div className="w-full px-1 flex-none h-6 mt-0.5">
+      {/* 3. 하단: 미션 푸터 버튼 */}
+      <div className="w-full flex-none">
         {isPresent ? (
           <button
             onClick={(e) => {
@@ -94,16 +96,17 @@ function Seat({
               onOpenMission?.(student);
             }}
             className={`
-              w-full h-full text-[9px] font-bold uppercase tracking-wider text-white rounded-lg
-              bg-gradient-to-r from-indigo-500 to-purple-500 shadow-sm hover:shadow-md active:scale-95 transition-all
-              ${highlightMission ? "animate-pulse ring-2 ring-purple-300" : ""}
+              w-full py-2 text-[10px] font-bold uppercase tracking-widest text-white
+              bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600
+              active:brightness-90 transition-all border-t border-purple-200/50
+              ${highlightMission ? "animate-pulse" : ""}
             `}
           >
             미션
           </button>
         ) : (
-          /* 결석 시에도 최소 공간 유지 (너무 납작해지지 않게) */
-          <div className="w-full h-full opacity-0 pointer-events-none" />
+          /* 결석 시 푸터 공간만큼 빈 영역 확보 */
+          <div className="h-[35px] w-full" />
         )}
       </div>
     </div>
