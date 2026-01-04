@@ -30,11 +30,10 @@ export default function StudentSelectPanel({
         <button
           type="button" // ⛔ submit 방지
           onClick={onToggleMultiSelectMode}
-          className={`text-sm px-3 py-1 rounded-full border transition ${
-            isMultiSelectMode
+          className={`text-sm px-3 py-1 rounded-full border transition ${isMultiSelectMode
               ? "bg-purple-600 text-white border-purple-600"
               : "bg-white/10 text-white/70 border-white/20 hover:bg-white/20"
-          }`}
+            }`}
         >
           {isMultiSelectMode ? "다중 선택 중" : "여러명 선택"}
         </button>
@@ -78,10 +77,9 @@ export default function StudentSelectPanel({
                     : onSelectStudent(student.id)
                 }
                 className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition
-                  ${
-                    isSelected
-                      ? "bg-indigo-800/80"
-                      : "hover:bg-white/10"
+                  ${isSelected
+                    ? "bg-indigo-800/80"
+                    : "hover:bg-white/10"
                   }`}
               >
                 {isMultiSelectMode && (

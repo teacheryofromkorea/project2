@@ -35,7 +35,7 @@ function StatCardsGrid({
         return (
           <div
             key={stat.id}
-            className="relative rounded-2xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-md border border-white/10 p-5 text-white"
+            className="relative rounded-2xl bg-black/20 backdrop-blur-md border border-white/5 p-5 text-white shadow-lg"
           >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xl">{stat.icon}</span>

@@ -129,7 +129,28 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col text-slate-800 bg-slate-50 relative overflow-x-hidden">
+    <div
+      className={`min-h-screen flex flex-col relative overflow-x-hidden transition-colors duration-500 ${isStatsPage
+        ? "bg-[#0a051a] text-white" // Deep Space Void
+        : "text-slate-800 bg-slate-50"
+        }`}
+    >
+
+      {/* 🌌 Stats Page Background (Cosmic Aurora & Geometric Dreams) */}
+      {isStatsPage && (
+        <div className="fixed inset-0 z-0 pointer-events-none bg-[#0a051a] overflow-hidden">
+          {/* 1. Nebula Orbs (Ambient Light) */}
+          <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-violet-600/30 rounded-full blur-[120px] animate-pulse-slow mix-blend-screen" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-indigo-600/30 rounded-full blur-[100px] animate-pulse-slow mix-blend-screen" style={{ animationDelay: '2s' }} />
+          <div className="absolute top-[20%] right-[10%] w-[40vw] h-[40vw] bg-fuchsia-600/20 rounded-full blur-[80px] animate-pulse-slow mix-blend-screen" style={{ animationDelay: '4s' }} />
+
+          {/* 2. Tech Grid (Structure) */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black_60%,transparent_100%)] opacity-60" />
+
+          {/* 4. Cinematic Noise */}
+          <div className="absolute inset-0 opacity-[0.05] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+        </div>
+      )}
 
       {/* Background Layer: Artistic Mesh Gradient (MMCA Style) */}
       {!isStatsPage && (

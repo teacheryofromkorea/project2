@@ -30,7 +30,7 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
     <header
       className={
         isStatsPage
-          ? "bg-white/60 backdrop-blur-md border-b border-white/40"
+          ? "bg-black/20 backdrop-blur-md border-b border-white/5"
           : "bg-white/40 backdrop-blur-xl border-b border-white/60 shadow-[0_4px_30px_rgba(0,0,0,0.03)]"
       }
     >
@@ -47,10 +47,14 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
               }}
               disabled={locked}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${locked
-                  ? "text-gray-400 cursor-not-allowed"
-                  : isActive(tab.path)
-                    ? "bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                ? "text-gray-400 cursor-not-allowed"
+                : isActive(tab.path)
+                  ? isStatsPage
+                    ? "bg-white/90 text-indigo-900 shadow-[0_0_15px_rgba(255,255,255,0.3)] ring-1 ring-white/50" // Stats화면 Active
+                    : "bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100" // 일반화면 Active
+                  : isStatsPage
+                    ? "text-indigo-200/60 hover:text-white hover:bg-white/10" // Stats화면 Inactive
+                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50" // 일반화면 Inactive
                 }`}
             >
               {tab.label}
@@ -64,7 +68,7 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
 
           {/* 자동 탭 전환 스위치 */}
           <div className="flex items-center gap-2">
-            <span className={isStatsPage ? "text-xs text-gray-300" : "text-xs text-gray-600"}>
+            <span className={isStatsPage ? "text-xs text-indigo-200/60" : "text-xs text-gray-600"}>
               자동 전환
             </span>
             <button
@@ -83,13 +87,13 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
           <span
             className={
               isStatsPage
-                ? "inline-flex items-center rounded-full bg-purple-700/80 text-white px-3 py-1 text-xs font-semibold"
+                ? "inline-flex items-center rounded-full bg-indigo-500/80 border border-indigo-400/30 text-white px-3 py-1 text-xs font-semibold backdrop-blur-md"
                 : "inline-flex items-center rounded-full bg-purple-600 text-white px-3 py-1 text-xs font-semibold"
             }
           >
             필수 세팅 가이드
           </span>
-          <div className={isStatsPage ? "text-gray-300 text-xs" : "text-gray-700 text-xs"}>
+          <div className={isStatsPage ? "text-indigo-200/60 text-xs" : "text-gray-700 text-xs"}>
             11:39
           </div>
         </div>
