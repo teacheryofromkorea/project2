@@ -334,6 +334,7 @@ export default function EndTimeBoard() {
                     }, {})}
                     onToggleAttendance={handleToggleDismissal}
                     onOpenMission={setTargetStudent}
+                    alwaysActiveMission={true} // ✅ 하교시간 탭은 미션버튼 항상 활성
                   />
                 </div>
               </div>

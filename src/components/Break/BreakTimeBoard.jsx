@@ -386,6 +386,7 @@ export default function BreakTimeBoard() {
                     }, {})}
                     onToggleAttendance={handleToggleSeat}
                     onOpenMission={setTargetStudent}
+                    alwaysActiveMission={true} // ✅ 쉬는시간 탭은 미션버튼 항상 활성
                   />
                 </div>
               </div>

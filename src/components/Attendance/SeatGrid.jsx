@@ -13,7 +13,8 @@ function SeatGrid({
   disabledMap = {}, // 비활성화 여부 (회색/클릭불가) - 예: 결석생
   onToggleAttendance,
   onOpenMission,
-  totalCols,
+  totalCols, // ✅ 복구
+  alwaysActiveMission = false, // ✅ 추가
 }) {
   // 최대 row / col 계산 → grid 크기 자동 결정
   const maxRow = Math.max(...seats.map((s) => s.row));
@@ -47,6 +48,7 @@ function SeatGrid({
             isDisabled={isDisabled}
             onToggleAttendance={onToggleAttendance}
             onOpenMission={onOpenMission}
+            alwaysActiveMission={alwaysActiveMission} // ✅ 전달
           />
         );
       })}

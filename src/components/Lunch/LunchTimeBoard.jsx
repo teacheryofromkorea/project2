@@ -330,6 +330,7 @@ export default function LunchTimeBoard() {
                     }, {})}
                     onToggleAttendance={handleToggleSeat}
                     onOpenMission={setTargetStudent}
+                    alwaysActiveMission={true} // ✅ 점심시간 탭은 미션버튼 항상 활성
                   />
                 </div>
               </div>

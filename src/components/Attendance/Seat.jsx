@@ -7,7 +7,9 @@ const Seat = ({
   isDisabled,   // 비활성화 여부 (회색/클릭불가 - 결석 등)
   onToggleAttendance,
   onOpenMission,
+  alwaysActiveMission = false, // ✅ 추가: 미션 버튼 항상 활성화 여부
 }) => {
+  // ... (keep existing state/useEffect) ...
   const [highlightMission, setHighlightMission] = useState(false);
   const prevActiveRef = useRef(isActive);
 
@@ -50,7 +52,7 @@ const Seat = ({
   let containerStyle = "";
   let badgeStyle = "";
   let nameStyle = "";
-  let buttonStyle = "";
+  let buttonStyle = ""; // unused in JSX below but kept for reference if needed
 
   if (isDisabled) {
     // Disabled State (결석)
@@ -63,13 +65,11 @@ const Seat = ({
     containerStyle = "bg-gradient-to-br from-indigo-50 to-purple-50 shadow-md border border-purple-300 cursor-pointer";
     badgeStyle = student.gender === "male" ? "bg-blue-500" : student.gender === "female" ? "bg-pink-500" : "bg-emerald-500";
     nameStyle = "text-gray-900";
-    buttonStyle = "text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 active:brightness-90 border-purple-200/50";
   } else {
     // Inactive (Default) State (미체크)
     containerStyle = "bg-white border border-slate-200 cursor-pointer hover:border-indigo-300 hover:shadow-md";
     badgeStyle = "bg-slate-400";
     nameStyle = "text-slate-600";
-    buttonStyle = "text-slate-300 bg-slate-50 border-slate-100";
   }
 
   return (
@@ -114,14 +114,17 @@ const Seat = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (isActive && !isDisabled) {
+              if (!isDisabled && (isActive || alwaysActiveMission)) {
                 onOpenMission?.(student);
               }
             }}
             className={`
               w-full py-2 text-[10px] font-bold uppercase tracking-widest
               transition-all border-t
-              ${buttonStyle}
+              ${isActive || alwaysActiveMission
+                ? "text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 active:brightness-90 border-purple-200/50"
+                : "text-indigo-600 bg-white hover:bg-indigo-50 border-indigo-100"
+              }
               ${highlightMission && isActive ? "animate-pulse" : ""}
             `}
           >
@@ -131,6 +134,6 @@ const Seat = ({
       </div>
     </div>
   );
-}
+};
 
 export default Seat;
