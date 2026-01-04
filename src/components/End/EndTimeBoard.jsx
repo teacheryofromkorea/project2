@@ -237,7 +237,7 @@ export default function EndTimeBoard() {
 
     window.addEventListener("attendance:updated", handleAttendanceUpdated);
     return () => {
-      window.removeEventListener("attendance: updated", handleAttendanceUpdated);
+      window.removeEventListener("attendance:updated", handleAttendanceUpdated);
     };
   }, [fetchAttendanceStatus]);
 

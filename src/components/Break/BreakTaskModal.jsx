@@ -48,39 +48,43 @@ function BreakTaskModal({
 
     // ✅ 루틴/미션 상태 불러오기
     useEffect(() => {
-        // blockId가 없으면 로드하지 않음 (쉬는시간 탭은 blockId 필수)
+        // blockId가 없으면 로드하지 않음 (쉬는시간 탭은 blockId 필수 - 1교시, 2교시 등 구분)
         if (isOpen === false || !student || !blockId) return;
 
         const fetchStatus = async () => {
             // ------------------------------
-            // 1) 루틴 상태 불러오기 (Break 전용)
+            // 1) 루틴 상태 불러오기 (Break 전용 테이블: student_break_routine_status)
             // ------------------------------
             let routineMap = {};
 
             if (routines.length > 0) {
+                // 해당 학생, 오늘 날짜, 해당 교시(blockId)의 루틴 상태 조회
                 const { data: routineRows } = await supabase
                     .from("student_break_routine_status")
                     .select("*")
                     .eq("student_id", student.id)
                     .eq("date", today)
-                    .eq("block_id", blockId); // block_id 필터링 필수
+                    .eq("block_id", blockId); // block_id 필터링 필수 (교시별 체크)
 
-                // 화면에 있는 루틴들을 먼저 모두 false 로 초기화
+                // 화면에 표시될 루틴들을 먼저 모두 false(미완료)로 초기화
+                // (DB에 데이터가 없는 루틴도 기본값 false로 시작하기 위함)
                 routines.forEach((r) => {
                     routineMap[r.id] = false;
                 });
 
-                // DB에 저장된 상태 반영 (routine_id 컬럼 사용 -> 에러 메시지 기반 수정)
+                // DB에 저장된 완료 상태 반영
+                // 주의: student_break_routine_status 테이블은 'routine_id' 컬럼을 사용함
                 routineRows?.forEach((row) => {
-                    routineMap[row.routine_id] = row.completed; // routine_item_id -> routine_id 로 변경
+                    routineMap[row.routine_id] = row.completed;
                 });
             }
 
             setRoutineStatus(routineMap);
 
             // ------------------------------
-            // 2) 미션 상태 불러오기 (공통)
+            // 2) 미션 상태 불러오기 (공통 테이블: student_mission_status)
             // ------------------------------
+            // 미션은 교시(blockId) 구분 없이 하루 단위로 관리됨
             const { data: missionRows } = await supabase
                 .from("student_mission_status")
                 .select("*")
@@ -185,8 +189,8 @@ function BreakTaskModal({
                         className="bg-gradient-to-r from-emerald-400 via-sky-400 to-indigo-400 h-3 rounded-full transition-all duration-500"
                         style={{
                             width: `${!loaded || totalCount === 0
-                                    ? 0
-                                    : Math.round((completedCount / totalCount) * 100)
+                                ? 0
+                                : Math.round((completedCount / totalCount) * 100)
                                 }%`,
                         }}
                     ></div>
@@ -211,8 +215,8 @@ function BreakTaskModal({
                                 <li key={r.id} className="flex items-center justify-between gap-2">
                                     <span
                                         className={`text-lg ${routineStatus[r.id]
-                                                ? "text-emerald-700 font-semibold line-through"
-                                                : "text-black-700"
+                                            ? "text-emerald-700 font-semibold line-through"
+                                            : "text-black-700"
                                             }`}
                                     >
                                         {r.content}
@@ -242,8 +246,8 @@ function BreakTaskModal({
                                 <li key={m.id} className="flex items-center justify-between gap-2">
                                     <span
                                         className={`text-lg ${missionStatus[m.id]
-                                                ? "text-purple-700 font-semibold line-through"
-                                                : "text-black-700"
+                                            ? "text-purple-700 font-semibold line-through"
+                                            : "text-black-700"
                                             }`}
                                     >
                                         {m.text}

@@ -7,7 +7,7 @@ const Seat = ({
   isDisabled,   // 비활성화 여부 (회색/클릭불가 - 결석 등)
   onToggleAttendance,
   onOpenMission,
-  alwaysActiveMission = false, // ✅ 추가: 미션 버튼 항상 활성화 여부
+  alwaysActiveMission = false, // ✅ 추가: 미션 버튼 항상 활성화 여부 (쉬는시간/점심/하교 탭 등에서 사용)
 }) => {
   // ... (keep existing state/useEffect) ...
   const [highlightMission, setHighlightMission] = useState(false);
@@ -17,7 +17,7 @@ const Seat = ({
   useEffect(() => {
     if (!student) return;
 
-    // false → true 로 바뀌는 순간만
+    // isActive가 false -> true 로 바뀌는 순간에만 '빠직' 애니메이션 효과
     if (!prevActiveRef.current && isActive) {
       setHighlightMission(true);
 
@@ -61,12 +61,12 @@ const Seat = ({
     nameStyle = "text-slate-400"; // 이름은 흐리게
     buttonStyle = ""; // 버튼 스타일 사용 안 함/별도 처리
   } else if (isActive) {
-    // Active State (체크됨)
+    // Active State (체크됨 - 보라색)
     containerStyle = "bg-gradient-to-br from-indigo-50 to-purple-50 shadow-md border border-purple-300 cursor-pointer";
     badgeStyle = student.gender === "male" ? "bg-blue-500" : student.gender === "female" ? "bg-pink-500" : "bg-emerald-500";
     nameStyle = "text-gray-900";
   } else {
-    // Inactive (Default) State (미체크)
+    // Inactive (Default) State (미체크 - 흰색)
     containerStyle = "bg-white border border-slate-200 cursor-pointer hover:border-indigo-300 hover:shadow-md";
     badgeStyle = "bg-slate-400";
     nameStyle = "text-slate-600";
@@ -104,7 +104,11 @@ const Seat = ({
         </div>
       </div>
 
-      {/* 3. 하단: 미션 푸터 버튼 OR 결석 라벨 */}
+      {/* 3. 하단: 미션 푸터 버튼 OR 결석 라벨 
+          - isDisabled(결석): '결석' 라벨 표시
+          - isActive(착석) 또는 alwaysActiveMission(항상활성): 보라색 활성 버튼 (클릭 가능)
+          - 그 외(미착석 & 등교탭): 흰색/하늘색 비활성 버튼 (클릭 불가/안함 -> 위 로직 수정됨, 클릭은 안됨)
+      */}
       <div className="w-full flex-none">
         {isDisabled ? (
           <div className="w-full py-2 text-[10px] font-bold text-rose-500 text-center bg-rose-50 border-t border-rose-100 tracking-widest uppercase">
@@ -113,7 +117,11 @@ const Seat = ({
         ) : (
           <button
             onClick={(e) => {
-              e.stopPropagation();
+              e.stopPropagation(); // 좌석 클릭 이벤트 전파 방지
+
+              // 미션 모달 열기 조건:
+              // 1. 결석이 아니어야 함 (!isDisabled)
+              // 2. '착석 상태'이거나 OR '항상 활성화 모드'여야 함
               if (!isDisabled && (isActive || alwaysActiveMission)) {
                 onOpenMission?.(student);
               }
@@ -122,8 +130,8 @@ const Seat = ({
               w-full py-2 text-[10px] font-bold uppercase tracking-widest
               transition-all border-t
               ${isActive || alwaysActiveMission
-                ? "text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 active:brightness-90 border-purple-200/50"
-                : "text-indigo-600 bg-white hover:bg-indigo-50 border-indigo-100"
+                ? "text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 active:brightness-90 border-purple-200/50" // 활성 스타일 (보라색)
+                : "text-indigo-600 bg-white hover:bg-indigo-50 border-indigo-100" // 비활성 스타일 (흰색)
               }
               ${highlightMission && isActive ? "animate-pulse" : ""}
             `}
