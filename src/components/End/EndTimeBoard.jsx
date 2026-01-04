@@ -1,24 +1,25 @@
-
-
-import { useEffect, useMemo, useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../../lib/supabaseClient";
-
-// 공통 컴포넌트 (점심시간과 동일 레이아웃)
-import TodayChallengeSidebar from "../Break/TodayChallengeSidebar";
-import ClassDutySidebar from "../Break/ClassDutySidebar";
 import StudentTaskModal from "../Attendance/StudentTaskModal";
-
-// 하교 전용 컴포넌트
-import EndRoutineArea from "./EndRoutineArea";
-import EndCheckContainer from "./EndCheckContainer";
 import useEndRoutine from "../../hooks/End/useEndRoutine";
+import GenericRoutineSidebar from "../shared/GenericRoutineSidebar";
+import MissionSidebar from "../Attendance/MissionSidebar";
+import SeatGrid from "../Attendance/SeatGrid";
+import { handleSupabaseError } from "../../utils/handleSupabaseError";
 
 export default function EndTimeBoard() {
-  const today = new Date().toISOString().slice(0, 10);
+  const [students, setStudents] = useState([]);
+  const [missions, setMissions] = useState([]);
+  const [missionStatus, setMissionStatus] = useState([]);
+  const [routineStatus, setRoutineStatus] = useState([]);
+  const [attendanceStatus, setAttendanceStatus] = useState([]);
+  const [dismissalStatus, setDismissalStatus] = useState([]);
+  const [seats, setSeats] = useState([]);
 
-  /* ===============================
-     하교 루틴 훅
-     =============================== */
+  const [targetStudent, setTargetStudent] = useState(null);
+  const [showIncompleteOnly, setShowIncompleteOnly] = useState(false);
+
+  const endRoutine = useEndRoutine();
   const {
     routineItems,
     routineTitle,
@@ -37,144 +38,322 @@ export default function EndTimeBoard() {
     moveRoutine,
     updateRoutine,
     saveRoutineTitle,
-  } = useEndRoutine();
+  } = endRoutine;
 
-  const [students, setStudents] = useState([]);
-  const [missions, setMissions] = useState([]);
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  const [attendanceStatus, setAttendanceStatus] = useState([]);
-  const [missionStatus, setMissionStatus] = useState([]);
-  const [endRoutineStatus, setEndRoutineStatus] = useState([]);
+  const fetchStudents = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("students")
+      .select("id, name, gender, number")
+      .order("name", { ascending: true });
 
-  const [targetStudent, setTargetStudent] = useState(null);
-
-  /* ===============================
-     출석한 학생만 필터링
-     =============================== */
-  const presentStudentIds = useMemo(
-    () => attendanceStatus.map((row) => row.student_id),
-    [attendanceStatus]
-  );
-
-  const presentStudents = useMemo(
-    () => students.filter((s) => presentStudentIds.includes(s.id)),
-    [students, presentStudentIds]
-  );
-
-  /* ===============================
-     데이터 fetch
-     =============================== */
-  useEffect(() => {
-    fetchStudents();
-    fetchMissions();
-    fetchAttendanceStatus();
-    fetchMissionStatus();
-    fetchEndRoutineStatus();
-
-    // 하교 루틴 제목/아이템
-    fetchRoutineItems();
-    fetchRoutineTitle();
+    if (!error) setStudents(data || []);
   }, []);
 
-  const fetchStudents = async () => {
-    const { data } = await supabase
-      .from("students")
-      .select("*")
-      .order("number");
+  const fetchSeats = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("classroom_seats")
+      .select(`
+        id,
+        row,
+        col,
+        label,
+        student_id,
+        students (
+          id,
+          name,
+          number,
+          gender
+        )
+      `)
+      .order("row", { ascending: true })
+      .order("col", { ascending: true });
 
-    setStudents(data || []);
-  };
+    if (!error) setSeats(data || []);
+  }, []);
 
-  const fetchMissions = async () => {
-    const { data } = await supabase
+  const fetchMissions = useCallback(async () => {
+    const { data, error } = await supabase
       .from("missions")
       .select("*")
-      .order("order_index");
+      .order("order_index", { ascending: true });
 
-    setMissions(data || []);
-  };
+    if (!error) setMissions(data || []);
+  }, []);
 
-  const fetchAttendanceStatus = async () => {
-    const { data } = await supabase
-      .from("student_attendance_status")
-      .select("student_id")
-      .eq("date", today)
-      .eq("present", true);
-
-    setAttendanceStatus(data || []);
-  };
-
-  const fetchMissionStatus = async () => {
-    const { data } = await supabase
+  const fetchMissionStatus = useCallback(async () => {
+    const { data, error } = await supabase
       .from("student_mission_status")
       .select("*")
       .eq("date", today);
 
-    setMissionStatus(data || []);
-  };
+    if (!error) setMissionStatus(data || []);
+  }, [today]);
 
-  const fetchEndRoutineStatus = async () => {
-    const { data } = await supabase
+  const fetchRoutineStatus = useCallback(async () => {
+    const { data, error } = await supabase
       .from("student_end_routine_status")
       .select("*")
       .eq("date", today);
 
-    setEndRoutineStatus(data || []);
+    if (!error) setRoutineStatus(data || []);
+  }, [today]);
+
+  const fetchAttendanceStatus = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("student_attendance_status")
+      .select("*")
+      .eq("date", today)
+      .eq("present", true);
+
+    if (!error) setAttendanceStatus(data || []);
+  }, [today]);
+
+  const fetchDismissalStatus = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("student_end_check_status")
+      .select("*")
+      .eq("date", today);
+
+    if (!error) setDismissalStatus(data || []);
+  }, [today]);
+
+  useEffect(() => {
+    (async () => {
+      await Promise.all([
+        fetchRoutineTitle(),
+        fetchRoutineItems(),
+        fetchStudents(),
+        fetchSeats(),
+        fetchMissions(),
+        fetchMissionStatus(),
+        fetchRoutineStatus(),
+        fetchAttendanceStatus(),
+        fetchDismissalStatus(),
+      ]);
+    })();
+  }, [
+    fetchRoutineTitle,
+    fetchRoutineItems,
+    fetchStudents,
+    fetchSeats,
+    fetchMissions,
+    fetchMissionStatus,
+    fetchRoutineStatus,
+    fetchAttendanceStatus,
+    fetchDismissalStatus,
+  ]);
+
+  const presentStudentIds = useMemo(() => {
+    return attendanceStatus.map((a) => a.student_id);
+  }, [attendanceStatus]);
+
+  const dismissalStatusMap = useMemo(() => {
+    const map = {};
+    dismissalStatus.forEach((d) => {
+      map[d.student_id] = d.checked;
+    });
+    return map;
+  }, [dismissalStatus]);
+
+  // 출석 여부 맵 (SeatGrid의 isPresent prop용)
+  const attendanceMap = useMemo(() => {
+    const map = {};
+    presentStudentIds.forEach((id) => {
+      map[id] = true;
+    });
+    return map;
+  }, [presentStudentIds]);
+
+  const handleToggleDismissal = async (student) => {
+    // 출석하지 않은 학생은 하교 체크 불가
+    if (!presentStudentIds.includes(student.id)) {
+      return;
+    }
+
+    const current = !!dismissalStatusMap[student.id];
+    const next = !current;
+
+    const { error } = await supabase
+      .from("student_end_check_status")
+      .upsert(
+        {
+          student_id: student.id,
+          date: today,
+          checked: next,
+        },
+        { onConflict: "student_id,date" }
+      );
+
+    if (error) {
+      handleSupabaseError(error, "하교 상태 저장에 실패했어요.");
+    } else {
+      await fetchDismissalStatus();
+    }
   };
 
-  /* ===============================
-     렌더링
-     =============================== */
+  // 미실시자 필터링
+  const filteredSeats = useMemo(() => {
+    if (!showIncompleteOnly) return seats;
+
+    return seats.filter((seat) => {
+      const student = seat.students;
+      if (!student) return false;
+      if (!presentStudentIds.includes(student.id)) return false;
+
+      // 루틴 미완료 확인
+      const completedRoutines = routineStatus
+        .filter((r) => r.student_id === student.id && r.done)
+        .map((r) => r.routine_item_id);
+      const hasIncompleteRoutine = routineItems.some(
+        (item) => !completedRoutines.includes(item.id)
+      );
+
+      // 미션 미완료 확인
+      const completedMissions = missionStatus
+        .filter((m) => m.student_id === student.id && m.done)
+        .map((m) => m.mission_id);
+      const hasIncompleteMission = missions.some(
+        (item) => !completedMissions.includes(item.id)
+      );
+
+      return hasIncompleteRoutine || hasIncompleteMission;
+    });
+  }, [
+    showIncompleteOnly,
+    seats,
+    presentStudentIds,
+    routineStatus,
+    routineItems,
+    missionStatus,
+    missions,
+  ]);
+
+  useEffect(() => {
+    const handleAttendanceUpdated = async () => {
+      await fetchAttendanceStatus();
+    };
+
+    window.addEventListener("attendance:updated", handleAttendanceUpdated);
+    return () => {
+      window.removeEventListener("attendance: updated", handleAttendanceUpdated);
+    };
+  }, [fetchAttendanceStatus]);
+
+  // 통계 계산
+  const stats = useMemo(() => {
+    const total = students.length;
+    const attended = attendanceStatus.length;
+    const dismissed = dismissalStatus.filter((d) => d.checked).length;
+    return { total, attended, dismissed };
+  }, [students, attendanceStatus, dismissalStatus]);
+
   return (
-    <div className="grid grid-cols-[260px,1fr,260px] gap-4">
-      {/* 좌측: 오늘의 도전 */}
-      <TodayChallengeSidebar
-        students={presentStudents}
-        missions={missions}
-        studentMissionStatus={missionStatus}
-        mode="end"
-        routineItems={routineItems}
-        studentBreakRoutineStatus={endRoutineStatus}
-        routineLabel={routineTitle || "하교시간 루틴"}
-        routineType="end"
-        onOpenModal={setTargetStudent}
-      />
+    <>
+      <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden">
+        {/* Decorative ambient blobs */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-purple-200/40 rounded-full blur-[100px]" />
+          <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-200/40 rounded-full blur-[100px]" />
+        </div>
 
-      {/* 중앙: 하교시간 루틴 + 하교 체크 */}
-      <div className="flex flex-col gap-6 w-full h-[85vh] min-h-0">
-        <EndRoutineArea
-          routine={{
-            routineItems,
-            routineTitle,
-            tempTitle,
-            setTempTitle,
-            newContent,
-            setNewContent,
-            editRoutine,
-            setEditRoutine,
-            editText,
-            setEditText,
-            fetchRoutineItems,
-            fetchRoutineTitle,
-            addRoutineItem,
-            deleteRoutineItem,
-            moveRoutine,
-            updateRoutine,
-            saveRoutineTitle,
-          }}
-        />
+        {/* Main Content: 3-column layout */}
+        <div className="relative z-10 flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 mx-auto min-h-0 w-full max-w-[1700px] px-4 py-6">
+            <div className="grid grid-cols-[260px,1fr,260px] gap-6 h-full">
+              {/* Left: End Routine Area */}
+              <div className="h-full overflow-y-auto">
+                <GenericRoutineSidebar
+                  routineTitle={routineTitle}
+                  routineItems={routineItems}
+                  tempTitle={tempTitle}
+                  setTempTitle={setTempTitle}
+                  newContent={newContent}
+                  setNewContent={setNewContent}
+                  editRoutine={editRoutine}
+                  setEditRoutine={setEditRoutine}
+                  editText={editText}
+                  setEditText={setEditText}
+                  addRoutineItem={addRoutineItem}
+                  deleteRoutineItem={deleteRoutineItem}
+                  moveRoutine={moveRoutine}
+                  updateRoutine={updateRoutine}
+                  saveRoutineTitle={saveRoutineTitle}
+                />
+              </div>
 
-<div className="flex-1 min-h-0 h-full">
-          <EndCheckContainer students={presentStudents} />
+              {/* Center: Seat Grid with Header */}
+              <div className="relative w-full h-full rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 p-6 sm:p-8 shadow-xl flex flex-col overflow-hidden">
+                {/* Header inside SeatGrid */}
+                <div className="flex-none mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-2xl font-extrabold text-gray-900">
+                      End <span className="text-indigo-600">Status</span>
+                    </h2>
+                    <div className="flex gap-2">
+                      <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total</span>
+                        <span className="text-base font-extrabold text-gray-900 leading-none">{stats.total}</span>
+                      </div>
+                      <div className="px-3 py-1.5 rounded-xl bg-white border border-green-200 shadow-sm flex items-center gap-2">
+                        <span className="text-[10px] text-green-700 font-bold uppercase tracking-wider">Attended</span>
+                        <span className="text-base font-extrabold text-green-700 leading-none">{stats.attended}</span>
+                      </div>
+                      <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2">
+                        <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider">Dismissed</span>
+                        <span className="text-base font-extrabold text-purple-700 leading-none">{stats.dismissed}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Filter */}
+                  <div className="flex items-center">
+                    <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 shadow-sm cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={showIncompleteOnly}
+                        onChange={(e) => setShowIncompleteOnly(e.target.checked)}
+                        className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                      />
+                      <span className="text-sm font-semibold text-gray-700">미실시자만 보기</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Seat Grid */}
+                <div className="flex-1 flex items-center justify-center min-h-0 overflow-y-auto">
+                  <SeatGrid
+                    seats={filteredSeats}
+                    activeMap={dismissalStatusMap}
+                    disabledMap={seats.reduce((acc, seat) => {
+                      if (seat.students && !presentStudentIds.includes(seat.students.id)) {
+                        acc[seat.students.id] = true;
+                      }
+                      return acc;
+                    }, {})}
+                    onToggleAttendance={handleToggleDismissal}
+                    onOpenMission={setTargetStudent}
+                  />
+                </div>
+              </div>
+
+              {/* Right: Mission Sidebar */}
+              <MissionSidebar
+                missions={missions}
+                students={students.filter((s) => presentStudentIds.includes(s.id))}
+                studentMissionStatus={missionStatus}
+                onOpenModal={setTargetStudent}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 우측: 우리반의 소중한 일 */}
-      <ClassDutySidebar />
-
-      {/* 미션 / 루틴 모달 */}
+      {/* Student Task Modal */}
       {targetStudent && (
         <StudentTaskModal
+          isOpen={!!targetStudent}
           student={targetStudent}
           missions={missions}
           routines={routineItems}
@@ -183,8 +362,13 @@ export default function EndTimeBoard() {
           routineLabel={routineTitle || "하교시간 루틴"}
           showRoutines={true}
           onClose={() => setTargetStudent(null)}
+          onSaved={async () => {
+            await fetchMissionStatus();
+            await fetchRoutineItems();
+            await fetchRoutineStatus();
+          }}
         />
       )}
-    </div>
+    </>
   );
 }

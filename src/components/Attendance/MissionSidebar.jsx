@@ -185,8 +185,18 @@ function MissionSidebar() {
     rounded-2xl
     p-6
     flex flex-col
+    overflow-hidden
   "
       >
+        {/* Decorative brush stroke blob */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Single large artistic brush blob */}
+          <div className="absolute -top-4 -right-8 w-48 h-64">
+            <div className="absolute inset-0 bg-gradient-to-bl from-pink-400/35 via-rose-400/25 to-pink-300/15 rounded-[60%_40%_50%_50%/30%_70%_60%_40%] blur-lg" />
+            <div className="absolute top-8 right-12 w-32 h-40 bg-gradient-to-br from-rose-500/30 via-pink-400/20 to-transparent rounded-[40%_60%_70%_30%/50%_50%_40%_60%] blur-md" />
+            <div className="absolute top-16 right-8 w-24 h-32 bg-gradient-to-tl from-pink-500/25 to-transparent rounded-[50%_50%_60%_40%/40%_60%_50%_50%] blur-sm" />
+          </div>
+        </div>
 
         <h2 className="text-xl font-extrabold mb-6 text-gray-900 tracking-tight flex items-center gap-2">
           <span className="w-1.5 h-6 bg-pink-600 rounded-full"></span>

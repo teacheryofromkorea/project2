@@ -225,7 +225,7 @@ function AttendanceBoard() {
                   <div className="absolute top-0 right-0 w-6 h-6 bg-purple-100/40 rounded-full blur-xl -mr-2 -mt-2" />
                   <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider relative z-10">Active</span>
                   <span className="text-base font-extrabold text-purple-700 relative z-10 leading-none">
-                    {Object.values(attendanceStatus).filter(Boolean).length}
+                    {attendanceStatus.filter(a => a.present).length}
                   </span>
                 </div>
               </div>
@@ -242,7 +242,7 @@ function AttendanceBoard() {
             <div className="flex-1 flex items-center justify-center min-h-0 overflow-y-auto">
               <SeatGrid
                 seats={seats}
-                attendanceMap={attendanceStatus.reduce((acc, row) => {
+                activeMap={attendanceStatus.reduce((acc, row) => {
                   acc[row.student_id] = row.present;
                   return acc;
                 }, {})}

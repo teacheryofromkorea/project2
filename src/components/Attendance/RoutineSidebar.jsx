@@ -3,21 +3,50 @@ import { supabase } from "../../lib/supabaseClient";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import { useLock } from "../../context/LockContext";
 
-function RoutineSidebar() {
+function RoutineSidebar({
+  // Optional props - if not provided, use internal state (for Attendance tab)
+  routineTitle: externalTitle,
+  routineItems: externalItems,
+  tempTitle,
+  setTempTitle,
+  newContent,
+  setNewContent,
+  editRoutine,
+  setEditRoutine,
+  editText,
+  setEditText,
+  addRoutineItem,
+  deleteRoutineItem,
+  moveRoutine,
+  updateRoutine,
+  saveRoutineTitle,
+  // Additional props for Break tab
+  blockId,
+  breakBlocks,
+  selectedBlockId,
+  setSelectedBlockId,
+}) {
   const { locked } = useLock();
 
-  // 🗂 루틴 목록 (DB에서 불러옴)
-  const [routineItems, setRoutineItems] = useState([]);
-  const [routineTitle, setRoutineTitle] = useState("✏️ 등교시 루틴");
+  // 🗂 Internal state for Attendance tab
+  const [internalItems, setInternalItems] = useState([]);
+  const [internalTitle, setInternalTitle] = useState("✏️ 등교시 루틴");
+
+  // Determine which data source to use
+  const usingExternalData = externalItems !== undefined;
+  const routineItems = usingExternalData ? externalItems : internalItems;
+  const routineTitle = usingExternalData ? externalTitle : internalTitle;
 
   // 모든 모달 상태 useState
   const [isEditing, setIsEditing] = useState(false);
-  const [newRoutine, setNewRoutine] = useState("");
-  const [editRoutineIndex, setEditRoutineIndex] = useState(null);
-  const [editText, setEditText] = useState("");
+  const [internalNewRoutine, setInternalNewRoutine] = useState("");
+  const [internalEditIndex, setInternalEditIndex] = useState(null);
+  const [internalEditText, setInternalEditText] = useState("");
 
-  // 📌 Supabase에서 루틴 불러오기
+  // 📌 Supabase에서 루틴 불러오기 (only if not using external data)
   useEffect(() => {
+    if (usingExternalData) return;
+
     const fetchRoutines = async () => {
       const { data, error } = await supabase
         .from("routines")
@@ -30,28 +59,31 @@ function RoutineSidebar() {
       }
 
       if (data) {
-        setRoutineItems(data);
+        setInternalItems(data);
 
         // 🔥 DB에서 제목 가져오기
         if (data.length > 0 && data[0].routine_title) {
-          setRoutineTitle(data[0].routine_title);
+          setInternalTitle(data[0].routine_title);
         }
       }
     };
 
     fetchRoutines();
-  }, []);
+  }, [usingExternalData]);
 
-  // ESC 닫기
   // ESC 닫기
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === "Escape") {
-
         // 🔹 작은 모달 우선 닫기
-        if (editRoutineIndex !== null) {
-          setEditRoutineIndex(null);
-          setEditText("");
+        if (usingExternalData ? editRoutine !== null : internalEditIndex !== null) {
+          if (usingExternalData) {
+            setEditRoutine?.(null);
+            setEditText?.("");
+          } else {
+            setInternalEditIndex(null);
+            setInternalEditText("");
+          }
           return;
         }
 
@@ -64,28 +96,31 @@ function RoutineSidebar() {
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isEditing, editRoutineIndex]);
+  }, [isEditing, editRoutine, internalEditIndex, usingExternalData, setEditRoutine, setEditText]);
 
   useEffect(() => {
     if (locked) {
       setIsEditing(false);
-      setEditRoutineIndex(null);
-      setEditText("");
+      if (usingExternalData) {
+        setEditRoutine?.(null);
+        setEditText?.("");
+      } else {
+        setInternalEditIndex(null);
+        setInternalEditText("");
+      }
     }
-  }, [locked]);
+  }, [locked, usingExternalData, setEditRoutine, setEditText]);
 
-
-
-  const addRoutine = async () => {
+  // Internal CRUD functions (only used for Attendance tab)
+  const internalAddRoutine = async () => {
     if (locked) return;
-    if (newRoutine.trim() === "") return;
+    if (internalNewRoutine.trim() === "") return;
 
-    // DB에 삽입
     const { data, error } = await supabase
       .from("routines")
       .insert({
-        text: newRoutine,
-        order_index: routineItems.length,
+        text: internalNewRoutine,
+        order_index: internalItems.length,
       })
       .select()
       .single();
@@ -95,88 +130,87 @@ function RoutineSidebar() {
       return;
     }
 
-    setRoutineItems([...routineItems, data]);
-    setNewRoutine("");
+    setInternalItems([...internalItems, data]);
+    setInternalNewRoutine("");
   };
 
-  const deleteRoutine = async (index) => {
+  const internalDeleteRoutine = async (index) => {
     if (locked) return;
-    const id = routineItems[index].id;
-
-    // 1) 루틴 삭제
-    const { error: deleteError } = await supabase
+    const item = internalItems[index];
+    const { error } = await supabase
       .from("routines")
       .delete()
-      .eq("id", id);
+      .eq("id", item.id);
 
-    if (deleteError) {
-      handleSupabaseError(deleteError, "루틴 삭제에 실패했어요.");
+    if (error) {
+      handleSupabaseError(error, "루틴 삭제에 실패했어요.");
       return;
     }
 
-    // 2) 이 루틴에 대한 학생별 상태도 같이 삭제
-    const { error: statusError } = await supabase
-      .from("student_routine_status")
-      .delete()
-      .eq("routine_id", id);
+    const updated = internalItems.filter((_, i) => i !== index);
+    setInternalItems(updated);
 
-    if (statusError) {
-      handleSupabaseError(statusError, "학생 루틴 상태 삭제 중 오류가 발생했어요.");
-    }
-
-    // 3) 프런트 쪽 목록 정리 및 order_index 재정렬
-    const updated = routineItems.filter((_, i) => i !== index);
-
-    const reordered = updated.map((item, i) => ({
-      ...item,
-      order_index: i,
-    }));
-    setRoutineItems(reordered);
-
-    for (const item of reordered) {
-      const { error } = await supabase
+    // order_index 다시 정렬
+    for (let i = 0; i < updated.length; i++) {
+      await supabase
         .from("routines")
-        .update({ order_index: item.order_index })
-        .eq("id", item.id);
-
-      if (error) {
-        handleSupabaseError(error, "루틴 순서 저장에 실패했어요.");
-        break;
-      }
+        .update({ order_index: i })
+        .eq("id", updated[i].id);
     }
   };
-  const moveRoutine = async (index, direction) => {
+
+  const internalMoveRoutine = async (index, direction) => {
     if (locked) return;
-    const newList = [...routineItems];
-    if (direction === "up" && index === 0) return;
-    if (direction === "down" && index === newList.length - 1) return;
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= internalItems.length) return;
 
-    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    const updated = [...internalItems];
+    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
 
-    // swap
-    [newList[index], newList[swapIndex]] = [newList[swapIndex], newList[index]];
+    setInternalItems(updated);
 
-    // 새 index 재정렬
-    const reordered = newList.map((item, i) => ({
-      ...item,
-      order_index: i,
-    }));
-
-    setRoutineItems(reordered);
-
-    // DB에도 반영
-    for (const item of reordered) {
-      const { error } = await supabase
+    // DB 업데이트
+    for (let i = 0; i < updated.length; i++) {
+      await supabase
         .from("routines")
-        .update({ order_index: item.order_index })
-        .eq("id", item.id);
-
-      if (error) {
-        handleSupabaseError(error, "루틴 순서 변경에 실패했어요.");
-        break;
-      }
+        .update({ order_index: i })
+        .eq("id", updated[i].id);
     }
   };
+
+  const internalUpdateRoutine = async () => {
+    if (locked) return;
+    if (internalEditText.trim() === "") return;
+
+    const item = internalItems[internalEditIndex];
+    const { error } = await supabase
+      .from("routines")
+      .update({ text: internalEditText })
+      .eq("id", item.id);
+
+    if (error) {
+      handleSupabaseError(error, "루틴 수정에 실패했어요.");
+      return;
+    }
+
+    const updated = [...internalItems];
+    updated[internalEditIndex] = { ...item, text: internalEditText };
+    setInternalItems(updated);
+    setInternalEditIndex(null);
+    setInternalEditText("");
+  };
+
+  // Use external or internal handlers
+  const handleAddRoutine = usingExternalData ? addRoutineItem : internalAddRoutine;
+  const handleDeleteRoutine = usingExternalData ? deleteRoutineItem : internalDeleteRoutine;
+  const handleMoveRoutine = usingExternalData ? moveRoutine : internalMoveRoutine;
+  const handleUpdateRoutine = usingExternalData ? updateRoutine : internalUpdateRoutine;
+
+  const currentNewContent = usingExternalData ? newContent : internalNewRoutine;
+  const setCurrentNewContent = usingExternalData ? setNewContent : setInternalNewRoutine;
+  const currentEditText = usingExternalData ? editText : internalEditText;
+  const setCurrentEditText = usingExternalData ? setEditText : setInternalEditText;
+  const currentEditRoutine = usingExternalData ? editRoutine : (internalEditIndex !== null ? internalItems[internalEditIndex] : null);
 
   return (
     <>
@@ -187,16 +221,43 @@ function RoutineSidebar() {
           rounded-2xl
           p-6
           flex flex-col
+          overflow-hidden
         "
       >
-        <h2 className="text-xl font-extrabold mb-6 text-gray-900 tracking-tight flex items-center gap-2">
+        {/* Decorative brush stroke blob */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Single large artistic brush blob */}
+          <div className="absolute -top-4 -left-8 w-48 h-64">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-400/35 via-purple-400/25 to-indigo-300/15 rounded-[40%_60%_70%_30%/60%_30%_70%_40%] blur-lg" />
+            <div className="absolute top-8 left-12 w-32 h-40 bg-gradient-to-bl from-purple-500/30 via-indigo-400/20 to-transparent rounded-[60%_40%_30%_70%/40%_60%_40%_60%] blur-md" />
+            <div className="absolute top-16 left-8 w-24 h-32 bg-gradient-to-tr from-indigo-500/25 to-transparent rounded-[50%_50%_60%_40%/30%_70%_60%_40%] blur-sm" />
+          </div>
+        </div>
+        <h2 className="text-xl font-extrabold mb-6 text-gray-900 tracking-tight flex items-center gap-2 relative z-10">
           <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
           {routineTitle}
         </h2>
 
-        <ul className="space-y-2 flex-1 flex flex-col justify-center min-h-0 overflow-y-auto px-1">
+        {/* Break time block selector */}
+        {breakBlocks && selectedBlockId !== undefined && setSelectedBlockId && (
+          <div className="mb-4 relative z-10">
+            <select
+              value={selectedBlockId || ""}
+              onChange={(e) => setSelectedBlockId?.(e.target.value || null)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {breakBlocks.map((block) => (
+                <option key={block.id} value={block.id}>
+                  {block.name} ({block.start_time?.slice(0, 5)} ~ {block.end_time?.slice(0, 5)})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <ul className="space-y-2 flex-1 flex flex-col justify-center min-h-0 overflow-y-auto px-1 relative z-10">
           {routineItems.map((item, idx) => (
-            <li key={idx}>
+            <li key={item.id || idx}>
 
               <button
                 className="
@@ -214,7 +275,7 @@ function RoutineSidebar() {
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
                     <span className="text-slate-700 text-lg font-bold group-hover:text-indigo-900 transition-colors leading-relaxed block">
-                      {item.text}
+                      {item.text || item.content}
                     </span>
                   </div>
                 </div>
@@ -227,7 +288,7 @@ function RoutineSidebar() {
 
         <button
           disabled={locked}
-          className={`mt-6 w-full text-sm font-semibold py-3 rounded-xl transition-all border
+          className={`mt-6 w-full text-sm font-semibold py-3 rounded-xl transition-all border relative z-10
             ${locked
               ? "bg-gray-100 text-gray-400 border-transparent cursor-not-allowed"
               : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700 hover:border-indigo-300 hover:shadow-sm"
@@ -235,6 +296,10 @@ function RoutineSidebar() {
           `}
           onClick={() => {
             if (locked) return;
+            if (usingExternalData) {
+              setTempTitle?.(routineTitle);
+              setNewContent?.("");
+            }
             setIsEditing(true);
           }}
         >

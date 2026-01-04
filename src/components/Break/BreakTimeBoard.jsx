@@ -1,40 +1,25 @@
-/**
- * BreakTimeBoard
- *
- * [역할]
- * - 쉬는시간 화면 전체 UI를 담당하는 컨테이너 컴포넌트
- * - 쉬는시간 루틴 표시 및 편집 UI 제공
- * - 쉬는시간 착석 체크 영역 렌더링
- * - 오늘의 미션 / 학생 상태 사이드바 연동
- *
- * [위임된 책임]
- * - 쉬는시간 시간 블록 선택 정책 → useBreakBlockSelection
- * - 쉬는시간 루틴 CRUD 로직 → useBreakRoutine
- *
- * [의도적으로 포함하지 않는 것]
- * - 시간 블록 자동 전환 로직의 세부 구현
- * - 루틴 / 미션 / 학생 DB 쿼리의 정책 결정
- *
- * ※ 이 컴포넌트는 "화면 구성"과 "hook 조합"에만 집중한다.
- */
 import { useState, useEffect, useCallback, useMemo } from "react";
 import useBreakBlockSelection from "../../hooks/Break/useBreakBlockSelection";
 import { supabase } from "../../lib/supabaseClient";
-import TodayChallengeSidebar from "./TodayChallengeSidebar";
-import SeatCheckContainer from "./SeatCheckContainer";
-import ClassDutySidebar from "./ClassDutySidebar";
 import StudentTaskModal from "../Attendance/StudentTaskModal";
 import useBreakRoutine from "../../hooks/Break/useBreakRoutine";
 import { BREAK_AUTO_SWITCH_EVENT } from "../../hooks/Break/useBreakBlockSelection";
-import BreakRoutinePanel from "./BreakRoutinePanel.jsx";
+import GenericRoutineSidebar from "../shared/GenericRoutineSidebar";
+import MissionSidebar from "../Attendance/MissionSidebar";
+import SeatGrid from "../Attendance/SeatGrid";
+import { handleSupabaseError } from "../../utils/handleSupabaseError";
 
 export default function BreakTimeBoard() {
   const [students, setStudents] = useState([]);
   const [missions, setMissions] = useState([]);
   const [missionStatus, setMissionStatus] = useState([]);
   const [routineStatus, setRoutineStatus] = useState([]);
+  const [attendanceStatus, setAttendanceStatus] = useState([]);
+  const [seatStatus, setSeatStatus] = useState([]);
+  const [seats, setSeats] = useState([]);
 
   const [targetStudent, setTargetStudent] = useState(null);
+  const [showIncompleteOnly, setShowIncompleteOnly] = useState(false);
 
   const {
     breakBlocks,
@@ -42,7 +27,6 @@ export default function BreakTimeBoard() {
     setSelectedBlockId,
   } = useBreakBlockSelection();
 
-  // 쉬는시간 루틴(공통) ID
   const ROUTINE_ID = "e2c703b6-e823-42ce-9373-9fb12a4cdbb1";
 
   const {
@@ -56,7 +40,6 @@ export default function BreakTimeBoard() {
     setEditRoutine,
     editText,
     setEditText,
-
     fetchRoutineItems,
     fetchRoutineTitle,
     addRoutineItem,
@@ -68,19 +51,37 @@ export default function BreakTimeBoard() {
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  const [attendanceStatus, setAttendanceStatus] = useState([]);
+  const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
 
-  // ----------------------
-  // 쉬는시간 맥락 데이터
-  // (학생 / 오늘 미션 / 수행 상태)
-  // ----------------------
   const fetchStudents = useCallback(async () => {
     const { data, error } = await supabase
       .from("students")
-      .select("id, name, gender")
+      .select("id, name, gender, number")
       .order("name", { ascending: true });
 
     if (!error) setStudents(data || []);
+  }, []);
+
+  const fetchSeats = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("classroom_seats")
+      .select(`
+        id,
+        row,
+        col,
+        label,
+        student_id,
+        students (
+          id,
+          name,
+          number,
+          gender
+        )
+      `)
+      .order("row", { ascending: true })
+      .order("col", { ascending: true });
+
+    if (!error) setSeats(data || []);
   }, []);
 
   const fetchMissions = useCallback(async () => {
@@ -126,50 +127,140 @@ export default function BreakTimeBoard() {
     if (!error) setAttendanceStatus(data || []);
   }, [today]);
 
-  // 초기 진입 및 의존성 변경 시 쉬는시간 화면에 필요한 데이터 로딩
+  const fetchSeatStatus = useCallback(async () => {
+    if (!selectedBlockId) {
+      setSeatStatus([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("break_seat_status")
+      .select("*")
+      .eq("date", today)
+      .eq("block_id", selectedBlockId);
+
+    if (!error) setSeatStatus(data || []);
+  }, [today, selectedBlockId]);
+
   useEffect(() => {
-    (async ()=> {
+    (async () => {
       await Promise.all([
         fetchRoutineTitle(),
         fetchRoutineItems(),
         fetchStudents(),
+        fetchSeats(),
         fetchMissions(),
         fetchMissionStatus(),
         fetchRoutineStatus(),
         fetchAttendanceStatus(),
+        fetchSeatStatus(),
       ]);
     })();
   }, [
     fetchRoutineTitle,
     fetchRoutineItems,
     fetchStudents,
+    fetchSeats,
     fetchMissions,
     fetchMissionStatus,
     fetchRoutineStatus,
     fetchAttendanceStatus,
+    fetchSeatStatus,
   ]);
 
   const presentStudentIds = useMemo(() => {
     return attendanceStatus.map((a) => a.student_id);
   }, [attendanceStatus]);
 
-  const presentStudents = useMemo(() => {
-    return students.filter((s) => presentStudentIds.includes(s.id));
-  }, [students, presentStudentIds]);
+  const seatStatusMap = useMemo(() => {
+    const map = {};
+    seatStatus.forEach((s) => {
+      map[s.student_id] = s.is_seated;
+    });
+    return map;
+  }, [seatStatus]);
 
-  // 루틴 제목 저장 핸들러
-  const handleSaveRoutineTitleAndClose = async () => {
-    await saveRoutineTitle();
-    setIsRoutineModalOpen(false);
+  // 출석 여부 맵 (SeatGrid의 isPresent prop용)
+  const attendanceMap = useMemo(() => {
+    const map = {};
+    presentStudentIds.forEach((id) => {
+      map[id] = true;
+    });
+    return map;
+  }, [presentStudentIds]);
+
+  const handleToggleSeat = async (student) => {
+    // 출석하지 않은 학생은 착석 체크 불가
+    if (!presentStudentIds.includes(student.id)) {
+      return;
+    }
+
+    if (!selectedBlockId) {
+      alert("먼저 쉬는시간을 선택해주세요.");
+      return;
+    }
+
+    const current = !!seatStatusMap[student.id];
+    const next = !current;
+
+    const { error } = await supabase
+      .from("break_seat_status")
+      .upsert({
+        student_id: student.id,
+        date: today,
+        block_id: selectedBlockId,
+        is_seated: next,
+      }, { onConflict: "student_id,date,block_id" });
+
+    if (error) {
+      handleSupabaseError(error, "착석 상태 저장에 실패했어요.");
+    } else {
+      await fetchSeatStatus();
+    }
   };
 
-  const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
+  // 미실시자 필터링
+  const filteredSeats = useMemo(() => {
+    if (!showIncompleteOnly) return seats;
+
+    return seats.filter((seat) => {
+      const student = seat.students;
+      if (!student) return false;
+      if (!presentStudentIds.includes(student.id)) return false;
+
+      // 루틴 미완료 확인
+      const completedRoutines = routineStatus
+        .filter((r) => r.student_id === student.id && r.done)
+        .map((r) => r.routine_item_id);
+      const hasIncompleteRoutine = routineItems.some(
+        (item) => !completedRoutines.includes(item.id)
+      );
+
+      // 미션 미완료 확인
+      const completedMissions = missionStatus
+        .filter((m) => m.student_id === student.id && m.done)
+        .map((m) => m.mission_id);
+      const hasIncompleteMission = missions.some(
+        (item) => !completedMissions.includes(item.id)
+      );
+
+      return hasIncompleteRoutine || hasIncompleteMission;
+    });
+  }, [
+    showIncompleteOnly,
+    seats,
+    presentStudentIds,
+    routineStatus,
+    routineItems,
+    missionStatus,
+    missions,
+  ]);
+
   const [autoSwitchToast, setAutoSwitchToast] = useState(null);
 
   useEffect(() => {
     const handler = (e) => {
       const { blockId } = e.detail || {};
-
       const block = breakBlocks.find((b) => b.id === blockId);
       if (!block) return;
 
@@ -177,7 +268,6 @@ export default function BreakTimeBoard() {
         `⏰ 지금은 ${block.name} (${block.start_time?.slice(0, 5)} ~ ${block.end_time?.slice(0, 5)}) 입니다`
       );
 
-      // 3초 후 자동 제거
       setTimeout(() => {
         setAutoSwitchToast(null);
       }, 3000);
@@ -200,62 +290,119 @@ export default function BreakTimeBoard() {
     };
   }, [fetchAttendanceStatus]);
 
+  // 통계 계산
+  const stats = useMemo(() => {
+    const total = students.length;
+    const attended = attendanceStatus.length;
+    const seated = seatStatus.filter((s) => s.is_seated).length;
+    return { total, attended, seated };
+  }, [students, attendanceStatus, seatStatus]);
+
   return (
-    <div className="grid grid-cols-[260px,1fr,260px] gap-4 h-[85vh]">
+    <>
+      <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden">
+        {/* Decorative ambient blobs */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-purple-200/40 rounded-full blur-[100px]" />
+          <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-200/40 rounded-full blur-[100px]" />
+        </div>
 
-      {/* 1. 좌측 오늘의 도전 */}
-      <TodayChallengeSidebar
-        students={presentStudents}
-        missions={missions}
-        studentMissionStatus={missionStatus}
-        routineItems={routineItems}
-        studentBreakRoutineStatus={routineStatus}
-        onOpenModal={setTargetStudent}
-        onSaved={async () => {
-          await fetchMissionStatus();
-          await fetchRoutineStatus();
-        }}
-      />
+        {/* Main Content: 3-column layout */}
+        <div className="relative z-10 flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 mx-auto min-h-0 w-full max-w-[1700px] px-4 py-6">
+            <div className="grid grid-cols-[260px,1fr,260px] gap-6 h-full">
+              {/* Left: Break Routine Panel */}
+              <div className="h-full overflow-y-auto">
+                <GenericRoutineSidebar
+                  routineTitle={routineTitle}
+                  routineItems={routineItems}
+                  tempTitle={tempTitle}
+                  setTempTitle={setTempTitle}
+                  newContent={newContent}
+                  setNewContent={setNewContent}
+                  editRoutine={editRoutine}
+                  setEditRoutine={setEditRoutine}
+                  editText={editText}
+                  setEditText={setEditText}
+                  addRoutineItem={addRoutineItem}
+                  deleteRoutineItem={deleteRoutineItem}
+                  moveRoutine={moveRoutine}
+                  updateRoutine={updateRoutine}
+                  saveRoutineTitle={saveRoutineTitle}
+                  breakBlocks={breakBlocks}
+                  selectedBlockId={selectedBlockId}
+                  setSelectedBlockId={setSelectedBlockId}
+                />
+              </div>
 
-      {/* 중앙 (상단 + 하단) */}
-      <div className="flex flex-col gap-4">
+              {/* Center: Seat Grid with Header */}
+              <div className="relative w-full h-full rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 p-6 sm:p-8 shadow-xl flex flex-col overflow-hidden">
+                {/* Header inside SeatGrid */}
+                <div className="flex-none mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-2xl font-extrabold text-gray-900">
+                      Break <span className="text-indigo-600">Status</span>
+                    </h2>
+                    <div className="flex gap-2">
+                      <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total</span>
+                        <span className="text-base font-extrabold text-gray-900 leading-none">{stats.total}</span>
+                      </div>
+                      <div className="px-3 py-1.5 rounded-xl bg-white border border-green-200 shadow-sm flex items-center gap-2">
+                        <span className="text-[10px] text-green-700 font-bold uppercase tracking-wider">Attended</span>
+                        <span className="text-base font-extrabold text-green-700 leading-none">{stats.attended}</span>
+                      </div>
+                      <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2">
+                        <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider">Seated</span>
+                        <span className="text-base font-extrabold text-purple-700 leading-none">{stats.seated}</span>
+                      </div>
+                    </div>
+                  </div>
 
-        <BreakRoutinePanel
-          routineTitle={routineTitle}
-          routineItems={routineItems}
-          breakBlocks={breakBlocks}
-          selectedBlockId={selectedBlockId}
-          setSelectedBlockId={setSelectedBlockId}
-          setTempTitle={setTempTitle}
-          setNewContent={setNewContent}
-          setIsRoutineModalOpen={setIsRoutineModalOpen}
-          isRoutineModalOpen={isRoutineModalOpen}
-          tempTitle={tempTitle}
-          newContent={newContent}
-          moveRoutine={moveRoutine}
-          deleteRoutineItem={deleteRoutineItem}
-          addRoutineItem={addRoutineItem}
-          editRoutine={editRoutine}
-          setEditRoutine={setEditRoutine}
-          editText={editText}
-          setEditText={setEditText}
-          updateRoutine={updateRoutine}
-          saveRoutineTitle={saveRoutineTitle}
-        />
+                  {/* Filter */}
+                  <div className="flex items-center">
+                    <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 shadow-sm cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={showIncompleteOnly}
+                        onChange={(e) => setShowIncompleteOnly(e.target.checked)}
+                        className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                      />
+                      <span className="text-sm font-semibold text-gray-700">미실시자만 보기</span>
+                    </label>
+                  </div>
+                </div>
 
-        {/* 3. 하단 착석 체크 */}
-        <SeatCheckContainer
-          blockId={selectedBlockId}
-          students={presentStudents}
-        />
+                {/* Seat Grid */}
+                <div className="flex-1 flex items-center justify-center min-h-0 overflow-y-auto">
+                  <SeatGrid
+                    seats={filteredSeats}
+                    activeMap={seatStatusMap}
+                    disabledMap={seats.reduce((acc, seat) => {
+                      if (seat.students && !presentStudentIds.includes(seat.students.id)) {
+                        acc[seat.students.id] = true;
+                      }
+                      return acc;
+                    }, {})}
+                    onToggleAttendance={handleToggleSeat}
+                    onOpenMission={setTargetStudent}
+                  />
+                </div>
+              </div>
+
+              {/* Right: Mission Sidebar */}
+              <MissionSidebar
+                missions={missions}
+                students={students.filter((s) => presentStudentIds.includes(s.id))}
+                studentMissionStatus={missionStatus}
+                onOpenModal={setTargetStudent}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* 4. 우측 역할 사이드바 */}
-      <ClassDutySidebar />
-
-      {/* ----------------------------------------
-        학생 작업 모달 (StudentTaskModal 컴포넌트 활용)
-      ---------------------------------------- */}
+      {/* Student Task Modal */}
       {targetStudent && (
         <StudentTaskModal
           isOpen={!!targetStudent}
@@ -274,16 +421,14 @@ export default function BreakTimeBoard() {
         />
       )}
 
+      {/* Auto-switch toast */}
       {autoSwitchToast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-          <div className="
-            bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl
-            text-sm font-semibold animate-fade-in
-          ">
+          <div className="bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl text-sm font-semibold animate-fade-in">
             {autoSwitchToast}
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

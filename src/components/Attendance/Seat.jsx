@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 
-function Seat({
+const Seat = ({
   seat,
   student,
-  isPresent,
+  isActive,     // 활성화 체크 여부 (보라색 표시)
+  isDisabled,   // 비활성화 여부 (회색/클릭불가 - 결석 등)
   onToggleAttendance,
   onOpenMission,
-}) {
+}) => {
   const [highlightMission, setHighlightMission] = useState(false);
-  const prevPresentRef = useRef(isPresent);
+  const prevActiveRef = useRef(isActive);
 
-  // 출석 상태 변화 감지 → 미션 버튼 첫 등장 강조
+  // 상태 변화 감지 → 미션 버튼 첫 등장 강조
   useEffect(() => {
     if (!student) return;
 
     // false → true 로 바뀌는 순간만
-    if (!prevPresentRef.current && isPresent) {
+    if (!prevActiveRef.current && isActive) {
       setHighlightMission(true);
 
       const timer = setTimeout(() => {
@@ -25,12 +26,11 @@ function Seat({
       return () => clearTimeout(timer);
     }
 
-    prevPresentRef.current = isPresent;
-  }, [isPresent, student]);
+    prevActiveRef.current = isActive;
+  }, [isActive, student]);
 
-  // 빈 자리는 클릭 무시
   const handleSeatClick = () => {
-    if (!student) return;
+    if (!student || isDisabled) return;
     onToggleAttendance?.(student);
   };
 
@@ -42,28 +42,48 @@ function Seat({
     );
   }
 
+  // 스타일 결정 로직
+  // 1) Disabled (결석 or 준비안됨): 회색, 클릭불가
+  // 2) Active (체크됨/출석함): 보라색, 활성
+  // 3) Inactive (미체크/미출석): 흰색, 클릭가능
+
+  let containerStyle = "";
+  let badgeStyle = "";
+  let nameStyle = "";
+  let buttonStyle = "";
+
+  if (isDisabled) {
+    // Disabled State (결석)
+    containerStyle = "bg-slate-100 border border-transparent opacity-60 cursor-not-allowed";
+    badgeStyle = "bg-slate-300";
+    nameStyle = "text-slate-400"; // 이름은 흐리게
+    buttonStyle = ""; // 버튼 스타일 사용 안 함/별도 처리
+  } else if (isActive) {
+    // Active State (체크됨)
+    containerStyle = "bg-gradient-to-br from-indigo-50 to-purple-50 shadow-md border border-purple-300 cursor-pointer";
+    badgeStyle = student.gender === "male" ? "bg-blue-500" : student.gender === "female" ? "bg-pink-500" : "bg-emerald-500";
+    nameStyle = "text-gray-900";
+    buttonStyle = "text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 active:brightness-90 border-purple-200/50";
+  } else {
+    // Inactive (Default) State (미체크)
+    containerStyle = "bg-white border border-slate-200 cursor-pointer hover:border-indigo-300 hover:shadow-md";
+    badgeStyle = "bg-slate-400";
+    nameStyle = "text-slate-600";
+    buttonStyle = "text-slate-300 bg-slate-50 border-slate-100";
+  }
+
   return (
     <div
       onClick={handleSeatClick}
       className={`
         group relative w-full h-full min-h-[100px] rounded-2xl transition-all duration-200 ease-out
-        flex flex-col items-center justify-between cursor-pointer overflow-hidden
-        ${isPresent
-          ? "bg-gradient-to-br from-indigo-50 to-purple-50 shadow-md border border-purple-300"
-          : "bg-white/90 backdrop-blur-sm border border-gray-200 opacity-90 hover:opacity-100 hover:bg-white hover:scale-[1.02] hover:shadow-lg"
-        }
+        flex flex-col items-center justify-between overflow-hidden
+        ${containerStyle}
       `}
     >
-      {/* 1. 상단: 번호 뱃지 (상단 여백 추가) */}
+      {/* 1. 상단: 번호 뱃지 */}
       <div className="pt-3 flex-none">
-        <div
-          className={`w-5 h-5 rounded-full ring-2 ring-white shadow-sm flex items-center justify-center ${student.gender === "male"
-            ? "bg-blue-500"
-            : student.gender === "female"
-              ? "bg-pink-500"
-              : "bg-emerald-500"
-            }`}
-        >
+        <div className={`w-5 h-5 rounded-full ring-2 ring-white shadow-sm flex items-center justify-center ${badgeStyle}`}>
           {student.number != null && (
             <span className="text-[10px] font-black text-white leading-none">
               {student.number}
@@ -72,41 +92,41 @@ function Seat({
         </div>
       </div>
 
-      {/* 2. 중간: 이름 (4글자 초강력 압축) */}
+      {/* 2. 중간: 이름 */}
       <div className="flex-none flex items-center justify-center w-full">
         <div
           className={`font-black transition-all duration-200 text-center w-full break-keep ${student.name.length >= 4
             ? "text-sm tracking-tighter leading-none px-0.5"
             : "text-lg tracking-tight"
-            } ${isPresent
-              ? "text-gray-900"
-              : "text-slate-600"
-            }`}
+            } ${nameStyle}`}
         >
           {student.name}
         </div>
       </div>
 
-      {/* 3. 하단: 미션 푸터 버튼 */}
+      {/* 3. 하단: 미션 푸터 버튼 OR 결석 라벨 */}
       <div className="w-full flex-none">
-        {isPresent ? (
+        {isDisabled ? (
+          <div className="w-full py-2 text-[10px] font-bold text-rose-500 text-center bg-rose-50 border-t border-rose-100 tracking-widest uppercase">
+            결석
+          </div>
+        ) : (
           <button
             onClick={(e) => {
-              e.stopPropagation(); // ⛔ 출석 토글 방지
-              onOpenMission?.(student);
+              e.stopPropagation();
+              if (isActive && !isDisabled) {
+                onOpenMission?.(student);
+              }
             }}
             className={`
-              w-full py-2 text-[10px] font-bold uppercase tracking-widest text-white
-              bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600
-              active:brightness-90 transition-all border-t border-purple-200/50
-              ${highlightMission ? "animate-pulse" : ""}
+              w-full py-2 text-[10px] font-bold uppercase tracking-widest
+              transition-all border-t
+              ${buttonStyle}
+              ${highlightMission && isActive ? "animate-pulse" : ""}
             `}
           >
             미션
           </button>
-        ) : (
-          /* 결석 시 푸터 공간만큼 빈 영역 확보 */
-          <div className="h-[35px] w-full" />
         )}
       </div>
     </div>

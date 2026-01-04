@@ -9,7 +9,8 @@ const GROUP_COLOR_MAP = {
 
 function SeatGrid({
   seats,
-  attendanceMap,
+  activeMap,        // 활성화 여부 (보라색 표시) - 예: 출석함, 착석함, 하교함
+  disabledMap = {}, // 비활성화 여부 (회색/클릭불가) - 예: 결석생
   onToggleAttendance,
   onOpenMission,
   totalCols,
@@ -28,16 +29,22 @@ function SeatGrid({
     >
       {seats.map((seat) => {
         const student = seat.students || null;
-        const isPresent = student
-          ? attendanceMap[student.id] === true
-          : false;
+
+        let isActive = false;
+        let isDisabled = false;
+
+        if (student) {
+          isActive = !!activeMap[student.id];
+          isDisabled = !!disabledMap[student.id];
+        }
 
         return (
           <Seat
             key={seat.id}
             seat={seat}
             student={student}
-            isPresent={isPresent}
+            isActive={isActive}
+            isDisabled={isDisabled}
             onToggleAttendance={onToggleAttendance}
             onOpenMission={onOpenMission}
           />
