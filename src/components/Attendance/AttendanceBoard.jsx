@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
-import StudentTaskModal from "./StudentTaskModal";
+import AttendanceTaskModal from "./AttendanceTaskModal";
 import SeatGrid from "./SeatGrid";
 import AttendanceConfirmModal from "./AttendanceConfirmModal";
 
@@ -266,7 +266,7 @@ function AttendanceBoard() {
 
       {/* 모달 UI 부분은 동일 */}
       {/* 학생 루틴/미션 모달 */}
-      <StudentTaskModal
+      <AttendanceTaskModal
         isOpen={modalType === "task"}
         onClose={() => {
           setModalType(null);
@@ -276,8 +276,8 @@ function AttendanceBoard() {
           fetchAttendance();
         }}
         student={selectedStudent}
-        routines={routines}   // 루틴 데이터 연결
-        missions={missions}   // 미션 데이터 연결
+        routines={routines}
+        missions={missions}
       />
 
       {confirmType && pendingStudent && (

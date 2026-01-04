@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import useBreakBlockSelection from "../../hooks/Break/useBreakBlockSelection";
 import { supabase } from "../../lib/supabaseClient";
-import StudentTaskModal from "../Attendance/StudentTaskModal";
+import BreakTaskModal from "./BreakTaskModal";
 import useBreakRoutine from "../../hooks/Break/useBreakRoutine";
 import { BREAK_AUTO_SWITCH_EVENT } from "../../hooks/Break/useBreakBlockSelection";
 import GenericRoutineSidebar from "../shared/GenericRoutineSidebar";
@@ -404,14 +404,12 @@ export default function BreakTimeBoard() {
 
       {/* Student Task Modal */}
       {targetStudent && (
-        <StudentTaskModal
+        <BreakTaskModal
           isOpen={!!targetStudent}
           student={targetStudent}
           missions={missions}
           routines={routineItems}
-          routineStatusTable="student_break_routine_status"
           blockId={selectedBlockId}
-          showRoutines={true}
           onClose={() => setTargetStudent(null)}
           onSaved={async () => {
             await fetchMissionStatus();

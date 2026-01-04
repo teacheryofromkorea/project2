@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import StudentTaskModal from "../Attendance/StudentTaskModal";
+import LunchTaskModal from "./LunchTaskModal";
 import useLunchRoutine from "../../hooks/Lunch/useLunchRoutine";
 import GenericRoutineSidebar from "../shared/GenericRoutineSidebar";
 import MissionSidebar from "../Attendance/MissionSidebar";
@@ -348,15 +348,12 @@ export default function LunchTimeBoard() {
 
       {/* Student Task Modal */}
       {targetStudent && (
-        <StudentTaskModal
+        <LunchTaskModal
           isOpen={!!targetStudent}
           student={targetStudent}
           missions={missions}
           routines={routineItems}
-          routineStatusTable="student_lunch_routine_status"
-          routineIdField="routine_item_id"
           routineLabel={routineTitle || "점심시간 루틴"}
-          showRoutines={true}
           onClose={() => setTargetStudent(null)}
           onSaved={async () => {
             await fetchMissionStatus();

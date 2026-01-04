@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import StudentTaskModal from "../Attendance/StudentTaskModal";
+import EndTaskModal from "./EndTaskModal";
 import useEndRoutine from "../../hooks/End/useEndRoutine";
 import GenericRoutineSidebar from "../shared/GenericRoutineSidebar";
 import MissionSidebar from "../Attendance/MissionSidebar";
@@ -352,15 +352,12 @@ export default function EndTimeBoard() {
 
       {/* Student Task Modal */}
       {targetStudent && (
-        <StudentTaskModal
+        <EndTaskModal
           isOpen={!!targetStudent}
           student={targetStudent}
           missions={missions}
           routines={routineItems}
-          routineStatusTable="student_end_routine_status"
-          routineIdField="routine_item_id"
           routineLabel={routineTitle || "하교시간 루틴"}
-          showRoutines={true}
           onClose={() => setTargetStudent(null)}
           onSaved={async () => {
             await fetchMissionStatus();
