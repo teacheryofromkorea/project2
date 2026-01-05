@@ -415,7 +415,7 @@ function ClassPage() {
         />
 
         {/* 중앙: 수업 콘텐츠 OR 퀘스트 대시보드 */}
-        <div className={`${activeTool === 'quest' ? 'col-span-9' : 'col-span-6'} bg-white/70 rounded-2xl shadow p-4 overflow-y-auto transition-all duration-300`}>
+        <div className={`${activeTool === 'quest' ? 'col-span-11' : 'col-span-6'} bg-white/70 rounded-2xl shadow p-4 overflow-y-auto transition-all duration-300`}>
           {activeTool === "quest" ? (
             <ClassQuestDashboard
               students={presentStudents}
@@ -434,7 +434,7 @@ function ClassPage() {
         </div>
 
         {/* 우측: 수업 도구 독 (깔끔한 아이콘 그리드) */}
-        <div className="col-span-3 flex flex-col gap-4">
+        <div className={`${activeTool === 'quest' ? 'col-span-1' : 'col-span-3'} flex flex-col gap-4 transition-all duration-300`}>
           <div className="bg-white/70 rounded-2xl shadow p-4 h-full flex flex-col items-center">
             <h3 className="text-sm font-bold text-gray-700 mb-4 w-full text-center border-b pb-2">
               🧰 도구
@@ -469,7 +469,9 @@ function ClassPage() {
                   `}
                 >
                   <span className="text-3xl mb-1">{tool.icon}</span>
-                  <span className="text-xs font-bold text-gray-600">{tool.label}</span>
+                  {activeTool !== 'quest' && (
+                    <span className="text-xs font-bold text-gray-600 animate-in fade-in">{tool.label}</span>
+                  )}
                 </button>
               ))}
             </div>
