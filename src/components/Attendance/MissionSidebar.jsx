@@ -101,7 +101,19 @@ function MissionSidebar() {
   // -------------------------
   const deleteMission = async (id) => {
     if (locked) return;
-    // 1) 미션 삭제
+
+    // 1) First, delete related student statuses (Referencing Table)
+    const { error: statusError } = await supabase
+      .from("student_mission_status")
+      .delete()
+      .eq("mission_id", id);
+
+    if (statusError) {
+      handleSupabaseError(statusError, "학생 미션 상태 삭제 중 오류가 발생했어요.");
+      return; // Stop if we can't delete the children
+    }
+
+    // 2) Then, delete the mission itself (Referenced Table)
     const { error } = await supabase
       .from("missions")
       .delete()
@@ -112,18 +124,7 @@ function MissionSidebar() {
       return;
     }
 
-    // 2) 이 미션에 대한 학생별 상태도 같이 삭제
-    const { error: statusError } = await supabase
-      .from("student_mission_status")
-      .delete()
-      .eq("mission_id", id);
-
-    if (statusError) {
-      handleSupabaseError(statusError, "학생 미션 상태 삭제 중 오류가 발생했어요.");
-      // 화면 갱신은 계속
-    }
-
-    // 3) 화면 갱신
+    // 3) Refresh UI
     fetchMissions();
   };
 

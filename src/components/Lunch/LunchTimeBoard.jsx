@@ -247,7 +247,7 @@ export default function LunchTimeBoard() {
 
   return (
     <>
-      <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden">
+      <div className="relative w-full flex-1 flex flex-col bg-transparent min-h-0">
         {/* Decorative ambient blobs */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-purple-200/40 rounded-full blur-[100px]" />
@@ -255,114 +255,112 @@ export default function LunchTimeBoard() {
         </div>
 
         {/* Main Content: 3-column layout */}
-        <div className="relative z-10 flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="flex-1 mx-auto min-h-0 w-full max-w-[1700px] px-4 py-6">
-            <div className="grid grid-cols-[260px,1fr,260px] gap-6 h-full">
-              {/* Left: Lunch Routine Area */}
-              <div className="h-full overflow-y-auto">
-                <GenericRoutineSidebar
-                  routineTitle={routineTitle}
-                  routineItems={routineItems}
-                  tempTitle={tempTitle}
-                  setTempTitle={setTempTitle}
-                  newContent={newContent}
-                  setNewContent={setNewContent}
-                  editRoutine={editRoutine}
-                  setEditRoutine={setEditRoutine}
-                  editText={editText}
-                  setEditText={setEditText}
-                  addRoutineItem={addRoutineItem}
-                  deleteRoutineItem={deleteRoutineItem}
-                  moveRoutine={moveRoutine}
-                  updateRoutine={updateRoutine}
-                  saveRoutineTitle={saveRoutineTitle}
-                />
-              </div>
+        <div className="relative z-10 flex-1 flex flex-col min-h-0">
+          <div className="grid grid-cols-[260px,1fr,260px] gap-6 w-full max-w-[1700px] flex-1 mx-auto min-h-0">
+            {/* Left: Lunch Routine Area */}
+            <GenericRoutineSidebar
+              routineTitle={routineTitle}
+              routineItems={routineItems}
+              tempTitle={tempTitle}
+              setTempTitle={setTempTitle}
+              newContent={newContent}
+              setNewContent={setNewContent}
+              editRoutine={editRoutine}
+              setEditRoutine={setEditRoutine}
+              editText={editText}
+              setEditText={setEditText}
+              addRoutineItem={addRoutineItem}
+              deleteRoutineItem={deleteRoutineItem}
+              moveRoutine={moveRoutine}
+              updateRoutine={updateRoutine}
+              saveRoutineTitle={saveRoutineTitle}
+            />
 
-              {/* Center: Seat Grid with Header */}
-              <div className="relative w-full h-full rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 p-6 sm:p-8 shadow-xl flex flex-col overflow-hidden">
-                {/* Header inside SeatGrid */}
-                <div className="flex-none mb-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-2xl font-extrabold text-gray-900">
-                      Lunch <span className="text-indigo-600">Status</span>
-                    </h2>
-                    <div className="flex gap-2">
-                      <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total</span>
-                        <span className="text-base font-extrabold text-gray-900 leading-none">{stats.total}</span>
-                      </div>
-                      <div className="px-3 py-1.5 rounded-xl bg-white border border-green-200 shadow-sm flex items-center gap-2">
-                        <span className="text-[10px] text-green-700 font-bold uppercase tracking-wider">Attended</span>
-                        <span className="text-base font-extrabold text-green-700 leading-none">{stats.attended}</span>
-                      </div>
-                      <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2">
-                        <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider">Seated</span>
-                        <span className="text-base font-extrabold text-purple-700 leading-none">{stats.seated}</span>
-                      </div>
+            {/* Center: Seat Grid with Header */}
+            <div className="relative w-full h-full rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 p-6 sm:p-8 shadow-xl flex flex-col overflow-hidden">
+              {/* Header inside SeatGrid */}
+              <div className="flex-none mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-2xl font-extrabold text-gray-900">
+                    Lunch <span className="text-indigo-600">Status</span>
+                  </h2>
+                  <div className="flex gap-2">
+                    <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total</span>
+                      <span className="text-base font-extrabold text-gray-900 leading-none">{stats.total}</span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-xl bg-white border border-green-200 shadow-sm flex items-center gap-2">
+                      <span className="text-[10px] text-green-700 font-bold uppercase tracking-wider">Attended</span>
+                      <span className="text-base font-extrabold text-green-700 leading-none">{stats.attended}</span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2">
+                      <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider">Seated</span>
+                      <span className="text-base font-extrabold text-purple-700 leading-none">{stats.seated}</span>
                     </div>
                   </div>
-
-                  {/* Filter */}
-                  <div className="flex items-center">
-                    <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 shadow-sm cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="checkbox"
-                        checked={showIncompleteOnly}
-                        onChange={(e) => setShowIncompleteOnly(e.target.checked)}
-                        className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                      />
-                      <span className="text-sm font-semibold text-gray-700">미실시자만 보기</span>
-                    </label>
-                  </div>
                 </div>
 
-                {/* Seat Grid */}
-                <div className="flex-1 flex items-center justify-center min-h-0 overflow-y-auto">
-                  <SeatGrid
-                    seats={filteredSeats}
-                    activeMap={seatStatusMap}
-                    disabledMap={seats.reduce((acc, seat) => {
-                      if (seat.students && !presentStudentIds.includes(seat.students.id)) {
-                        acc[seat.students.id] = true;
-                      }
-                      return acc;
-                    }, {})}
-                    onToggleAttendance={handleToggleSeat}
-                    onOpenMission={setTargetStudent}
-                    alwaysActiveMission={true} // ✅ 점심시간 탭은 미션버튼 항상 활성
-                  />
+                {/* Filter */}
+                <div className="flex items-center">
+                  <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 shadow-sm cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={showIncompleteOnly}
+                      onChange={(e) => setShowIncompleteOnly(e.target.checked)}
+                      className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                    />
+                    <span className="text-sm font-semibold text-gray-700">미실시자만 보기</span>
+                  </label>
                 </div>
               </div>
 
-              {/* Right: Mission Sidebar */}
-              <MissionSidebar
-                missions={missions}
-                students={students.filter((s) => presentStudentIds.includes(s.id))}
-                studentMissionStatus={missionStatus}
-                onOpenModal={setTargetStudent}
-              />
+              {/* Seat Grid */}
+              <div className="flex-1 flex items-center justify-center min-h-0 overflow-y-auto">
+                <SeatGrid
+                  seats={filteredSeats}
+                  activeMap={seatStatusMap}
+                  disabledMap={seats.reduce((acc, seat) => {
+                    if (seat.students && !presentStudentIds.includes(seat.students.id)) {
+                      acc[seat.students.id] = true;
+                    }
+                    return acc;
+                  }, {})}
+                  onToggleAttendance={handleToggleSeat}
+                  onOpenMission={setTargetStudent}
+                  alwaysActiveMission={true} // ✅ 점심시간 탭은 미션버튼 항상 활성
+                />
+              </div>
             </div>
+
+            {/* Right: Mission Sidebar */}
+            <MissionSidebar
+              missions={missions}
+              students={students.filter((s) => presentStudentIds.includes(s.id))}
+              studentMissionStatus={missionStatus}
+              onOpenModal={setTargetStudent}
+            />
           </div>
         </div>
       </div>
 
       {/* Student Task Modal */}
-      {targetStudent && (
-        <LunchTaskModal
-          isOpen={!!targetStudent}
-          student={targetStudent}
-          missions={missions}
-          routines={routineItems}
-          routineLabel={routineTitle || "점심시간 루틴"}
-          onClose={() => setTargetStudent(null)}
-          onSaved={async () => {
-            await fetchMissionStatus();
-            await fetchRoutineItems();
-            await fetchRoutineStatus();
-          }}
-        />
-      )}
+      {
+        targetStudent && (
+          <LunchTaskModal
+            isOpen={!!targetStudent}
+            student={targetStudent}
+            missions={missions}
+            routines={routineItems}
+            routineLabel={routineTitle || "점심시간 루틴"}
+            onClose={() => setTargetStudent(null)}
+            onSaved={async () => {
+              await fetchMissionStatus();
+              await fetchRoutineItems();
+              await fetchRoutineStatus();
+            }}
+          />
+        )
+      }
     </>
   );
 }
