@@ -250,6 +250,26 @@ function ClassPage() {
     }));
   };
 
+  const moveQuest = (questId, direction) => {
+    setQuests((prev) => {
+      const index = prev.findIndex((q) => q.id === questId);
+      if (index === -1) return prev;
+      if (direction === "up" && index === 0) return prev;
+      if (direction === "down" && index === prev.length - 1) return prev;
+
+      const newQuests = [...prev];
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      [newQuests[index], newQuests[targetIndex]] = [newQuests[targetIndex], newQuests[index]];
+      return newQuests;
+    });
+  };
+
+  const updateQuest = (questId, newTitle) => {
+    setQuests((prev) =>
+      prev.map((q) => (q.id === questId ? { ...q, title: newTitle } : q))
+    );
+  };
+
   // 🔹 (Legacy) 사이드바용 퀘스트 체크 토글 (현재 활성화된 퀘스트 자동 타겟팅)
   const toggleQuestCompletion = (studentId) => {
     if (!activeQuestId) return;
@@ -383,26 +403,18 @@ function ClassPage() {
         {/* 좌측: 학생 리스트 (미니 좌석 덱) - 퀘스트 모드일 때는 숨김 (테이블 뷰로 통합) */}
         {activeTool !== 'quest' && (
           <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4 overflow-y-auto relative animate-in fade-in slide-in-from-left-4 duration-300">
-            {activeQuest && (
-              <div className="sticky top-0 z-10 bg-orange-100/90 backdrop-blur px-4 py-3 -mx-4 -mt-4 mb-4 border-b border-orange-200">
-                <div className="text-xs text-orange-600 font-bold mb-1">🔥 진행 중인 퀘스트</div>
-                <div className="font-extrabold text-orange-800 truncate">{activeQuest.title}</div>
-                <div className="text-xs text-orange-600/80 mt-1 font-mono">
-                  {activeQuest.completed.size} / {presentStudents.length} 완료
-                </div>
-              </div>
-            )}
+
 
             <ClassSeatDeck
               students={presentStudents}
               periodPoints={periodPoints}
-              onStudentClick={activeQuest ? null : setStatModalStudent}
+              onStudentClick={setStatModalStudent}
               selectedStudentIds={selectedStudentIds}
 
-              // 퀘스트 전용 props
-              isQuestMode={!!activeQuest}
-              questCompletedStudentIds={activeQuest ? activeQuest.completed : new Set()}
-              onToggleQuestCompletion={toggleQuestCompletion}
+              // 퀘스트 전용 props (제거됨: 수업 도구 화면에서는 퀘스트 표시 안 함)
+              isQuestMode={false}
+              questCompletedStudentIds={new Set()}
+              onToggleQuestCompletion={null}
             />
           </div>
         )}
@@ -423,6 +435,8 @@ function ClassPage() {
               onAddQuest={addQuest}
               onDeleteQuest={deleteQuest}
               onToggleQuestCheck={toggleQuestCheck}
+              onMoveQuest={moveQuest}
+              onUpdateQuest={updateQuest}
             />
           ) : (
             <ClassResourceBoard

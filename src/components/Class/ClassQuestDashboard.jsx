@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const QUEST_COLORS = [
@@ -24,9 +24,14 @@ export default function ClassQuestDashboard({
     quests = [],
     onAddQuest,
     onDeleteQuest,
-    onToggleQuestCheck, // (questId, studentId) => void
+    onToggleQuestCheck,
+    onMoveQuest,   // (questId, 'up' | 'down') => void
+    onUpdateQuest, // (questId, newTitle) => void
 }) {
     const [inputName, setInputName] = useState("");
+    const [editingId, setEditingId] = useState(null);
+    const [editTitle, setEditTitle] = useState("");
+    const editInputRef = useRef(null);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -35,16 +40,59 @@ export default function ClassQuestDashboard({
         setInputName("");
     };
 
+    const startEditing = (quest) => {
+        setEditingId(quest.id);
+        setEditTitle(quest.title);
+        // Focus will be handled by useEffect or autoFocus
+    };
+
+    const saveEditing = () => {
+        if (editingId && editTitle.trim()) {
+            onUpdateQuest(editingId, editTitle.trim());
+        }
+        setEditingId(null);
+        setEditTitle("");
+    };
+
+    const cancelEditing = () => {
+        setEditingId(null);
+        setEditTitle("");
+    };
+
+    // Auto-focus when editing starts
+    useEffect(() => {
+        if (editingId && editInputRef.current) {
+            editInputRef.current.focus();
+        }
+    }, [editingId]);
+
     return (
         <div className="h-full flex gap-4 overflow-hidden p-2">
             {/* 🟧 [좌측 패널 65%] 퀘스트 빌보드 (Large Display) */}
             <div className="flex-[0.65] flex flex-col gap-3 min-w-0">
                 {/* 헤더 */}
-                <div className="bg-white/80 rounded-xl p-3 shadow-md backdrop-blur border border-white/50 shrink-0">
+                <div className="bg-white/80 rounded-xl p-3 shadow-md backdrop-blur border border-white/50 shrink-0 flex items-center justify-between">
                     <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
                         <span>🔥</span>
                         <span>QUEST BOARD</span>
                     </h2>
+                    {/* 퀘스트 추가 폼 */}
+                    <form onSubmit={handleSubmit} className="flex gap-2">
+                        <input
+                            type="text"
+                            value={inputName}
+                            onChange={(e) => setInputName(e.target.value)}
+                            placeholder="새 퀘스트..."
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm w-48 focus:w-64 transition-all outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!inputName.trim()}
+                            className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm font-bold hover:bg-red-600 disabled:opacity-50 shadow-sm transition-all active:scale-95"
+                        >
+                            + 추가
+                        </button>
+                    </form>
                 </div>
 
                 {/* 퀘스트 카드 리스트 */}
@@ -60,28 +108,50 @@ export default function ClassQuestDashboard({
                             const completedCount = quest.completed.size;
                             const totalCount = students.length;
                             const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+                            const isEditing = editingId === quest.id;
 
                             return (
                                 <div
                                     key={quest.id}
-                                    className={`relative bg-white rounded-2xl p-5 shadow-lg border-l-8 ${color.border} flex flex-col gap-3 group transition-transform hover:scale-[1.02]`}
-                                    style={{ borderLeftColor: 'transparent' }} // 오버라이드 방지용
+                                    className={`relative bg-white rounded-2xl p-5 shadow-lg border-l-8 ${color.border} flex flex-col gap-3 group transition-transform hover:scale-[1.01]`}
+                                    style={{ borderLeftColor: 'transparent' }}
                                 >
-                                    {/* 왼쪽 컬러 바 (border-l 대신 절대위치로 확실하게) */}
                                     <div className={`absolute top-0 left-0 bottom-0 w-3 rounded-l-2xl ${color.badge}`} />
 
                                     <div className="pl-2 flex items-start gap-4">
-                                        {/* Number Badge (Huge) */}
+                                        {/* Number Badge */}
                                         <div className={`shrink-0 w-16 h-16 rounded-2xl ${color.bg} ${color.text} flex items-center justify-center text-4xl font-extrabold shadow-inner`}>
                                             {index + 1}
                                         </div>
 
                                         {/* Content */}
                                         <div className="flex-1 min-w-0 pt-1">
-                                            {/* Title (Biggest) */}
-                                            <h3 className="text-3xl font-black text-gray-800 leading-tight mb-2 break-keep" style={{ wordBreak: "keep-all" }}>
-                                                {quest.title}
-                                            </h3>
+                                            {/* Title */}
+                                            {isEditing ? (
+                                                <div className="flex gap-2 mb-2">
+                                                    <input
+                                                        ref={editInputRef}
+                                                        type="text"
+                                                        value={editTitle}
+                                                        onChange={(e) => setEditTitle(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter") saveEditing();
+                                                            if (e.key === "Escape") cancelEditing();
+                                                        }}
+                                                        onBlur={saveEditing}
+                                                        className="flex-1 text-3xl font-black text-gray-800 bg-white border-b-2 border-indigo-500 outline-none pb-1"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <h3
+                                                    className="text-3xl font-black text-gray-800 leading-tight mb-2 break-keep cursor-pointer hover:underline decoration-dashed underline-offset-4 decoration-gray-300"
+                                                    style={{ wordBreak: "keep-all" }}
+                                                    onDoubleClick={() => startEditing(quest)}
+                                                    title="더블 클릭하여 수정"
+                                                >
+                                                    {quest.title}
+                                                </h3>
+                                            )}
 
                                             {/* Progress Bar & Stats */}
                                             <div className="w-full bg-gray-100 rounded-full h-4 mb-2 overflow-hidden shadow-inner">
@@ -94,23 +164,62 @@ export default function ClassQuestDashboard({
                                                 <span className={`${color.text} bg-white px-2 py-0.5 rounded shadow-sm border border-gray-100`}>
                                                     {percent}% 완료
                                                 </span>
-                                                <span>
-                                                    {completedCount} / {totalCount} 명
-                                                </span>
+                                                <div className="flex items-center gap-3">
+                                                    <span>{completedCount} / {totalCount} 명</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Delete Button (Hover Only) */}
-                                    <button
-                                        onClick={() => {
-                                            if (confirm(`'${quest.title}' 퀘스트를 삭제하시겠습니까?`)) onDeleteQuest(quest.id);
-                                        }}
-                                        className="absolute top-2 right-2 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
-                                        title="퀘스트 삭제"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    </button>
+                                    {/* Actions Group (Top Right) */}
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {/* Reorder Up */}
+                                        <button
+                                            onClick={() => onMoveQuest && onMoveQuest(quest.id, 'up')}
+                                            disabled={index === 0}
+                                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent"
+                                            title="위로 이동"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" /></svg>
+                                        </button>
+
+                                        {/* Reorder Down */}
+                                        <button
+                                            onClick={() => onMoveQuest && onMoveQuest(quest.id, 'down')}
+                                            disabled={index === quests.length - 1}
+                                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent"
+                                            title="아래로 이동"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                                        </button>
+
+                                        <div className="w-px h-5 bg-gray-200 mx-1 self-center" />
+
+                                        {/* Edit (Changes to Save/Check if editing) */}
+                                        <button
+                                            onMouseDown={(e) => e.preventDefault()} // 🔹 중요: 버튼 클릭 시 input focus 잃어서 onBlur 발생하지 않도록 방지
+                                            onClick={() => isEditing ? saveEditing() : startEditing(quest)}
+                                            className={`p-1.5 rounded-lg transition-colors ${isEditing ? "text-green-600 bg-green-50 hover:bg-green-100" : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"}`}
+                                            title={isEditing ? "저장" : "수정"}
+                                        >
+                                            {isEditing ? (
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                                            ) : (
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                            )}
+                                        </button>
+
+                                        {/* Delete */}
+                                        <button
+                                            onClick={() => {
+                                                if (confirm(`'${quest.title}' 퀘스트를 삭제하시겠습니까?`)) onDeleteQuest(quest.id);
+                                            }}
+                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                            title="삭제"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })
@@ -125,23 +234,6 @@ export default function ClassQuestDashboard({
                         <span className="text-lg">📋</span>
                         <h2 className="text-base font-bold text-gray-800">체크리스트</h2>
                     </div>
-                    {/* 간단한 추가 폼 (왼쪽에 배치) */}
-                    <form onSubmit={handleSubmit} className="flex gap-2">
-                        <input
-                            type="text"
-                            value={inputName}
-                            onChange={(e) => setInputName(e.target.value)}
-                            placeholder="새 퀘스트..."
-                            className="px-2 py-1 rounded border border-gray-200 text-sm w-32 focus:w-48 transition-all outline-none focus:border-indigo-400"
-                        />
-                        <button
-                            type="submit"
-                            disabled={!inputName.trim()}
-                            className="px-2 py-1 bg-indigo-500 text-white rounded text-sm font-bold hover:bg-indigo-600 disabled:opacity-50"
-                        >
-                            +
-                        </button>
-                    </form>
                 </div>
 
                 <div className="flex-1 overflow-auto bg-white/40 relative">
