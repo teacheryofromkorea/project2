@@ -116,7 +116,7 @@ export default function ClassTimer() {
   const isEnding = remaining <= 10 && remaining > 0;
 
   return (
-    <div className="w-full h-[75vh] flex flex-col items-center justify-center gap-8 rounded-2xl bg-white/70 backdrop-blur shadow relative">
+    <div className="w-full h-[75vh] flex flex-col items-center justify-center gap-8 rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 shadow-xl relative border border-white/50">
       <button
         onClick={() => {
           if (locked) return;
@@ -189,11 +189,10 @@ export default function ClassTimer() {
                 <button
                   key={m}
                   onClick={() => applyPreset(m)}
-                  className={`py-2 rounded-xl font-semibold ${
-                    inputMin === m && inputSec === 0
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-gray-100 hover:bg-gray-200"
-                  }`}
+                  className={`py-2 rounded-xl font-semibold ${inputMin === m && inputSec === 0
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 hover:bg-gray-200"
+                    }`}
                   disabled={locked}
                 >
                   {m}분
@@ -227,9 +226,8 @@ export default function ClassTimer() {
       {/* 시간 표시 */}
       {!showSettings && (
         <div
-          className={`font-extrabold tracking-widest ${
-            isEnding ? "text-red-600 animate-pulse" : "text-gray-900"
-          }`}
+          className={`font-extrabold tracking-widest ${isEnding ? "text-red-600 animate-pulse" : "text-gray-900"
+            }`}
           style={{ fontSize: "13rem" }}
         >
           {formatTime(remaining)}

@@ -1,9 +1,19 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import ClassStudentPanel from "./ClassStudentPanel";
+import ClassSeatDeck from "./ClassSeatDeck";
+import ClassStatModal from "./ClassStatModal";
 import useClassTimeBlockSelection from "../../hooks/useClassTimeBlockSelection";
 import useInitClassResources from "../../hooks/useInitClassResources";
 import ClassResourceBoard from "./ClassResourceBoard";
+
+// 🔹 Import Widgets
+// 🔹 Import Full Tools (Reusing existing components)
+import ClassTimer from "../Tools/ClassTimer";
+import RandomPicker from "../Tools/RandomPicker";
+import Blackboard from "../Tools/Blackboard";
+import TeamBuilder from "../Tools/TeamBuilder";
+import ClassQuestWidget from "../Tools/ClassQuestWidget";
+import ClassQuestDashboard from "./ClassQuestDashboard";
 
 /**
  * ClassPage
@@ -52,8 +62,84 @@ function ClassPage() {
   // 🔹 선택된 학생들 (다중 선택)
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
 
+  // 🔹 미니 능력치 모달용 상태 (클릭된 학생)
+  const [statModalStudent, setStatModalStudent] = useState(null);
+
+  // 🔹 현재 활성화된 수업 도구 (null | 'timer' | 'picker' | 'memo' | 'team' | 'quest')
+  const [activeTool, setActiveTool] = useState(() => {
+    try {
+      return localStorage.getItem("class_active_tool");
+    } catch {
+      return null;
+    }
+  });
+
+  // 🔹 도구 상태 저장
+  useEffect(() => {
+    if (activeTool) {
+      localStorage.setItem("class_active_tool", activeTool);
+    } else {
+      localStorage.removeItem("class_active_tool");
+    }
+  }, [activeTool]);
+
   // 🔹 toast 메시지
   const [toast, setToast] = useState(null);
+
+  // 🔹 퀘스트 상태 (다중 퀘스트 지원)
+  // quests: [{ id, title, completed: Set<studentId> }, ...]
+  // 🔹 퀘스트 상태 (다중 퀘스트 지원)
+  // quests: [{ id, title, completed: Set<studentId> }, ...]
+  const [quests, setQuests] = useState(() => {
+    try {
+      const saved = localStorage.getItem("class_quests");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.map(q => ({
+          ...q,
+          completed: new Set(q.completed)
+        }));
+      }
+      return [];
+    } catch (e) {
+      console.error("Failed to load quests", e);
+      return [];
+    }
+  });
+
+  const [activeQuestId, setActiveQuestId] = useState(() => {
+    try {
+      return localStorage.getItem("class_active_quest_id") || null;
+    } catch {
+      return null;
+    }
+  });
+
+  // 🔹 LocalStorage 저장 (상태 변경 시)
+  useEffect(() => {
+    try {
+      // Set -> Array 변환하여 저장
+      const serialized = JSON.stringify(quests, (key, value) =>
+        value instanceof Set ? Array.from(value) : value
+      );
+      localStorage.setItem("class_quests", serialized);
+    } catch (e) {
+      console.error("Failed to save quests", e);
+    }
+  }, [quests]);
+
+  useEffect(() => {
+    if (activeQuestId) {
+      localStorage.setItem("class_active_quest_id", activeQuestId);
+    } else {
+      localStorage.removeItem("class_active_quest_id");
+    }
+  }, [activeQuestId]);
+
+  // 현재 활성화된 퀘스트 객체 (없으면 null)
+  const activeQuest = useMemo(() =>
+    quests.find(q => q.id === activeQuestId) || null
+    , [quests, activeQuestId]);
 
   // 🔹 수업 도구 템플릿 초기화 (최초 1회)
   useInitClassResources();
@@ -117,6 +203,57 @@ function ClassPage() {
       else next.add(studentId);
       return next;
     });
+  };
+
+  // 🔹 퀘스트 추가
+  const addQuest = (title) => {
+    const newQuest = {
+      id: Date.now().toString(),
+      title,
+      completed: new Set(),
+    };
+    setQuests(prev => [...prev, newQuest]);
+
+    // 추가 후 바로 활성화할지 여부는 선택사항. 여기서는 바로 활성화.
+    setActiveQuestId(newQuest.id);
+
+    showToast(`퀘스트 '${title}' 생성됨`, "success");
+  };
+
+  // 🔹 퀘스트 삭제
+  const deleteQuest = (id) => {
+    setQuests(prev => prev.filter(q => q.id !== id));
+    if (activeQuestId === id) {
+      setActiveQuestId(null);
+    }
+  };
+
+  // 🔹 퀘스트 활성/비활성 토글
+  const toggleQuestActive = (id) => {
+    if (activeQuestId === id) {
+      setActiveQuestId(null); // 이미 활성화된거 누르면 끄기
+    } else {
+      setActiveQuestId(id);
+    }
+  };
+
+  // 🔹 퀘스트 체크 토글 (특정 퀘스트, 특정 학생)
+  const toggleQuestCheck = (questId, studentId) => {
+    setQuests(prev => prev.map(q => {
+      if (q.id !== questId) return q;
+
+      const nextCompleted = new Set(q.completed);
+      if (nextCompleted.has(studentId)) nextCompleted.delete(studentId);
+      else nextCompleted.add(studentId);
+
+      return { ...q, completed: nextCompleted };
+    }));
+  };
+
+  // 🔹 (Legacy) 사이드바용 퀘스트 체크 토글 (현재 활성화된 퀘스트 자동 타겟팅)
+  const toggleQuestCompletion = (studentId) => {
+    if (!activeQuestId) return;
+    toggleQuestCheck(activeQuestId, studentId);
   };
 
   const showToast = (message, type = "success") => {
@@ -222,86 +359,173 @@ function ClassPage() {
     fetchAttendanceStatus();
   }, [today]);
 
+  // 도구 목록 정의
+  const tools = [
+    { id: "timer", icon: "⏱️", label: "타이머", component: ClassTimer },
+    { id: "picker", icon: "🎲", label: "랜덤 뽑기", component: RandomPicker },
+    { id: "memo", icon: "📝", label: "판서/메모", component: Blackboard },
+    { id: "team", icon: "🫂", label: "모둠 편성", component: TeamBuilder },
+    { id: "quest", icon: "🔥", label: "퀘스트", component: ClassQuestWidget },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto px-6  space-y-6">
 
       {/* ===============================
           메인 수업 화면 레이아웃
-          좌: 학생 / 중: 수업 콘텐츠 / 우: 수업 도구
+          좌: 학생 / 중: 수업 콘텐츠 / 우: 수업 도구 독(Dock)
       =============================== */}
 
       {/* 메인 수업 화면 */}
+      {/* 메인 수업 화면 */}
+      {/* 메인 수업 화면 */}
       <div className="grid grid-cols-12 gap-6 h-[85vh]">
-        {/* 좌측: 학생 리스트 */}
-        <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4 overflow-y-auto">
-          <ClassStudentPanel
-            students={presentStudents}
-            periodPoints={periodPoints}
-            onAddPoint={addPoint}
-            onRemovePoint={removePoint}
-            selectedStudentIds={selectedStudentIds}
-            onToggleSelect={toggleStudentSelection}
-          />
-        </div>
+        {/* 좌측: 학생 리스트 (미니 좌석 덱) - 퀘스트 모드일 때는 숨김 (테이블 뷰로 통합) */}
+        {activeTool !== 'quest' && (
+          <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4 overflow-y-auto relative animate-in fade-in slide-in-from-left-4 duration-300">
+            {activeQuest && (
+              <div className="sticky top-0 z-10 bg-orange-100/90 backdrop-blur px-4 py-3 -mx-4 -mt-4 mb-4 border-b border-orange-200">
+                <div className="text-xs text-orange-600 font-bold mb-1">🔥 진행 중인 퀘스트</div>
+                <div className="font-extrabold text-orange-800 truncate">{activeQuest.title}</div>
+                <div className="text-xs text-orange-600/80 mt-1 font-mono">
+                  {activeQuest.completed.size} / {presentStudents.length} 완료
+                </div>
+              </div>
+            )}
 
-        {/* 중앙: 수업 콘텐츠 */}
-        <div className="col-span-6 bg-white/70 rounded-2xl shadow p-4 overflow-y-auto">
-          <ClassResourceBoard
-            classBlocks={classBlocks}
-            selectedClassBlockId={selectedClassBlockId}
-            onChangeClassBlock={selectClassBlockManually}
-          />
-        </div>
+            <ClassSeatDeck
+              students={presentStudents}
+              periodPoints={periodPoints}
+              onStudentClick={activeQuest ? null : setStatModalStudent}
+              selectedStudentIds={selectedStudentIds}
 
-        {/* 우측: 수업 도구 */}
-        <div className="col-span-3 bg-white/70 rounded-2xl shadow p-4 space-y-3 overflow-y-auto">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-bold text-gray-700 flex items-center gap-1">
-              🧰 수업 도구
-            </h3>
+              // 퀘스트 전용 props
+              isQuestMode={!!activeQuest}
+              questCompletedStudentIds={activeQuest ? activeQuest.completed : new Set()}
+              onToggleQuestCompletion={toggleQuestCompletion}
+            />
           </div>
+        )}
 
-          <button
-            onClick={addPointBulk}
-            disabled={presentStudents.length === 0}
-            className={`w-full py-2 rounded-lg text-sm font-semibold
-              ${
-                presentStudents.length === 0
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-blue-500 text-white hover:bg-blue-600"
-              }`}
-          >
-            {selectedStudentIds.size > 0
-              ? "선택 학생 상점 +1"
-              : "전체 학생 상점 +1"}
-          </button>
+        {/* 미니 능력치 모달 (학생 클릭 시) */}
+        <ClassStatModal
+          isOpen={!!statModalStudent}
+          student={statModalStudent}
+          onClose={() => setStatModalStudent(null)}
+        />
 
-          <button
-            onClick={savePeriodPoints}
-            disabled={Object.keys(periodPoints).length === 0}
-            className={`w-full py-2 rounded-lg text-sm font-semibold
-              ${
-                Object.keys(periodPoints).length === 0
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-green-500 text-white hover:bg-green-600"
-              }`}
-          >
-            이 교시 상점 저장
-          </button>
+        {/* 중앙: 수업 콘텐츠 OR 퀘스트 대시보드 */}
+        <div className={`${activeTool === 'quest' ? 'col-span-9' : 'col-span-6'} bg-white/70 rounded-2xl shadow p-4 overflow-y-auto transition-all duration-300`}>
+          {activeTool === "quest" ? (
+            <ClassQuestDashboard
+              students={presentStudents}
+              quests={quests}
+              onAddQuest={addQuest}
+              onDeleteQuest={deleteQuest}
+              onToggleQuestCheck={toggleQuestCheck}
+            />
+          ) : (
+            <ClassResourceBoard
+              classBlocks={classBlocks}
+              selectedClassBlockId={selectedClassBlockId}
+              onChangeClassBlock={selectClassBlockManually}
+            />
+          )}
+        </div>
 
-          <p className="text-xs text-gray-400">
-            현재 교시에서 지급된 상점을 누적 기록으로 저장합니다.
-          </p>
+        {/* 우측: 수업 도구 독 (깔끔한 아이콘 그리드) */}
+        <div className="col-span-3 flex flex-col gap-4">
+          <div className="bg-white/70 rounded-2xl shadow p-4 h-full flex flex-col items-center">
+            <h3 className="text-sm font-bold text-gray-700 mb-4 w-full text-center border-b pb-2">
+              🧰 도구
+            </h3>
+            <div className="grid grid-cols-1 gap-4 w-full">
+              {tools.map((tool) => (
+                <button
+                  key={tool.id}
+                  onClick={() => setActiveTool(activeTool === tool.id ? null : tool.id)}
+                  className={`
+                    flex flex-col items-center justify-center
+                    p-4 rounded-xl transition-all duration-200
+                    hover:scale-105 active:scale-95
+                    ${
+                    // 1. 활성화된 상태 (배경 강조)
+                    activeTool === tool.id
+                      ? "bg-indigo-100/80 shadow-inner"
+                      : "bg-white shadow-sm hover:shadow-md border border-slate-100"
+                    }
+                    ${
+                    // 2. 퀘스트 툴 특별 처리 (활성화 안됐어도 진행중이면 강조)
+                    tool.id === 'quest' && activeQuest && activeTool !== 'quest'
+                      ? "bg-orange-50 ring-2 ring-orange-200 animate-pulse"
+                      : ""
+                    }
+                    ${
+                    // 3. 퀘스트 모드 활성화 상태
+                    tool.id === 'quest' && activeTool === 'quest'
+                      ? "!bg-orange-100 !ring-0" // 링 제거
+                      : ""
+                    }
+                  `}
+                >
+                  <span className="text-3xl mb-1">{tool.icon}</span>
+                  <span className="text-xs font-bold text-gray-600">{tool.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* 🔹 도구 모달 오버레이 (활성화 시 등장) */}
+      {/* 🔹 도구 모달 오버레이 (활성화 시 등장) - 퀘스트는 제외 (대시보드로 표시) */}
+      {activeTool && activeTool !== 'quest' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setActiveTool(null)}>
+          <div
+            className="relative w-[90vw] max-w-6xl flex flex-col animate-in fade-in zoom-in duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 닫기 버튼 (외부 플로팅) */}
+            <button
+              onClick={() => setActiveTool(null)}
+              className="absolute -top-12 right-0 text-white/80 hover:text-white flex items-center gap-2 font-bold transition-colors"
+            >
+              <span>닫기</span>
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-lg">✕</div>
+            </button>
+
+            {/* 위젯 본문 렌더링 (투명 컨테이너, 도구 자체 스타일 사용) */}
+            <div className="w-full h-full">
+              {(() => {
+                const TargetWidget = tools.find(t => t.id === activeTool)?.component;
+                // 퀘스트는 대시보드 형태이므로 모달에 띄우지 않음 (혹은 모달로 띄워도 되지만, 기획상 대시보드로 변경)
+                if (activeTool === 'quest') return null;
+
+                return TargetWidget ? (
+                  <TargetWidget
+                    students={presentStudents}
+                    onClose={() => setActiveTool(null)}
+
+                    // 퀘스트 위젯 전용 props
+                    quests={quests}
+                    activeQuestId={activeQuestId}
+                    onAddQuest={addQuest}
+                    onDeleteQuest={deleteQuest}
+                    onSetActiveQuest={toggleQuestActive}
+                  />
+                ) : null;
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div
           className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg shadow text-sm
-            ${
-              toast.type === "error"
-                ? "bg-red-500 text-white"
-                : "bg-gray-900 text-white"
+            ${toast.type === "error"
+              ? "bg-red-500 text-white"
+              : "bg-gray-900 text-white"
             }`}
         >
           {toast.message}

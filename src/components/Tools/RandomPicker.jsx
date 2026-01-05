@@ -66,7 +66,7 @@ export default function RandomPicker({ students = [] }) {
   };
 
   return (
-    <div className="w-full h-[75vh] flex gap-6 rounded-2xl bg-white/70 backdrop-blur shadow p-6">
+    <div className="w-full h-[75vh] flex gap-6 rounded-2xl bg-gradient-to-br from-blue-50 via-white to-indigo-50 shadow-xl p-6 border border-white/50">
       <div className="flex-1 flex flex-col items-center justify-center gap-10">
         {/* 제목 */}
         <div className="text-2xl font-extrabold text-gray-800">
@@ -78,10 +78,9 @@ export default function RandomPicker({ students = [] }) {
           <button
             onClick={() => setMode("all")}
             className={`px-5 py-2 rounded-full font-semibold
-              ${
-                mode === "all"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700"
+              ${mode === "all"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-700"
               }
             `}
             disabled={locked || isShuffling}
@@ -92,10 +91,9 @@ export default function RandomPicker({ students = [] }) {
           <button
             onClick={() => setMode("present")}
             className={`px-5 py-2 rounded-full font-semibold
-              ${
-                mode === "present"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700"
+              ${mode === "present"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-700"
               }
             `}
             disabled={locked || isShuffling}
@@ -106,10 +104,9 @@ export default function RandomPicker({ students = [] }) {
           <button
             onClick={() => setMode("selected")}
             className={`px-5 py-2 rounded-full font-semibold
-              ${
-                mode === "selected"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700"
+              ${mode === "selected"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-700"
               }
               ${(locked || isShuffling) ? "cursor-not-allowed" : ""}
             `}
@@ -129,10 +126,9 @@ export default function RandomPicker({ students = [] }) {
                     key={s.id}
                     onClick={() => toggleSelect(s.id)}
                     className={`px-3 py-2 rounded-lg text-sm font-semibold
-                      ${
-                        selected
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-700"
+                      ${selected
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700"
                       }
                       ${(locked || isShuffling) ? "cursor-not-allowed" : ""}
                     `}
@@ -280,10 +276,9 @@ export default function RandomPicker({ students = [] }) {
           whileHover={locked || isShuffling ? {} : { scale: 1.14 }}
           whileTap={locked || isShuffling ? {} : { scale: 0.86 }}
           className={`px-10 py-4 rounded-2xl text-xl font-bold shadow
-            ${
-              locked || isShuffling
-                ? "bg-gray-300 text-gray-400 cursor-not-allowed"
-                : "bg-blue-600 text-white hover:bg-blue-700"
+            ${locked || isShuffling
+              ? "bg-gray-300 text-gray-400 cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700"
             }
           `}
         >
