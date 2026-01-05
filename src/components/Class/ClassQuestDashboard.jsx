@@ -37,8 +37,8 @@ export default function ClassQuestDashboard({
 
     return (
         <div className="h-full flex gap-4 overflow-hidden p-2">
-            {/* 🟧 [좌측 패널 40%] 퀘스트 빌보드 (Large Display) */}
-            <div className="flex-[0.4] flex flex-col gap-3 min-w-0">
+            {/* 🟧 [좌측 패널 65%] 퀘스트 빌보드 (Large Display) */}
+            <div className="flex-[0.65] flex flex-col gap-3 min-w-0">
                 {/* 헤더 */}
                 <div className="bg-white/80 rounded-xl p-3 shadow-md backdrop-blur border border-white/50 shrink-0">
                     <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
@@ -118,8 +118,8 @@ export default function ClassQuestDashboard({
                 </div>
             </div>
 
-            {/* 🟦 [우측 패널 60%] 학생 명단 (Compact Table) */}
-            <div className="flex-[0.6] flex flex-col bg-white/80 rounded-2xl shadow-xl overflow-hidden backdrop-blur-md border border-white/50">
+            {/* 🟦 [우측 패널 35%] 학생 명단 (Compact Table) */}
+            <div className="flex-[0.35] flex flex-col bg-white/80 rounded-2xl shadow-xl overflow-hidden backdrop-blur-md border border-white/50">
                 <div className="p-3 border-b border-gray-100 bg-white/60 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2">
                         <span className="text-lg">📋</span>
