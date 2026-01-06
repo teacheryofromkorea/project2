@@ -7,7 +7,7 @@ function AttendanceConfirmModal({
   onConfirm,
   onClose,
 }) {
-  if (!student) return null;
+
 
   const isCancel = type === "cancel";
 
@@ -34,7 +34,7 @@ function AttendanceConfirmModal({
         {/* 메시지 */}
         <div className="text-center flex flex-col gap-2">
           <div className="text-xl font-bold text-gray-900">
-            {student.name}
+            {student?.name}
           </div>
 
           <div className="text-base text-gray-700 leading-relaxed">

@@ -280,22 +280,21 @@ function AttendanceBoard() {
         missions={missions}
       />
 
-      {confirmType && pendingStudent && (
-        <AttendanceConfirmModal
-          isOpen={true}
-          type={confirmType}
-          student={pendingStudent}
-          onClose={() => {
-            setConfirmType(null);
-            setPendingStudent(null);
-          }}
-          onConfirm={async () => {
-            await markPresent(pendingStudent.id);
-            setConfirmType(null);
-            setPendingStudent(null);
-          }}
-        />
-      )}
+      <AttendanceConfirmModal
+        isOpen={!!confirmType && !!pendingStudent}
+        type={confirmType}
+        student={pendingStudent}
+        onClose={() => {
+          setConfirmType(null);
+          // ⚠️ exit animation을 위해 student 데이터를 즉시 지우지 않음
+        }}
+        onConfirm={async () => {
+          if (!pendingStudent) return;
+          await markPresent(pendingStudent.id);
+          setConfirmType(null);
+          // 여기서도 student 유지 (다음 선택 시 덮어씌워짐)
+        }}
+      />
     </>
   );
 }
