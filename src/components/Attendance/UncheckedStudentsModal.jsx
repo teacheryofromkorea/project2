@@ -82,10 +82,15 @@ export default function UncheckedStudentsModal({
         setLoading(false);
     };
 
-    if (!isOpen) return null;
+    // if (!isOpen) return null; // ❌ Removed to allow exit animation in BaseModal
 
     return (
-        <BaseModal isOpen={isOpen} onClose={onClose}>
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            // Soft animation overrides
+            transition={{ type: "tween", duration: 0.3, ease: "easeInOut" }}
+        >
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
