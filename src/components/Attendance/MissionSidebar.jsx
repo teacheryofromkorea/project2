@@ -263,7 +263,13 @@ function MissionSidebar() {
 
 
       {/* Modal 1: Mission List Edit */}
-      <BaseModal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+      <BaseModal
+        isOpen={isEditing}
+        onClose={() => {
+          if (editMission) return;
+          setIsEditing(false);
+        }}
+      >
         <div className="bg-white p-6 rounded-3xl w-80 shadow-xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
           <h3 className="text-lg font-bold mb-4">미션 편집</h3>
           {/* 제목 수정 입력 */}
@@ -280,7 +286,7 @@ function MissionSidebar() {
                 key={item.id}
                 className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-lg"
               >
-                <span className="flex-1 text-sm truncate mr-2">{item.text}</span>
+                <span className="flex-1 text-medium truncate mr-2">{item.text}</span>
 
                 <div className="flex items-center space-x-1 flex-shrink-0">
                   <button

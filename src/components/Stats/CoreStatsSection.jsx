@@ -14,6 +14,7 @@ function CoreStatsSection({
   selectedStudentIds = [],
   isMultiSelectMode = false,
   onStudentsUpdated,
+  onNestedModalStateChange, // New prop to notify parent about internal modal state
 }) {
   const [statTemplates, setStatTemplates] = useState([]);
   const [studentStatsMap, setStudentStatsMap] = useState({});
@@ -26,6 +27,11 @@ function CoreStatsSection({
   const [reason, setReason] = useState("");
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Notify parent whenever internal modal state changes
+  useEffect(() => {
+    onNestedModalStateChange?.(reasonModalOpen || settingsOpen);
+  }, [reasonModalOpen, settingsOpen, onNestedModalStateChange]);
 
   const targetStudentIds = isMultiSelectMode
     ? selectedStudentIds

@@ -209,7 +209,7 @@ function AttendanceBoard() {
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-sm">
-                  Attendance <span className="text-indigo-600">Status</span>
+                  Attendance
                 </h1>
 
               </div>

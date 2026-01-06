@@ -282,7 +282,14 @@ function RoutineSidebar({
         </button>
       </aside>
 
-      <BaseModal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+      <BaseModal
+        isOpen={isEditing}
+        onClose={() => {
+          const isChildOpen = usingExternalData ? !!currentEditRoutine : internalEditIndex !== null;
+          if (isChildOpen) return;
+          setIsEditing(false);
+        }}
+      >
         <div className="bg-white p-6 rounded-3xl w-80 shadow-xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
           <h3 className="text-lg font-bold mb-4 flex-shrink-0">루틴 편집</h3>
 

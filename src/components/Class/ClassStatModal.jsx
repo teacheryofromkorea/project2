@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import CoreStatsSection from "../Stats/CoreStatsSection";
 import { X } from "lucide-react";
 import BaseModal from "../common/BaseModal";
@@ -15,24 +15,32 @@ export default function ClassStatModal({
     onClose,
     onStudentsUpdated, // 데이터 갱신 시 호출될 콜백
 }) {
+    // Child modal state tracker
+    const [nestedModalOpen, setNestedModalOpen] = useState(false);
+
+    const handleClose = () => {
+        if (nestedModalOpen) return;
+        onClose();
+    };
+
     // ESC 키로 닫기
     useEffect(() => {
         const handleKey = (e) => {
-            if (e.key === "Escape") onClose();
+            if (e.key === "Escape") handleClose();
         };
         if (isOpen) window.addEventListener("keydown", handleKey);
         return () => window.removeEventListener("keydown", handleKey);
-    }, [isOpen, onClose]);
+    }, [isOpen, nestedModalOpen, onClose]); // Depend on nestedModalOpen
 
     // 배경 클릭 시 닫기
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) {
-            onClose();
+            handleClose();
         }
     };
 
     return (
-        <BaseModal isOpen={isOpen} onClose={onClose}>
+        <BaseModal isOpen={isOpen} onClose={handleClose}>
             {student && (
                 <div className="
               relative w-full max-w-4xl bg-[#1a1625] 
@@ -49,7 +57,7 @@ export default function ClassStatModal({
                             </span>
                         </h2>
                         <button
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition"
                         >
                             <X size={20} />
@@ -63,6 +71,7 @@ export default function ClassStatModal({
                             selectedStudentId={student.id}
                             isMultiSelectMode={false}
                             onStudentsUpdated={onStudentsUpdated}
+                            onNestedModalStateChange={setNestedModalOpen}
                         />
                     </div>
 

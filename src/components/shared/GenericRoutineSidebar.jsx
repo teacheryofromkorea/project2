@@ -116,7 +116,13 @@ export default function GenericRoutineSidebar({
             </aside>
 
             {/* Edit Modal */}
-            <BaseModal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+            <BaseModal
+                isOpen={isEditing}
+                onClose={() => {
+                    if (editRoutine) return;
+                    setIsEditing(false);
+                }}
+            >
                 <div className="bg-white p-6 rounded-3xl w-[400px] shadow-xl" onClick={e => e.stopPropagation()}>
                     <h3 className="text-xl font-bold mb-4">루틴 편집</h3>
 
