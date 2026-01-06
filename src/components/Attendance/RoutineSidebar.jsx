@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import BaseModal from "../common/BaseModal";
-import { supabase } from "../../lib/supabaseClient";
-import { handleSupabaseError } from "../../utils/handleSupabaseError";
+// ✅ useAttendanceRoutine 훅 import
+import useAttendanceRoutine from "../../hooks/Attendance/useAttendanceRoutine";
 import { useLock } from "../../context/LockContext";
 
 function RoutineSidebar({
@@ -29,50 +29,80 @@ function RoutineSidebar({
 }) {
   const { locked } = useLock();
 
-  // 🗂 Internal state for Attendance tab
-  const [internalItems, setInternalItems] = useState([]);
-  const [internalTitle, setInternalTitle] = useState("✏️ 등교시 루틴");
+  // 🗂 Internal state for Attendance tab (via Hook)
+  // 기존 로직(routines 테이블 직접 접근)을 훅으로 대체
+  const {
+    routineItems: internalItems,
+    routineTitle: internalTitle,
+    fetchRoutineTitle: internalFetch,
+
+    // setter & actions (매핑)
+    setTempTitle: setInternalTempTitle,
+    // tempTitle state is managed inside hook, but we need to pass it to UI inputs?
+    // Wait, useAttendanceRoutine exposes tempTitle and setTempTitle.
+
+    tempTitle: internalTempTitleVal, // UI용
+
+    newContent: internalNewRoutine,
+    setNewContent: setInternalNewRoutine,
+
+    // Edit state
+    editRoutine: internalEditItem, // hook uses object, old code used index
+    setEditRoutine: setInternalEditItem,
+    editText: internalEditText,
+    setEditText: setInternalEditText,
+
+    addRoutineItem: internalAddRoutine,
+    deleteRoutineItem: internalDeleteRoutine,
+    moveRoutine: internalMoveRoutine,
+    updateRoutine: internalUpdateRoutine,
+    saveRoutineTitle: internalSaveRoutineTitle,
+  } = useAttendanceRoutine();
 
   // Determine which data source to use
   const usingExternalData = externalItems !== undefined;
+
+  // 📌 훅 초기화 (External Data 아닐 때만)
+  useEffect(() => {
+    if (!usingExternalData) {
+      internalFetch();
+    }
+  }, [usingExternalData, internalFetch]);
+
   const routineItems = usingExternalData ? externalItems : internalItems;
   const routineTitle = usingExternalData ? externalTitle : internalTitle;
 
-  // 모든 모달 상태 useState
+  // 모든 모달 상태 useState (UI Control)
   const [isEditing, setIsEditing] = useState(false);
-  const [internalNewRoutine, setInternalNewRoutine] = useState("");
-  const [internalEditIndex, setInternalEditIndex] = useState(null);
-  const [internalEditText, setInternalEditText] = useState("");
 
-  // 📌 Supabase에서 루틴 불러오기 (only if not using external data)
-  useEffect(() => {
-    if (usingExternalData) return;
+  // Hook uses object for edit, but old UI used index logic for internal items.
+  // We need to adapt.
+  // The Hook's `editRoutine` is the item object {id, text, ...}.
+  // The UI selects item by index or object.
+  // Let's rely on the Hook's `editRoutine` (object) instead of `internalEditIndex`.
 
-    const fetchRoutines = async () => {
-      const { data, error } = await supabase
-        .from("routines")
-        .select("*")
-        .order("order_index", { ascending: true });
+  // Handlers mapping
+  const handleAddRoutine = usingExternalData ? addRoutineItem : internalAddRoutine;
+  const handleDeleteRoutine = usingExternalData ? deleteRoutineItem : (index) => internalDeleteRoutine(internalItems[index].id);
+  // Hook's delete takes ID. Old internalDelete took index.
 
-      if (error) {
-        handleSupabaseError(error, "루틴 목록을 불러오지 못했어요.");
-        return;
-      }
+  const handleMoveRoutine = usingExternalData ? moveRoutine : internalMoveRoutine;
+  const handleUpdateRoutine = usingExternalData ? updateRoutine : internalUpdateRoutine;
 
-      if (data) {
-        setInternalItems(data);
+  const currentNewContent = usingExternalData ? newContent : internalNewRoutine;
+  const setCurrentNewContent = usingExternalData ? setNewContent : setInternalNewRoutine;
 
-        // 🔥 DB에서 제목 가져오기
-        if (data.length > 0 && data[0].routine_title) {
-          setInternalTitle(data[0].routine_title);
-        }
-      }
-    };
+  const currentEditText = usingExternalData ? editText : internalEditText;
+  const setCurrentEditText = usingExternalData ? setEditText : setInternalEditText;
 
-    fetchRoutines();
-  }, [usingExternalData]);
+  // Edit Target
+  const currentEditRoutine = usingExternalData ? editRoutine : internalEditItem;
 
-  // ESC handlers removed in favor of BaseModal (simple fallback)
+  // Modal title input value
+  const currentTempTitle = usingExternalData ? tempTitle : internalTempTitleVal;
+  const setCurrentTempTitle = usingExternalData ? setTempTitle : setInternalTempTitle;
+
+  // ESC handling (simple)
   useEffect(() => {
     if (locked) {
       setIsEditing(false);
@@ -80,112 +110,11 @@ function RoutineSidebar({
         setEditRoutine?.(null);
         setEditText?.("");
       } else {
-        setInternalEditIndex(null);
+        setInternalEditItem(null);
         setInternalEditText("");
       }
     }
-  }, [locked, usingExternalData, setEditRoutine, setEditText]);
-
-  // Internal CRUD functions (only used for Attendance tab)
-  const internalAddRoutine = async () => {
-    if (locked) return;
-    if (internalNewRoutine.trim() === "") return;
-
-    const { data, error } = await supabase
-      .from("routines")
-      .insert({
-        text: internalNewRoutine,
-        order_index: internalItems.length,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      handleSupabaseError(error, "루틴 추가에 실패했어요.");
-      return;
-    }
-
-    setInternalItems([...internalItems, data]);
-    setInternalNewRoutine("");
-  };
-
-  const internalDeleteRoutine = async (index) => {
-    if (locked) return;
-    const item = internalItems[index];
-    const { error } = await supabase
-      .from("routines")
-      .delete()
-      .eq("id", item.id);
-
-    if (error) {
-      handleSupabaseError(error, "루틴 삭제에 실패했어요.");
-      return;
-    }
-
-    const updated = internalItems.filter((_, i) => i !== index);
-    setInternalItems(updated);
-
-    // order_index 다시 정렬
-    for (let i = 0; i < updated.length; i++) {
-      await supabase
-        .from("routines")
-        .update({ order_index: i })
-        .eq("id", updated[i].id);
-    }
-  };
-
-  const internalMoveRoutine = async (index, direction) => {
-    if (locked) return;
-    const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= internalItems.length) return;
-
-    const updated = [...internalItems];
-    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
-
-    setInternalItems(updated);
-
-    // DB 업데이트
-    for (let i = 0; i < updated.length; i++) {
-      await supabase
-        .from("routines")
-        .update({ order_index: i })
-        .eq("id", updated[i].id);
-    }
-  };
-
-  const internalUpdateRoutine = async () => {
-    if (locked) return;
-    if (internalEditText.trim() === "") return;
-
-    const item = internalItems[internalEditIndex];
-    const { error } = await supabase
-      .from("routines")
-      .update({ text: internalEditText })
-      .eq("id", item.id);
-
-    if (error) {
-      handleSupabaseError(error, "루틴 수정에 실패했어요.");
-      return;
-    }
-
-    const updated = [...internalItems];
-    updated[internalEditIndex] = { ...item, text: internalEditText };
-    setInternalItems(updated);
-    setInternalEditIndex(null);
-    setInternalEditText("");
-  };
-
-  // Use external or internal handlers
-  const handleAddRoutine = usingExternalData ? addRoutineItem : internalAddRoutine;
-  const handleDeleteRoutine = usingExternalData ? deleteRoutineItem : internalDeleteRoutine;
-  const handleMoveRoutine = usingExternalData ? moveRoutine : internalMoveRoutine;
-  const handleUpdateRoutine = usingExternalData ? updateRoutine : internalUpdateRoutine;
-
-  const currentNewContent = usingExternalData ? newContent : internalNewRoutine;
-  const setCurrentNewContent = usingExternalData ? setNewContent : setInternalNewRoutine;
-  const currentEditText = usingExternalData ? editText : internalEditText;
-  const setCurrentEditText = usingExternalData ? setEditText : setInternalEditText;
-  const currentEditRoutine = usingExternalData ? editRoutine : (internalEditIndex !== null ? internalItems[internalEditIndex] : null);
+  }, [locked, usingExternalData, setEditRoutine, setEditText, setInternalEditItem, setInternalEditText]);
 
   return (
     <>
@@ -285,8 +214,8 @@ function RoutineSidebar({
       <BaseModal
         isOpen={isEditing}
         onClose={() => {
-          const isChildOpen = usingExternalData ? !!currentEditRoutine : internalEditIndex !== null;
-          if (isChildOpen) return;
+          // Check if child modal is open
+          if (currentEditRoutine) return;
           setIsEditing(false);
         }}
       >
@@ -295,8 +224,8 @@ function RoutineSidebar({
 
           <input
             className="w-full border rounded-lg px-3 py-2 mb-3 font-semibold flex-shrink-0"
-            value={usingExternalData && tempTitle !== undefined ? tempTitle : internalTitle}
-            onChange={(e) => usingExternalData ? setTempTitle?.(e.target.value) : setInternalTitle(e.target.value)}
+            value={currentTempTitle || ""}
+            onChange={(e) => setCurrentTempTitle?.(e.target.value)}
           />
 
           <ul className="space-y-2 mb-4 overflow-y-auto flex-1 min-h-0">
@@ -329,7 +258,7 @@ function RoutineSidebar({
                       if (usingExternalData) {
                         setEditRoutine?.(item);
                       } else {
-                        setInternalEditIndex(index);
+                        setInternalEditItem(item);
                       }
                       setCurrentEditText(item.text || item.content);
                     }}
@@ -383,18 +312,7 @@ function RoutineSidebar({
                 if (usingExternalData) {
                   saveRoutineTitle?.();
                 } else {
-                  if (internalItems.length > 0) {
-                    const ids = internalItems.map((item) => item.id);
-                    const { error } = await supabase
-                      .from("routines")
-                      .update({ routine_title: internalTitle })
-                      .in("id", ids);
-
-                    if (error) {
-                      handleSupabaseError(error, "루틴 제목 저장에 실패했어요.");
-                      return;
-                    }
-                  }
+                  await internalSaveRoutineTitle();
                 }
                 setIsEditing(false);
               }}
@@ -407,11 +325,11 @@ function RoutineSidebar({
 
       {/* Inner Edit Modal (Existing Item) */}
       <BaseModal
-        isOpen={usingExternalData ? !!currentEditRoutine : internalEditIndex !== null}
+        isOpen={!!currentEditRoutine}
         onClose={() => {
           setCurrentEditText("");
           if (usingExternalData) setEditRoutine?.(null);
-          else setInternalEditIndex(null);
+          else setInternalEditItem(null);
         }}
       >
         <div className="bg-white p-6 rounded-3xl w-80 shadow-xl" onClick={e => e.stopPropagation()}>
@@ -439,7 +357,7 @@ function RoutineSidebar({
             onClick={() => {
               setCurrentEditText("");
               if (usingExternalData) setEditRoutine?.(null);
-              else setInternalEditIndex(null);
+              else setInternalEditItem(null);
             }}
           >
             취소

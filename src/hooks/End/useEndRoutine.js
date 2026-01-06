@@ -28,8 +28,9 @@ export default function useEndRoutine() {
      1. 루틴 아이템 조회
      =============================== */
   const fetchRoutineItems = useCallback(async (currentTitleId) => {
-    // titleId가 없으면 조회 불가
-    if (!currentTitleId) return;
+    // titleId가 없으면 조회 불가 (state fallback)
+    const targetId = currentTitleId || titleId;
+    if (!targetId) return;
 
     const { data, error } = await supabase
       .from("end_routine_items")
@@ -225,6 +226,7 @@ export default function useEndRoutine() {
     editText,
     setEditText,
 
+    fetchRoutineItems, // 이제 외부에서 호출 가능
     fetchRoutineTitle, // 이제 이 함수 하나로 초기화 (title + items)
     saveRoutineTitle,
     addRoutineItem,

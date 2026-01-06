@@ -5,6 +5,7 @@ import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import AttendanceTaskModal from "./AttendanceTaskModal";
 import SeatGrid from "./SeatGrid";
 import AttendanceConfirmModal from "./AttendanceConfirmModal";
+import useAttendanceRoutine from "../../hooks/Attendance/useAttendanceRoutine"; // ✅ Import Hook
 
 function AttendanceBoard() {
   const today = getTodayString(); // 오늘 날짜 (Local Time)
@@ -24,6 +25,16 @@ function AttendanceBoard() {
 
   const [confirmType, setConfirmType] = useState(null); // "present" | "cancel"
   const [pendingStudent, setPendingStudent] = useState(null);
+
+  // ... removed getPendingTasks to save tokens, it relies on routines which we will get from hook ...
+  // actually getPendingTasks is defined outside this block in replacement? No, I need to keep getPendingTasks.
+  // I only want to replace the state definition and fetchRoutines function.
+
+  // Let's use the hook
+  const {
+    routineItems: routines, // ✅ Hook State mapped to 'routines'
+    fetchRoutineTitle: fetchRoutines // ✅ Hook Action mapped to 'fetchRoutines'
+  } = useAttendanceRoutine();
 
   const getPendingTasks = (studentId) => {
     // ... (기존 getPendingTasks 함수는 동일)
@@ -67,16 +78,11 @@ function AttendanceBoard() {
 
   const [modalType, setModalType] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [routines, setRoutines] = useState([]);
+  // const [routines, setRoutines] = useState([]); // Removed
   const [missions, setMissions] = useState([]);
 
-  const fetchRoutines = async () => {
-    const { data } = await supabase
-      .from("routines")
-      .select("*")
-      .order("order_index", { ascending: true });
-    setRoutines(data);
-  };
+  // fetchRoutines refactored to use Hook logic (via alias above)
+  // const fetchRoutines = async () => ... (Removed manual implementation)
 
   const fetchMissions = async () => {
     const { data } = await supabase
@@ -144,7 +150,7 @@ function AttendanceBoard() {
   useEffect(() => {
     (async () => {
       await Promise.all([
-        fetchRoutines(),
+        fetchRoutines(), // Now calls the hook function
         fetchMissions(),
         fetchStatus(),
         fetchAttendance(),

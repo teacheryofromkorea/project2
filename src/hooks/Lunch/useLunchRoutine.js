@@ -5,16 +5,14 @@ import { handleSupabaseError } from "../../utils/handleSupabaseError";
 /**
  * useLunchRoutine
  *
- * 점심시간 루틴 CRUD 전담 훅
- * - 쉬는시간(useBreakRoutine) 구조 참고
- * - 점심시간은 루틴 1세트 고정 (routine_id 없음)
+ * 점심시간 루틴 CRUD 전담 훅 (Refactored: Single Persistent Record)
+ * - 기존: 가장 오래된(created_at asc) 루틴을 가져옴 -> 없으면 동작 안함
+ * - 변경: 가장 최신(created_at desc) 루틴을 가져옴 -> 없으면 자동 생성
  *
  * 책임:
- * - 점심 루틴 제목 조회 / 저장
+ * - 점심 루틴 제목 조회 / 저장 (없으면 자동생성)
  * - 점심 루틴 항목 조회
  * - 항목 추가 / 삭제 / 수정 / 순서 변경
- *
- * ❌ 학생, 미션, 착석 로직 포함하지 않음
  */
 export default function useLunchRoutine() {
   /* ===============================
@@ -32,7 +30,11 @@ export default function useLunchRoutine() {
   /* ===============================
      루틴 항목 조회
      =============================== */
-  const fetchRoutineItems = useCallback(async () => {
+  const fetchRoutineItems = useCallback(async (currentTitleId) => {
+    // titleId를 인자로 받거나 상태에서 사용 (초기 로딩 시 인자 사용)
+    const targetId = currentTitleId || titleId;
+    if (!targetId) return;
+
     const { data, error } = await supabase
       .from("lunch_routine_items")
       .select("*")
@@ -43,34 +45,69 @@ export default function useLunchRoutine() {
       return;
     }
     setRoutineItems(data || []);
-  }, []);
+  }, [titleId]);
 
   /* ===============================
-     루틴 제목 조회
+     루틴 제목 조회 (+없으면 생성)
      =============================== */
   const fetchRoutineTitle = useCallback(async () => {
+    // 1. 가장 최신 루틴 1개 조회
     const { data, error } = await supabase
       .from("lunch_routine_title")
       .select("id, title")
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false }) // 최신순
       .limit(1);
 
     if (error) {
       handleSupabaseError(error, "점심시간 루틴 제목을 불러오지 못했어요.");
       return;
     }
-    if (!data || data.length === 0) return;
 
-    setRoutineTitle(data[0].title);
-    setTempTitle(data[0].title);
-    setTitleId(data[0].id);
-  }, []);
+    let currentId = null;
+    let currentTitle = "점심시간 루틴";
+
+    // 2. 데이터가 있으면 사용
+    if (data && data.length > 0) {
+      currentId = data[0].id;
+      currentTitle = data[0].title;
+    } else {
+      // 3. 없으면 생성
+      const { data: newData, error: insertError } = await supabase
+        .from("lunch_routine_title")
+        .insert({
+          title: "점심시간 루틴",
+          // date 컬럼이 필수인지 확인 필요. 보통 default now()거나 null 허용이면 생략 가능.
+          // 기존 코드 참조하니 date 컬럼을 안 넣었었음.
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        handleSupabaseError(insertError, "점심시간 루틴 초기 생성 실패");
+        return;
+      }
+      currentId = newData.id;
+      currentTitle = newData.title;
+    }
+
+    setTitleId(currentId);
+    setRoutineTitle(currentTitle);
+    setTempTitle(currentTitle);
+
+    // 아이템 조회 (기존엔 FK가 없어서 그냥 불렀음)
+    fetchRoutineItems(currentId);
+  }, [fetchRoutineItems]);
 
   /* ===============================
      루틴 항목 추가
      =============================== */
   const addRoutineItem = useCallback(async () => {
     if (!newContent.trim()) return;
+
+    // lunch_routine_items에 title_id가 없다면 그냥 insert
+    // 하지만 만약 나중에 구조를 맞춘다면 title_id를 넣어야 함.
+    // 기존 코드: .insert({ text: ..., order_index: ... }) -> title_id 없음.
+    // 따라서 여기도 그대로 유지. 단, "단일 설정"이므로 큰 문제 없음.
 
     const { error } = await supabase.from("lunch_routine_items").insert({
       text: newContent,
@@ -164,8 +201,7 @@ export default function useLunchRoutine() {
     }
 
     setRoutineTitle(tempTitle);
-    fetchRoutineTitle();
-  }, [tempTitle, titleId, fetchRoutineTitle]);
+  }, [tempTitle, titleId]);
 
   return {
     // 상태

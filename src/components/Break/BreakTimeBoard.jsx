@@ -39,8 +39,11 @@ export default function BreakTimeBoard() {
     setSelectedBlockId,
   } = useBreakBlockSelection();
 
-  const ROUTINE_ID = "e2c703b6-e823-42ce-9373-9fb12a4cdbb1";
-
+  /* 
+    [Refactor] 
+    - 이전: const ROUTINE_ID = "e2c7..." (하드코딩) -> useBreakRoutine({ routineId: ROUTINE_ID })
+    - 변경: useBreakRoutine() 내부에서 "가장 최신" 루틴을 자동 감지/생성
+  */
   const {
     routineItems,
     routineTitle,
@@ -59,7 +62,7 @@ export default function BreakTimeBoard() {
     moveRoutine,
     updateRoutine,
     saveRoutineTitle,
-  } = useBreakRoutine({ routineId: ROUTINE_ID });
+  } = useBreakRoutine();
 
   const today = useMemo(() => getTodayString(), []);
 

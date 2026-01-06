@@ -129,7 +129,7 @@ export default function GenericRoutineSidebar({
                     <label className="block text-sm font-medium text-gray-700 mb-2">루틴 제목</label>
                     <input
                         className="w-full border rounded-lg px-3 py-2 mb-4 font-semibold"
-                        value={tempTitle || routineTitle}
+                        value={tempTitle !== undefined ? tempTitle : (routineTitle || "")}
                         onChange={(e) => setTempTitle?.(e.target.value)}
                     />
 

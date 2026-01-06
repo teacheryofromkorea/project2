@@ -135,7 +135,7 @@ export default function EndTimeBoard() {
     (async () => {
       await Promise.all([
         fetchRoutineTitle(),
-        fetchRoutineItems(),
+        // fetchRoutineItems() 제거: fetchRoutineTitle 내부에서 처리됨 & 초기엔 titleId 없음
         fetchStudents(),
         fetchSeats(),
         fetchMissions(),
