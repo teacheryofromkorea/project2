@@ -5,7 +5,8 @@ import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import AttendanceTaskModal from "./AttendanceTaskModal";
 import SeatGrid from "./SeatGrid";
 import AttendanceConfirmModal from "./AttendanceConfirmModal";
-import useAttendanceRoutine from "../../hooks/Attendance/useAttendanceRoutine"; // ✅ Import Hook
+import UncheckedStudentsModal from "./UncheckedStudentsModal"; // ✅ Import new modal
+import useAttendanceRoutine from "../../hooks/Attendance/useAttendanceRoutine";
 
 function AttendanceBoard() {
   const today = getTodayString(); // 오늘 날짜 (Local Time)
@@ -36,10 +37,17 @@ function AttendanceBoard() {
   // const routines = []; // removed
   // const fetchRoutines = ... // removed
 
-  const [modalType, setModalType] = useState(null);
+  const [modalType, setModalType] = useState(null); // "task" | "unchecked"
   const [selectedStudent, setSelectedStudent] = useState(null);
   // const [routines, setRoutines] = useState([]); // Removed
   const [missions, setMissions] = useState([]);
+
+  // 미체크 학생 목록 계산
+  const uncheckedStudents = students.filter(student => {
+    const statusRow = attendanceStatus.find(a => a.student_id === student.id);
+    // status가 없거나 'unchecked'이면 미체크로 간주
+    return !statusRow || !statusRow.status || statusRow.status === 'unchecked';
+  });
 
   const getPendingTasks = (studentId) => {
     // ... (기존 getPendingTasks 함수는 동일)
@@ -199,9 +207,14 @@ function AttendanceBoard() {
   const markPresent = async (id) => {
     const today = getTodayString(); // today 변수 재정의
 
-    const isPresent = attendanceStatus.some(
-      (a) => a.student_id === id && a.present
+    const currentStatusRow = attendanceStatus.find(
+      (a) => a.student_id === id
     );
+    // 현재 'present' 상태인지 확인 (status 컬럼 우선 사용)
+    const isPresent = currentStatusRow?.status === 'present' || currentStatusRow?.present === true;
+
+    // Toggle 로직: Present면 Unchecked로, 아니면 Present로
+    const newStatus = isPresent ? 'unchecked' : 'present';
 
     const { error } = await supabase
       .from("student_attendance_status")
@@ -209,7 +222,8 @@ function AttendanceBoard() {
         {
           student_id: id,
           date: today,
-          present: !isPresent,
+          present: newStatus === 'present', // 호환성 유지
+          status: newStatus, // 새로운 상태 컬럼
         },
         { onConflict: "student_id,date" }
       );
@@ -244,6 +258,24 @@ function AttendanceBoard() {
 
               {/* 우측 상단 상태 요약 카드 (Slim Row Style) */}
               <div className="flex gap-2">
+                {/* 미체크 학생 확인 버튼 (New) */}
+                {uncheckedStudents.length > 0 ? (
+                  <button
+                    onClick={() => setModalType("unchecked")}
+                    className="px-3 py-1.5 rounded-xl bg-red-500 border border-red-600 shadow-sm flex items-center gap-2 hover:bg-red-600 transition-colors animate-pulse"
+                  >
+                    <span className="text-[10px] text-white font-bold uppercase tracking-wider">Check</span>
+                    <span className="text-base font-extrabold text-white leading-none">
+                      {uncheckedStudents.length}
+                    </span>
+                  </button>
+                ) : (
+                  <div className="px-3 py-1.5 rounded-xl bg-emerald-100 border border-emerald-200 shadow-sm flex items-center gap-2">
+                    <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">All Clear</span>
+                    <span className="text-base font-extrabold text-emerald-700 leading-none">✓</span>
+                  </div>
+                )}
+
                 <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total</span>
                   <span className="text-base font-extrabold text-gray-900 leading-none">{students.length}</span>
@@ -253,7 +285,7 @@ function AttendanceBoard() {
                   <div className="absolute top-0 right-0 w-6 h-6 bg-purple-100/40 rounded-full blur-xl -mr-2 -mt-2" />
                   <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider relative z-10">Active</span>
                   <span className="text-base font-extrabold text-purple-700 relative z-10 leading-none">
-                    {attendanceStatus.filter(a => a.present).length}
+                    {attendanceStatus.filter(a => a.present || a.status === 'present').length}
                   </span>
                 </div>
               </div>
@@ -271,13 +303,13 @@ function AttendanceBoard() {
               <SeatGrid
                 seats={seats}
                 activeMap={attendanceStatus.reduce((acc, row) => {
-                  acc[row.student_id] = row.present;
+                  // status가 'present' 이거나, 기존 present 컬럼이 true인 경우 활성화
+                  acc[row.student_id] = row.status === 'present' || row.present === true;
                   return acc;
                 }, {})}
                 onToggleAttendance={(student) => {
-                  const isPresent = attendanceStatus.some(
-                    (a) => a.student_id === student.id && a.present
-                  );
+                  const current = attendanceStatus.find(a => a.student_id === student.id);
+                  const isPresent = current?.status === 'present' || current?.present === true;
 
                   setPendingStudent(student);
                   setConfirmType(isPresent ? "cancel" : "present");
@@ -307,6 +339,17 @@ function AttendanceBoard() {
         routines={routines}
         missions={missions}
         routineTitle={routineTitle} // ✅ Pass dynamic title
+      />
+
+      {/* 미체크 학생 관리 모달 */}
+      <UncheckedStudentsModal
+        isOpen={modalType === "unchecked"}
+        onClose={() => setModalType(null)}
+        uncheckedStudents={uncheckedStudents}
+        onSaved={() => {
+          fetchStatus();
+          fetchAttendance(); // 데이터 새로고침
+        }}
       />
 
       <AttendanceConfirmModal

@@ -11,11 +11,11 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
   const tabs = useMemo(
     () => [
       { label: "등교", path: "/attendance" },
-      { label: "쉬는시간", path: "/break" },
+      { label: "휴식", path: "/break" },
       { label: "점심", path: "/lunch" },
       { label: "수업", path: "/class" },
       { label: "하교", path: "/end" },
-      { label: "능력치", path: "/stats" },
+      { label: "칭찬", path: "/stats" },
       { label: "현황", path: "/overview" },
       { label: "도구", path: "/tools" },
       { label: "설정", path: "/settings/students" }

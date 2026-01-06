@@ -1,4 +1,5 @@
 import RewardSummarySection from "./RewardSummarySection";
+import AttendanceStatsSection from "./AttendanceStatsSection";
 
 function OverviewPage() {
   return (
@@ -9,6 +10,9 @@ function OverviewPage() {
           출석, 미션, 루틴, 상벌점 등을 한눈에 확인합니다.
         </p>
       </div>
+
+      {/* 🔹 출결 종합 현황 */}
+      <AttendanceStatsSection />
 
       {/* 🔹 누적 상점 현황 */}
       <RewardSummarySection />
