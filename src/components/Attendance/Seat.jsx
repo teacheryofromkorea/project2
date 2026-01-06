@@ -128,9 +128,12 @@ const Seat = ({
       <div className="w-full flex-none">
         {statusInfo ? (
           // 상세 상태 표시 (Footer Label)
+          // 상세 상태 표시 (Footer Label)
           <div className={`w-full py-2 text-[10px] font-bold text-center border-t tracking-widest uppercase flex items-center justify-center gap-1 ${statusInfo.color.replace('bg-', 'bg-opacity-50 ')}`}>
-            <span>{statusInfo.icon}</span>
-            <span>{statusInfo.label}</span>
+            {statusInfo.label.length <= 4 && <span>{statusInfo.icon}</span>}
+            <span className={`${statusInfo.label.length > 4 ? "tracking-tighter scale-90" : ""}`}>
+              {statusInfo.label}
+            </span>
           </div>
         ) : (
           // 미션 버튼 (Checking not detailed status)

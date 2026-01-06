@@ -39,7 +39,8 @@ function AttendanceBoard() {
 
   const [modalType, setModalType] = useState(null); // "task" | "unchecked"
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [modalTargetStudents, setModalTargetStudents] = useState([]); // ✅ 모달에 전달할 대상 학생들 (null이면 전체 미체크 학생 사용 가능하도록 로직 수정 or 직접 설정)
+  const [modalTargetStudents, setModalTargetStudents] = useState([]); // ✅ 모달에 전달할 대상 학생들
+  const [modalConfig, setModalConfig] = useState({ title: null, description: null }); // ✅ 모달 텍스트 설정
   // const [routines, setRoutines] = useState([]); // Removed
   const [missions, setMissions] = useState([]);
 
@@ -236,101 +237,107 @@ function AttendanceBoard() {
 
 
   return (
-    <>
+    <div className="flex flex-col w-full h-full relative">
       {/* 교실 배경 컨테이너 (Full height fill) - Light Gemini Style */}
-      <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden">
+      <div className="absolute inset-0 flex flex-col bg-transparent overflow-hidden">
         {/* Decorative ambient blobs (Light Mode) */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-purple-200/40 rounded-full blur-[100px]" />
-          <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-200/40 rounded-full blur-[100px]" />
-        </div>
+        <div className="absolute top-0 left-0 w-[40%] h-[40%] bg-purple-200/40 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-200/40 rounded-full blur-[100px]" />
+      </div>
 
 
-        {/* 상단 헤더 영역 (HUD Style - Wide) */}
-        <div className="relative z-10 px-4 pt-5">
-          <div className="w-full">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-sm">
-                  Attendance
-                </h1>
+      {/* 상단 헤더 영역 (HUD Style - Wide) */}
+      <div className="relative z-10 px-4 pt-5">
+        <div className="w-full">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-sm">
+                Attendance
+              </h1>
 
+            </div>
+
+            {/* 우측 상단 상태 요약 카드 (Slim Row Style) */}
+            <div className="flex gap-2">
+              {/* 미체크 학생 확인 버튼 */}
+              {uncheckedStudents.length > 0 ? (
+                <button
+                  onClick={() => {
+                    setModalTargetStudents(uncheckedStudents);
+                    setModalConfig({
+                      title: "⚠️ 미체크 학생 관리",
+                      description: null // Default logic usage
+                    });
+                    setModalType("unchecked");
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-red-500 border border-red-600 shadow-sm flex items-center gap-2 hover:bg-red-600 transition-colors animate-pulse"
+                >
+                  <span className="text-[10px] text-white font-bold uppercase tracking-wider">Check</span>
+                  <span className="text-base font-extrabold text-white leading-none">
+                    {uncheckedStudents.length}
+                  </span>
+                </button>
+              ) : (
+                <div className="px-3 py-1.5 rounded-xl bg-emerald-100 border border-emerald-200 shadow-sm flex items-center gap-2">
+                  <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">All Clear</span>
+                  <span className="text-base font-extrabold text-emerald-700 leading-none">✓</span>
+                </div>
+              )}
+
+              <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total</span>
+                <span className="text-base font-extrabold text-gray-900 leading-none">{students.length}</span>
               </div>
 
-              {/* 우측 상단 상태 요약 카드 (Slim Row Style) */}
-              <div className="flex gap-2">
-                {/* 미체크 학생 확인 버튼 (New) */}
-                {uncheckedStudents.length > 0 ? (
-                  <button
-                    onClick={() => {
-                      setModalTargetStudents(uncheckedStudents);
-                      setModalType("unchecked");
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-red-500 border border-red-600 shadow-sm flex items-center gap-2 hover:bg-red-600 transition-colors animate-pulse"
-                  >
-                    <span className="text-[10px] text-white font-bold uppercase tracking-wider">Check</span>
-                    <span className="text-base font-extrabold text-white leading-none">
-                      {uncheckedStudents.length}
-                    </span>
-                  </button>
-                ) : (
-                  <div className="px-3 py-1.5 rounded-xl bg-emerald-100 border border-emerald-200 shadow-sm flex items-center gap-2">
-                    <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">All Clear</span>
-                    <span className="text-base font-extrabold text-emerald-700 leading-none">✓</span>
-                  </div>
-                )}
-
-                <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total</span>
-                  <span className="text-base font-extrabold text-gray-900 leading-none">{students.length}</span>
-                </div>
-
-                <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-6 h-6 bg-purple-100/40 rounded-full blur-xl -mr-2 -mt-2" />
-                  <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider relative z-10">Active</span>
-                  <span className="text-base font-extrabold text-purple-700 relative z-10 leading-none">
-                    {attendanceStatus.filter(a => a.present || a.status === 'present').length}
-                  </span>
-                </div>
+              <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-6 h-6 bg-purple-100/40 rounded-full blur-xl -mr-2 -mt-2" />
+                <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider relative z-10">Active</span>
+                <span className="text-base font-extrabold text-purple-700 relative z-10 leading-none">
+                  {attendanceStatus.filter(a => a.present || a.status === 'present').length}
+                </span>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* 좌석 영역 래퍼 (Wide Layout) */}
-        <div className="relative z-10 flex-1 px-4 py-4 flex flex-col justify-center items-center min-h-0">
+      {/* 좌석 영역 래퍼 (Wide Layout) */}
+      <div className="relative z-10 flex-1 px-4 py-4 flex flex-col justify-center items-center min-h-0">
 
-          {/* 좌석 무대 - Frosted White Glass (Wide Expansion) */}
-          <div className="relative w-full h-full rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 p-6 sm:p-8 shadow-xl flex flex-col justify-center transition-all duration-500 overflow-hidden">
-            <div className="h-2 flex-none" />
-            <div className="flex-1 flex items-center justify-center min-h-0 overflow-y-auto">
-              <SeatGrid
-                seats={seats}
-                statusMap={attendanceStatus.reduce((acc, row) => {
-                  acc[row.student_id] = row.status || (row.present ? 'present' : 'unchecked');
-                  return acc;
-                }, {})}
-                onToggleAttendance={(student) => {
-                  const current = attendanceStatus.find(a => a.student_id === student.id);
-                  const isPresent = current?.status === 'present' || current?.present === true;
-                  const isUnchecked = !current || current.status === 'unchecked';
+        {/* 좌석 무대 - Frosted White Glass (Wide Expansion) */}
+        <div className="relative w-full h-full rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 p-6 sm:p-8 shadow-xl flex flex-col justify-center transition-all duration-500 overflow-hidden">
+          <div className="h-2 flex-none" />
+          <div className="flex-1 flex items-center justify-center min-h-0 overflow-y-auto">
+            <SeatGrid
+              seats={seats}
+              statusMap={attendanceStatus.reduce((acc, row) => {
+                acc[row.student_id] = row.status || (row.present ? 'present' : 'unchecked');
+                return acc;
+              }, {})}
+              onToggleAttendance={(student) => {
+                const current = attendanceStatus.find(a => a.student_id === student.id);
+                const isPresent = current?.status === 'present' || current?.present === true;
+                const isUnchecked = !current || current.status === 'unchecked';
 
-                  // 상세 상태인 경우 (present도 아니고 unchecked도 아님) -> 모달 열기
-                  if (!isPresent && !isUnchecked) {
-                    setModalTargetStudents([student]); // 선택된 학생만 모달에 전달
-                    setModalType("unchecked");
-                    return;
-                  }
+                // 상세 상태인 경우 (present도 아니고 unchecked도 아님) -> 모달 열기
+                if (!isPresent && !isUnchecked) {
+                  setModalTargetStudents([student]);
+                  setModalConfig({
+                    title: "출결 상태 변경",
+                    description: `${student.name} 학생의 출결 상태를 수정합니다.`
+                  });
+                  setModalType("unchecked");
+                  return;
+                }
 
-                  setPendingStudent(student);
-                  setConfirmType(isPresent ? "cancel" : "present");
-                }}
-                onOpenMission={(student) => {
-                  setSelectedStudent(student);
-                  setModalType("task");
-                }}
-              />
-            </div>
+                setPendingStudent(student);
+                setConfirmType(isPresent ? "cancel" : "present");
+              }}
+              onOpenMission={(student) => {
+                setSelectedStudent(student);
+                setModalType("task");
+              }}
+            />
           </div>
         </div>
       </div>
@@ -357,6 +364,8 @@ function AttendanceBoard() {
         isOpen={modalType === "unchecked"}
         onClose={() => setModalType(null)}
         uncheckedStudents={modalTargetStudents.length > 0 ? modalTargetStudents : uncheckedStudents}
+        title={modalConfig.title}
+        description={modalConfig.description}
         onSaved={() => {
           fetchStatus();
           fetchAttendance(); // 데이터 새로고침
@@ -378,7 +387,7 @@ function AttendanceBoard() {
           // 여기서도 student 유지 (다음 선택 시 덮어씌워짐)
         }}
       />
-    </>
+    </div>
   );
 }
 

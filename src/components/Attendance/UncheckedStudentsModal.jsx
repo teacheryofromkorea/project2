@@ -23,6 +23,8 @@ export default function UncheckedStudentsModal({
     onClose,
     uncheckedStudents, // Array of student objects
     onSaved, // Callback to refresh parent data
+    title, // ✅ Optional customizable title
+    description, // ✅ Optional customizable description
 }) {
     const [loading, setLoading] = useState(false);
     const [selectedStatuses, setSelectedStatuses] = useState({});
@@ -112,11 +114,15 @@ export default function UncheckedStudentsModal({
                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
                     <div>
                         <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-                            ⚠️ 미체크 학생 관리
+                            {title || "⚠️ 미체크 학생 관리"}
                         </h2>
-                        <p className="text-gray-500 text-sm mt-1">
-                            총 <span className="text-red-600 font-bold">{uncheckedStudents.length}명</span>의 학생이 아직 출석 체크되지 않았습니다.
-                        </p>
+                        {description ? (
+                            <p className="text-gray-500 text-sm mt-1">{description}</p>
+                        ) : (
+                            <p className="text-gray-500 text-sm mt-1">
+                                총 <span className="text-red-600 font-bold">{uncheckedStudents.length}명</span>의 학생이 아직 출석 체크되지 않았습니다.
+                            </p>
+                        )}
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
