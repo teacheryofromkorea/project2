@@ -22,7 +22,7 @@ const STATUS_CONFIG = {
 
     // 4. 기타 (Etc)
     "present": { label: "출석", icon: "✅", color: "text-green-600", group: "etc" },
-    "unchecked": { label: "미체크", icon: "⚪", color: "text-gray-300", group: "etc" }, // Using gray circle
+    "unchecked": { label: "미체크", icon: "⚪", color: "text-gray-400", group: "etc" }, // Darker gray for visibility
 };
 
 const getStatusIcon = (status) => STATUS_CONFIG[status]?.icon || "";
@@ -117,8 +117,23 @@ export default function AttendanceStatsSection() {
         const dayStr = String(day).padStart(2, '0');
         const dateStr = `${year}-${month}-${dayStr}`;
 
+        const today = new Date();
+        const checkDate = new Date(year, currentDate.getMonth(), day);
+
+        // Reset time for accurate comparison
+        const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const checkDateZero = new Date(year, currentDate.getMonth(), day);
+
         const record = statsData.find(d => d.student_id === studentId && d.date === dateStr);
-        return record?.status || null;
+
+        if (record) return record.status || 'unchecked';
+
+        // If no record, check if date is valid for "unchecked" (past or today)
+        if (checkDateZero <= todayZero) {
+            return 'unchecked';
+        }
+
+        return null; // Future dates show nothing
     };
 
     const docRequiredLogs = statsData.filter(d =>
@@ -276,10 +291,17 @@ export default function AttendanceStatsSection() {
                                             const config = STATUS_CONFIG[status];
                                             // Weekend styling could go here
                                             return (
-                                                <td key={day} className="text-center border-r border-gray-50 last:border-0 relative cursor-default p-0">
+                                                <td key={day} className="text-center border-r border-gray-50 last:border-0 relative cursor-default p-0 align-middle">
                                                     {status && (
-                                                        <div className="w-full h-full flex items-center justify-center">
-                                                            <span className={`text-base leading-none select-none ${config?.color}`} title={config?.label}>{config?.icon}</span>
+                                                        <div className="w-full h-10 flex items-center justify-center group relative">
+                                                            <span className={`text-base leading-none select-none ${config?.color}`}>{config?.icon}</span>
+
+                                                            {/* Custom Tooltip */}
+                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg font-medium">
+                                                                {config?.label}
+                                                                {/* Arrow */}
+                                                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                                            </div>
 
                                                             {/* Document Status Indicator Dot */}
                                                             {status && (status.startsWith('sick') || status.startsWith('authorized')) && (
