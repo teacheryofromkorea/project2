@@ -45,7 +45,7 @@ const Seat = ({
   if (!student) {
     return (
       <div className="h-full rounded-2xl bg-white/60 border border-white/60 flex items-center justify-center min-h-[80px]">
-        <span className="text-slate-400 text-[10px] font-bold tracking-widest uppercase">Empty</span>
+        <span className="text-slate-400 text-[10px] font-bold tracking-widest uppercase"></span>
       </div>
     );
   }

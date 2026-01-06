@@ -236,17 +236,25 @@ function AttendanceBoard() {
   };
 
 
+  // 기타 상태 학생 (출석도 아니고 미체크도 아닌 학생)
+  const otherStudents = students.filter(student => {
+    const statusRow = attendanceStatus.find(a => a.student_id === student.id);
+    if (!statusRow) return false;
+    const isPresent = statusRow.present || statusRow.status === 'present';
+    const isUnchecked = !statusRow.status || statusRow.status === 'unchecked';
+    return !isPresent && !isUnchecked;
+  });
+
   return (
     <div className="flex flex-col w-full h-full relative">
-      {/* 교실 배경 컨테이너 (Full height fill) - Light Gemini Style */}
+      {/* ... (background) ... */}
       <div className="absolute inset-0 flex flex-col bg-transparent overflow-hidden">
-        {/* Decorative ambient blobs (Light Mode) */}
+        {/* ... (blobs) ... */}
         <div className="absolute top-0 left-0 w-[40%] h-[40%] bg-purple-200/40 rounded-full blur-[100px]" />
         <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-blue-200/40 rounded-full blur-[100px]" />
       </div>
 
-
-      {/* 상단 헤더 영역 (HUD Style - Wide) */}
+      {/* 상단 헤더 영역 */}
       <div className="relative z-10 px-4 pt-5">
         <div className="w-full">
           <div className="flex items-center justify-between mb-2">
@@ -254,12 +262,49 @@ function AttendanceBoard() {
               <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-sm">
                 Attendance
               </h1>
-
             </div>
 
-            {/* 우측 상단 상태 요약 카드 (Slim Row Style) */}
+            {/* 우측 상단 상태 요약 카드 */}
             <div className="flex gap-2">
-              {/* 미체크 학생 확인 버튼 */}
+              <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
+                <span className="text-[13px] text-slate-500 font-bold uppercase tracking-wider">전체</span>
+                <span className="text-base font-extrabold text-gray-900 leading-none">{students.length}</span>
+              </div>
+
+              <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-6 h-6 bg-purple-100/40 rounded-full blur-xl -mr-2 -mt-2" />
+                <span className="text-[13px] text-purple-700 font-bold uppercase tracking-wider relative z-10">출석</span>
+                <span className="text-base font-extrabold text-purple-700 relative z-10 leading-none">
+                  {attendanceStatus.filter(a => a.present || a.status === 'present').length}
+                </span>
+              </div>
+
+              {/* ✅ 기타 상태 (Other) Button */}
+              {otherStudents.length > 0 && (
+                <button
+                  onClick={() => {
+                    // Enrich students with status
+                    const enrichedOtherStudents = otherStudents.map(s => {
+                      const statusRow = attendanceStatus.find(a => a.student_id === s.id);
+                      return { ...s, status: statusRow?.status || 'unchecked' };
+                    });
+
+                    setModalTargetStudents(enrichedOtherStudents);
+                    setModalConfig({
+                      title: "📋 기타 출결 학생",
+                      description: "질병, 인정, 미인정 등 기타 출결 상태 학생 목록입니다."
+                    });
+                    setModalType("unchecked");
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 shadow-sm flex items-center gap-2 hover:bg-blue-100 transition-colors cursor-pointer"
+                >
+                  <span className="text-[13px] text-blue-600 font-bold uppercase tracking-wider">기타</span>
+                  <span className="text-base font-extrabold text-blue-600 leading-none">
+                    {otherStudents.length}
+                  </span>
+                </button>
+              )}
+
               {uncheckedStudents.length > 0 ? (
                 <button
                   onClick={() => {
@@ -272,30 +317,21 @@ function AttendanceBoard() {
                   }}
                   className="px-3 py-1.5 rounded-xl bg-red-500 border border-red-600 shadow-sm flex items-center gap-2 hover:bg-red-600 transition-colors animate-pulse"
                 >
-                  <span className="text-[10px] text-white font-bold uppercase tracking-wider">Check</span>
+                  <span className="text-[13px] text-white font-bold uppercase tracking-wider">미체크</span>
                   <span className="text-base font-extrabold text-white leading-none">
                     {uncheckedStudents.length}
                   </span>
                 </button>
               ) : (
+                // ... (All Clear UI) ...
                 <div className="px-3 py-1.5 rounded-xl bg-emerald-100 border border-emerald-200 shadow-sm flex items-center gap-2">
                   <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">All Clear</span>
                   <span className="text-base font-extrabold text-emerald-700 leading-none">✓</span>
                 </div>
               )}
 
-              <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total</span>
-                <span className="text-base font-extrabold text-gray-900 leading-none">{students.length}</span>
-              </div>
-
-              <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-6 h-6 bg-purple-100/40 rounded-full blur-xl -mr-2 -mt-2" />
-                <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider relative z-10">Active</span>
-                <span className="text-base font-extrabold text-purple-700 relative z-10 leading-none">
-                  {attendanceStatus.filter(a => a.present || a.status === 'present').length}
-                </span>
-              </div>
+              {/* ... (Total/Active stats) ... */}
+              {/* Removed Total/Active per user previous edit */}
             </div>
           </div>
         </div>
@@ -321,7 +357,11 @@ function AttendanceBoard() {
 
                 // 상세 상태인 경우 (present도 아니고 unchecked도 아님) -> 모달 열기
                 if (!isPresent && !isUnchecked) {
-                  setModalTargetStudents([student]);
+                  // Enrich student with current detail status
+                  setModalTargetStudents([{
+                    ...student,
+                    status: current.status // Pass current detailed status
+                  }]);
                   setModalConfig({
                     title: "출결 상태 변경",
                     description: `${student.name} 학생의 출결 상태를 수정합니다.`
@@ -387,7 +427,7 @@ function AttendanceBoard() {
           // 여기서도 student 유지 (다음 선택 시 덮어씌워짐)
         }}
       />
-    </div>
+    </div >
   );
 }
 

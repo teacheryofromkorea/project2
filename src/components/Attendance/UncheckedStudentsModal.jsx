@@ -31,33 +31,10 @@ export default function UncheckedStudentsModal({
 
     useEffect(() => {
         if (isOpen) {
-            // Initialize statuses based on student's current status if available, or default to 'unchecked'
-            // Since uncheckedStudents might now include students with existing statuses (via edit flow),
-            // we should ideally pre-fill their current status if we had access to it easily.
-            // However, the prop is just student objects. 
-            // The existing logic initializes to "unchecked".
-            // If the user is editing a "Sick" student, it would be nice if "Sick" was pre-selected.
-            // But let's stick to the requested fix first: saving logic.
-            // Wait, if I'm editing a student, I want to see their current status.
-            // The `uncheckedStudents` prop in AttendanceBoard passed `modalTargetStudents`.
-            // These are student objects. They don't have the status in them unless we enriched them.
-            // let's check AttendanceBoard.. 
-            // In AttendanceBoard, we passed `[student]`. `student` object from `seats` (which comes from `fetchSeats`) 
-            // doesn't usually have the `attendanceStatus` merged into it. 
-            // But `SeatGrid` receives `statusMap`. 
-            // The student object itself is just { id, name, number, gender }.
-
-            // To properly pre-select, we need the current status.
-            // But the user didn't explicitly ask for pre-selection, just "modify".
-            // Defaulting to "unchecked" is OK for now, but a bit annoying if editing.
-            // Actually, the user said "modify". If I open it and it says "Unchecked", I have to re-select "Sick" if I want to keep it?
-            // No, I'm changing it. So defaulting to unchecked is maybe safe "reset".
-            // But better UX would be to default to current.
-            // Since I don't have current status easily without fetching or prop drill, I will leave init as 'unchecked' for now unless I see a quick way.
-
             const initialStatuses = {};
             uncheckedStudents.forEach(s => {
-                initialStatuses[s.id] = "unchecked";
+                // ✅ Use existing status if available, fallback to 'unchecked'
+                initialStatuses[s.id] = s.status || "unchecked";
             });
             setSelectedStatuses(initialStatuses);
         }
