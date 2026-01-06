@@ -8,8 +8,10 @@ import {
   useLocation,
 } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
+import { AnimatePresence } from "framer-motion"; // 🔹 Import AnimatePresence
 import TopNav from "./components/TopNav";
 import { LockProvider } from "./context/LockContext";
+import PageTransition from "./components/common/PageTransition"; // 🔹 Import PageTransition
 
 import RoutineSidebar from "./components/Attendance/RoutineSidebar";
 import MissionSidebar from "./components/Attendance/MissionSidebar";
@@ -34,13 +36,15 @@ import useCurrentTimeBlock from "./hooks/useCurrentTimeBlock";
 
 function AttendanceLayout() {
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      <div className="grid grid-cols-[260px,1fr,260px] gap-6 w-full max-w-[1700px] flex-1 mx-auto min-h-0">
-        <RoutineSidebar />
-        <AttendanceBoard />
-        <MissionSidebar />
+    <PageTransition>
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="grid grid-cols-[260px,1fr,260px] gap-6 w-full max-w-[1700px] flex-1 mx-auto min-h-0">
+          <RoutineSidebar />
+          <AttendanceBoard />
+          <MissionSidebar />
+        </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
 
@@ -179,35 +183,69 @@ function AppContent() {
         />
 
         <main className="flex-1 flex flex-col min-h-0 px-8 pb-10 pt-4">
-          <Routes>
-            {/* 기본 경로 → 출석 탭 */}
-            <Route path="/" element={<Navigate to="/attendance" replace />} />
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              {/* 기본 경로 → 출석 탭 */}
+              <Route path="/" element={<Navigate to="/attendance" replace />} />
 
-            {/* 출석 */}
-            <Route path="/attendance" element={<AttendanceLayout />} />
+              {/* 출석 (PageTransition inside layout component) */}
+              <Route path="/attendance" element={<AttendanceLayout />} />
 
-            {/* 쉬는시간 */}
-            <Route path="/break" element={<BreakTimeBoard />} />
+              {/* 쉬는시간 */}
+              <Route path="/break" element={
+                <PageTransition>
+                  <BreakTimeBoard />
+                </PageTransition>
+              } />
 
-            {/* 설정 */}
-            <Route path="/settings" element={<SettingsLayout />}>
-              <Route path="students" element={<StudentsPage />} />
-              <Route path="timetable" element={<TimeTablePage />} />
-              <Route path="seating" element={<SeatingPlanPage />} />
-              <Route path="general" element={<GeneralPage />} />
-            </Route>
+              {/* 설정 (PageTransition handles generic children) */}
+              <Route path="/settings" element={
+                <PageTransition>
+                  <SettingsLayout />
+                </PageTransition>
+              }>
+                <Route path="students" element={<StudentsPage />} />
+                <Route path="timetable" element={<TimeTablePage />} />
+                <Route path="seating" element={<SeatingPlanPage />} />
+                <Route path="general" element={<GeneralPage />} />
+              </Route>
 
-            {/* 기타 탭 */}
-            <Route path="/lunch" element={<LunchTimeBoard />} />
-            <Route path="/class" element={<ClassPage />} />
-            <Route path="/end" element={<EndTimeBoard />} />
-            <Route path="/stats" element={<StatsPage />} />
-            <Route path="/overview" element={<OverviewPage />} />
-            <Route path="/tools" element={<ToolsPage />} />
+              {/* 기타 탭 */}
+              <Route path="/lunch" element={
+                <PageTransition>
+                  <LunchTimeBoard />
+                </PageTransition>
+              } />
+              <Route path="/class" element={
+                <PageTransition>
+                  <ClassPage />
+                </PageTransition>
+              } />
+              <Route path="/end" element={
+                <PageTransition>
+                  <EndTimeBoard />
+                </PageTransition>
+              } />
+              <Route path="/stats" element={
+                <PageTransition>
+                  <StatsPage />
+                </PageTransition>
+              } />
+              <Route path="/overview" element={
+                <PageTransition>
+                  <OverviewPage />
+                </PageTransition>
+              } />
+              <Route path="/tools" element={
+                <PageTransition>
+                  <ToolsPage />
+                </PageTransition>
+              } />
 
-            {/* 존재하지 않는 경로 → 출석 */}
-            <Route path="*" element={<Navigate to="/attendance" replace />} />
-          </Routes>
+              {/* 존재하지 않는 경로 → 출석 */}
+              <Route path="*" element={<Navigate to="/attendance" replace />} />
+            </Routes>
+          </AnimatePresence>
         </main>
       </div>
     </div>
