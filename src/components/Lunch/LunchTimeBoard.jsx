@@ -111,12 +111,16 @@ export default function LunchTimeBoard() {
     if (!error) setRoutineStatus(data || []);
   }, [today]);
 
+  /* 
+    [Refactor] 
+    - Fetch ALL attendance statuses to show detailed status for absent students.
+    - Previous: .eq("present", true) -> Removed to fetch all.
+  */
   const fetchAttendanceStatus = useCallback(async () => {
     const { data, error } = await supabase
       .from("student_attendance_status")
       .select("*")
-      .eq("date", today)
-      .eq("present", true);
+      .eq("date", today);
 
     if (!error) setAttendanceStatus(data || []);
   }, [today]);
@@ -157,7 +161,10 @@ export default function LunchTimeBoard() {
   ]);
 
   const presentStudentIds = useMemo(() => {
-    return attendanceStatus.map((a) => a.student_id);
+    // Filter locally since we now fetch all
+    return attendanceStatus
+      .filter((a) => a.present)
+      .map((a) => a.student_id);
   }, [attendanceStatus]);
 
   const seatStatusMap = useMemo(() => {
@@ -168,14 +175,26 @@ export default function LunchTimeBoard() {
     return map;
   }, [seatStatus]);
 
-  // 출석 여부 맵 (SeatGrid의 isPresent prop용)
-  const attendanceMap = useMemo(() => {
+  // Combined Status Map for SeatGrid
+  // - If Present: Use Seat Status (Seated='present' color, Not Seated='unchecked' white)
+  // - If Absent: Use Attendance Status (e.g. 'sick-absent')
+  const combinedStatusMap = useMemo(() => {
     const map = {};
-    presentStudentIds.forEach((id) => {
-      map[id] = true;
+    students.forEach((student) => {
+      const att = attendanceStatus.find((a) => a.student_id === student.id);
+      const isPresent = att?.present;
+
+      if (isPresent) {
+        // Present -> check seat status
+        const isSeated = seatStatusMap[student.id];
+        map[student.id] = isSeated ? 'present' : 'unchecked';
+      } else {
+        // Absent or Unchecked -> use detailed status if available
+        map[student.id] = att?.status || 'unchecked';
+      }
     });
     return map;
-  }, [presentStudentIds]);
+  }, [students, attendanceStatus, seatStatusMap]);
 
   const handleToggleSeat = async (student) => {
     // 출석하지 않은 학생은 착석 체크 불가
@@ -252,10 +271,10 @@ export default function LunchTimeBoard() {
   // 통계 계산
   const stats = useMemo(() => {
     const total = students.length;
-    const attended = attendanceStatus.length;
+    const attended = presentStudentIds.length;
     const seated = seatStatus.filter((s) => s.is_seated).length;
     return { total, attended, seated };
-  }, [students, attendanceStatus, seatStatus]);
+  }, [students, presentStudentIds, seatStatus]);
 
   return (
     <>
@@ -298,15 +317,15 @@ export default function LunchTimeBoard() {
                   </h2>
                   <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total</span>
+                      <span className="text-[13px] text-slate-500 font-bold uppercase tracking-wider">전체</span>
                       <span className="text-base font-extrabold text-gray-900 leading-none">{stats.total}</span>
                     </div>
                     <div className="px-3 py-1.5 rounded-xl bg-white border border-green-200 shadow-sm flex items-center gap-2">
-                      <span className="text-[10px] text-green-700 font-bold uppercase tracking-wider">Attended</span>
+                      <span className="text-[13px] text-green-700 font-bold uppercase tracking-wider">출석</span>
                       <span className="text-base font-extrabold text-green-700 leading-none">{stats.attended}</span>
                     </div>
                     <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2">
-                      <span className="text-[10px] text-purple-700 font-bold uppercase tracking-wider">Seated</span>
+                      <span className="text-[13px] text-purple-700 font-bold uppercase tracking-wider">착석</span>
                       <span className="text-base font-extrabold text-purple-700 leading-none">{stats.seated}</span>
                     </div>
                   </div>
@@ -330,10 +349,11 @@ export default function LunchTimeBoard() {
               <div className="flex-1 flex items-center justify-center min-h-0 overflow-y-auto">
                 <SeatGrid
                   seats={filteredSeats}
-                  activeMap={seatStatusMap}
+                  statusMap={combinedStatusMap}
                   disabledMap={seats.reduce((acc, seat) => {
-                    if (seat.students && !presentStudentIds.includes(seat.students.id)) {
-                      acc[seat.students.id] = true;
+                    const student = seat.students;
+                    if (student && !presentStudentIds.includes(student.id)) {
+                      acc[student.id] = true;
                     }
                     return acc;
                   }, {})}

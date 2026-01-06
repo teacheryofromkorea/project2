@@ -4,6 +4,7 @@ const Seat = ({
   seat,
   student,
   status = 'unchecked', // 'present', 'unchecked', or detailed status string
+  disabled = false,
   onToggleAttendance,
   onOpenMission,
   alwaysActiveMission = false,
@@ -13,16 +14,6 @@ const Seat = ({
   const prevStatusRef = useRef(status);
 
   const isActive = status === 'present';
-  // Detailed status means not present and not unchecked
-  const isDetailedStatus = status !== 'present' && status !== 'unchecked';
-  // Disabled (visual) if detailed status is effectively absent type? 
-  // Actually user wants to see the status label. Click behavior:
-  // If detailed status -> user can still click seat to toggle? 
-  // AttendanceBoard logic says markPresent toggles between present/unchecked.
-  // We probably want clicking the seat to still toggle or open unchecked modal?
-  // Existing logic: markPresent toggles status.
-  // If detailed status is set, toggling might reset to present or unchecked. 
-  // Let's keep click handler simple: onToggleAttendance triggers the toggle logic in parent.
 
   useEffect(() => {
     if (!student) return;
@@ -35,12 +26,6 @@ const Seat = ({
     }
     prevStatusRef.current = status;
   }, [status, student]);
-
-  const handleSeatClick = () => {
-    if (!student) return;
-    // Allow toggle even if detailed status (to undo it easily)
-    onToggleAttendance?.(student);
-  };
 
   if (!student) {
     return (
@@ -65,10 +50,9 @@ const Seat = ({
 
   const statusInfo = STATUS_CONFIG[status];
 
-  // 스타일 결정 로직
-  // 1) Active (출석): 보라색, 활성
-  // 2) Detailed (결석 등): 해당 상태 컬러
-  // 3) Inactive (미체크): 흰색
+  // Disabled Style Logic
+  // If disabled, apply opacity and grayscale, and prevent clicks.
+  const containerDisabledStyle = disabled ? "opacity-80 grayscale cursor-not-allowed pointer-events-none" : "";
 
   let containerStyle = "";
   let badgeStyle = "";
@@ -81,7 +65,6 @@ const Seat = ({
     nameStyle = "text-gray-900";
   } else if (statusInfo) {
     // Detailed Status (Sick, Late, etc)
-    // Use the color from config for border/bg, but simpler
     containerStyle = `border ${statusInfo.color.split(' ')[2]} ${statusInfo.color.split(' ')[0]} cursor-pointer opacity-90`;
     badgeStyle = "bg-gray-400";
     nameStyle = "text-gray-600";
@@ -92,6 +75,18 @@ const Seat = ({
     nameStyle = "text-slate-600";
   }
 
+  // Override if disabled
+  if (disabled) {
+    containerStyle = "bg-gray-50 border border-gray-200 cursor-not-allowed shadow-none";
+    badgeStyle = "bg-gray-300";
+    nameStyle = "text-gray-400 decoration-gray-300"; // Optional line-through? maybe too much
+  }
+
+  const handleSeatClick = () => {
+    if (!student || disabled) return;
+    onToggleAttendance?.(student);
+  };
+
   return (
     <div
       onClick={handleSeatClick}
@@ -99,6 +94,7 @@ const Seat = ({
         group relative w-full h-full min-h-[100px] rounded-2xl transition-all duration-200 ease-out
         flex flex-col items-center justify-between overflow-hidden
         ${containerStyle}
+        ${containerDisabledStyle}
       `}
     >
       {/* 1. 상단: 번호 뱃지 */}
@@ -128,12 +124,16 @@ const Seat = ({
       <div className="w-full flex-none">
         {statusInfo ? (
           // 상세 상태 표시 (Footer Label)
-          // 상세 상태 표시 (Footer Label)
           <div className={`w-full py-2 text-[10px] font-bold text-center border-t tracking-widest uppercase flex items-center justify-center gap-1 ${statusInfo.color.replace('bg-', 'bg-opacity-50 ')}`}>
             {statusInfo.label.length <= 4 && <span>{statusInfo.icon}</span>}
             <span className={`${statusInfo.label.length > 4 ? "tracking-tighter scale-90" : ""}`}>
               {statusInfo.label}
             </span>
+          </div>
+        ) : (disabled && status === 'unchecked') ? (
+          // [New] Disabled Unchecked Label
+          <div className="w-full py-2 text-[10px] font-bold text-center border-t border-gray-200 tracking-widest uppercase flex items-center justify-center gap-1 bg-gray-100 text-gray-400">
+            <span>미체크</span>
           </div>
         ) : (
           // 미션 버튼 (Checking not detailed status)
