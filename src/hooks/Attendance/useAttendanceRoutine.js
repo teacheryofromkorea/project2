@@ -90,6 +90,9 @@ export default function useAttendanceRoutine() {
     /* ===============================
        루틴 항목 추가
        =============================== */
+    /* ===============================
+       루틴 항목 추가
+       =============================== */
     const addRoutineItem = useCallback(async () => {
         if (!newContent.trim()) return;
         if (!titleId) return;
@@ -105,6 +108,7 @@ export default function useAttendanceRoutine() {
         } else {
             setNewContent("");
             fetchRoutineItems();
+            window.dispatchEvent(new Event("routines:updated"));
         }
     }, [newContent, titleId, routineItems.length, fetchRoutineItems]);
 
@@ -122,6 +126,7 @@ export default function useAttendanceRoutine() {
                 handleSupabaseError(error, "할 일 삭제에 실패했어요.");
             } else {
                 fetchRoutineItems();
+                window.dispatchEvent(new Event("routines:updated"));
             }
         },
         [fetchRoutineItems]
@@ -156,6 +161,7 @@ export default function useAttendanceRoutine() {
                 .eq("id", target.id);
 
             fetchRoutineItems();
+            window.dispatchEvent(new Event("routines:updated"));
         },
         [routineItems, titleId, fetchRoutineItems]
     );
@@ -177,6 +183,7 @@ export default function useAttendanceRoutine() {
             setEditRoutine(null);
             setEditText("");
             fetchRoutineItems();
+            window.dispatchEvent(new Event("routines:updated"));
         }
     }, [editRoutine, editText, fetchRoutineItems]);
 
@@ -195,6 +202,7 @@ export default function useAttendanceRoutine() {
             handleSupabaseError(error, "제목 저장에 실패했어요.");
         } else {
             setRoutineTitle(tempTitle);
+            window.dispatchEvent(new Event("routines:updated"));
         }
     }, [titleId, tempTitle]);
 

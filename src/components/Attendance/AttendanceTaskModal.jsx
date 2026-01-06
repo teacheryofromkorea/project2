@@ -31,6 +31,7 @@ function AttendanceTaskModal({
     student,
     routines = [],
     missions = [],
+    routineTitle, // ✅ Prop accepted
 }) {
     const [routineStatus, setRoutineStatus] = useState({});
     const [missionStatus, setMissionStatus] = useState({});
@@ -193,7 +194,7 @@ function AttendanceTaskModal({
                     {/* ---------------------- 좌측: 루틴 체크 ---------------------- */}
                     <div className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/60">
                         <h3 className="font-semibold mb-3 text-black-700">
-                            🧭 아침 루틴
+                            🧭 {routineTitle || "아침 루틴"}
                         </h3>
                         <ul className="space-y-2">
                             {routines.map((r) => (

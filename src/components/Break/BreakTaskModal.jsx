@@ -32,6 +32,7 @@ function BreakTaskModal({
     routines = [],
     missions = [],
     blockId, // 쉬는시간 구분용 필수 prop
+    routineTitle, // ✅ 전달받은 루틴 제목
 }) {
     const [routineStatus, setRoutineStatus] = useState({});
     const [missionStatus, setMissionStatus] = useState({});
@@ -202,7 +203,7 @@ function BreakTaskModal({
                     {/* ---------------------- 좌측: 루틴 체크 ---------------------- */}
                     <div className="bg-white/70 rounded-2xl p-4 shadow-sm border border-white/60">
                         <h3 className="font-semibold mb-3 text-black-700">
-                            🧭 쉬는시간 루틴
+                            🧭 {routineTitle || "쉬는시간 루틴"}
                         </h3>
                         <ul className="space-y-2">
                             {routines.map((r) => (

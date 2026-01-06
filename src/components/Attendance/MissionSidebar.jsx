@@ -107,6 +107,7 @@ function MissionSidebar() {
 
     setNewMission("");
     fetchMissions(); // 화면 갱신
+    window.dispatchEvent(new Event("missions:updated"));
   };
 
   // -------------------------
@@ -139,6 +140,7 @@ function MissionSidebar() {
 
     // 3) Refresh UI
     fetchMissions();
+    window.dispatchEvent(new Event("missions:updated"));
   };
 
   const moveMission = async (index, direction) => {
@@ -169,6 +171,7 @@ function MissionSidebar() {
     handleSupabaseError(error2, "미션 순서 변경에 실패했어요.");
 
     fetchMissions();
+    window.dispatchEvent(new Event("missions:updated"));
   };
 
   const updateMission = async () => {
@@ -188,6 +191,7 @@ function MissionSidebar() {
     setEditMission(null);
     setEditText("");
     fetchMissions();
+    window.dispatchEvent(new Event("missions:updated"));
   };
 
   return (

@@ -26,15 +26,20 @@ function AttendanceBoard() {
   const [confirmType, setConfirmType] = useState(null); // "present" | "cancel"
   const [pendingStudent, setPendingStudent] = useState(null);
 
-  // ... removed getPendingTasks to save tokens, it relies on routines which we will get from hook ...
-  // actually getPendingTasks is defined outside this block in replacement? No, I need to keep getPendingTasks.
-  // I only want to replace the state definition and fetchRoutines function.
-
   // Let's use the hook
   const {
     routineItems: routines, // ✅ Hook State mapped to 'routines'
+    routineTitle, // ✅ Get routineTitle from hook
     fetchRoutineTitle: fetchRoutines // ✅ Hook Action mapped to 'fetchRoutines'
   } = useAttendanceRoutine();
+
+  // const routines = []; // removed
+  // const fetchRoutines = ... // removed
+
+  const [modalType, setModalType] = useState(null);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  // const [routines, setRoutines] = useState([]); // Removed
+  const [missions, setMissions] = useState([]);
 
   const getPendingTasks = (studentId) => {
     // ... (기존 getPendingTasks 함수는 동일)
@@ -68,6 +73,7 @@ function AttendanceBoard() {
     return Math.max(0, total - (doneRoutineIds.size + doneMissionIds.size));
   };
 
+
   const fetchAttendance = async () => {
     const { data } = await supabase
       .from("student_attendance_status")
@@ -76,10 +82,6 @@ function AttendanceBoard() {
     setAttendanceStatus(data || []);
   };
 
-  const [modalType, setModalType] = useState(null);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  // const [routines, setRoutines] = useState([]); // Removed
-  const [missions, setMissions] = useState([]);
 
   // fetchRoutines refactored to use Hook logic (via alias above)
   // const fetchRoutines = async () => ... (Removed manual implementation)
@@ -146,6 +148,25 @@ function AttendanceBoard() {
     setMissionStatus(missionData || []);
   };
 
+  // 🔄 Listen for global updates (Sidebar changes)
+  useEffect(() => {
+    const handleRoutinesUpdated = () => {
+      fetchRoutines();
+    };
+    const handleMissionsUpdated = () => {
+      fetchMissions();
+    };
+
+    window.addEventListener("routines:updated", handleRoutinesUpdated);
+    window.addEventListener("missions:updated", handleMissionsUpdated);
+
+    return () => {
+      window.removeEventListener("routines:updated", handleRoutinesUpdated);
+      window.removeEventListener("missions:updated", handleMissionsUpdated);
+    };
+  }, [fetchRoutines]); // fetchMissions is defined inside component but usually stable if not using callbacks? Wait, fetchMissions is defined inside using standard function, checking deps.
+
+
   // 최초 1회: 루틴/미션/출석/상태만 로딩
   useEffect(() => {
     (async () => {
@@ -157,7 +178,7 @@ function AttendanceBoard() {
         fetchSeats(),
       ]);
     })();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 설정탭에서 학생 CRUD 발생 시 즉시 학생 목록 재조회
   useEffect(() => {
@@ -285,6 +306,7 @@ function AttendanceBoard() {
         student={selectedStudent}
         routines={routines}
         missions={missions}
+        routineTitle={routineTitle} // ✅ Pass dynamic title
       />
 
       <AttendanceConfirmModal

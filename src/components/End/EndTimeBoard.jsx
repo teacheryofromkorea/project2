@@ -205,11 +205,23 @@ export default function EndTimeBoard() {
     }
   };
 
+  // Resilience: Match students to seats if join failed (safeguard against data fetching issues)
+  const robustSeats = useMemo(() => {
+    return seats.map((seat) => {
+      // If seat already has students data joined, use it
+      if (seat.students) return seat;
+
+      // Otherwise, try to find the student in the separate students list
+      const matchedStudent = students.find((s) => s.id === seat.student_id);
+      return { ...seat, students: matchedStudent };
+    });
+  }, [seats, students]);
+
   // 미실시자 필터링
   const filteredSeats = useMemo(() => {
-    if (!showIncompleteOnly) return seats;
+    if (!showIncompleteOnly) return robustSeats;
 
-    return seats.filter((seat) => {
+    return robustSeats.filter((seat) => {
       const student = seat.students;
       if (!student) return false;
       if (!presentStudentIds.includes(student.id)) return false;
@@ -234,7 +246,7 @@ export default function EndTimeBoard() {
     });
   }, [
     showIncompleteOnly,
-    seats,
+    robustSeats,
     presentStudentIds,
     routineStatus,
     routineItems,
@@ -335,7 +347,7 @@ export default function EndTimeBoard() {
                 <SeatGrid
                   seats={filteredSeats}
                   activeMap={dismissalStatusMap}
-                  disabledMap={seats.reduce((acc, seat) => {
+                  disabledMap={robustSeats.reduce((acc, seat) => {
                     if (seat.students && !presentStudentIds.includes(seat.students.id)) {
                       acc[seat.students.id] = true;
                     }

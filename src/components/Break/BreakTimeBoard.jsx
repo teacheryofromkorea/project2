@@ -420,6 +420,7 @@ export default function BreakTimeBoard() {
         student={targetStudent}
         missions={missions}
         routines={routineItems}
+        routineTitle={routineTitle} // ✅ 루틴 제목 전달
         blockId={selectedBlockId}
         onClose={handleCloseTaskModal}
         onSaved={async () => {
