@@ -39,6 +39,7 @@ function AttendanceBoard() {
 
   const [modalType, setModalType] = useState(null); // "task" | "unchecked"
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [modalTargetStudents, setModalTargetStudents] = useState([]); // ✅ 모달에 전달할 대상 학생들 (null이면 전체 미체크 학생 사용 가능하도록 로직 수정 or 직접 설정)
   // const [routines, setRoutines] = useState([]); // Removed
   const [missions, setMissions] = useState([]);
 
@@ -261,7 +262,10 @@ function AttendanceBoard() {
                 {/* 미체크 학생 확인 버튼 (New) */}
                 {uncheckedStudents.length > 0 ? (
                   <button
-                    onClick={() => setModalType("unchecked")}
+                    onClick={() => {
+                      setModalTargetStudents(uncheckedStudents);
+                      setModalType("unchecked");
+                    }}
                     className="px-3 py-1.5 rounded-xl bg-red-500 border border-red-600 shadow-sm flex items-center gap-2 hover:bg-red-600 transition-colors animate-pulse"
                   >
                     <span className="text-[10px] text-white font-bold uppercase tracking-wider">Check</span>
@@ -302,14 +306,21 @@ function AttendanceBoard() {
             <div className="flex-1 flex items-center justify-center min-h-0 overflow-y-auto">
               <SeatGrid
                 seats={seats}
-                activeMap={attendanceStatus.reduce((acc, row) => {
-                  // status가 'present' 이거나, 기존 present 컬럼이 true인 경우 활성화
-                  acc[row.student_id] = row.status === 'present' || row.present === true;
+                statusMap={attendanceStatus.reduce((acc, row) => {
+                  acc[row.student_id] = row.status || (row.present ? 'present' : 'unchecked');
                   return acc;
                 }, {})}
                 onToggleAttendance={(student) => {
                   const current = attendanceStatus.find(a => a.student_id === student.id);
                   const isPresent = current?.status === 'present' || current?.present === true;
+                  const isUnchecked = !current || current.status === 'unchecked';
+
+                  // 상세 상태인 경우 (present도 아니고 unchecked도 아님) -> 모달 열기
+                  if (!isPresent && !isUnchecked) {
+                    setModalTargetStudents([student]); // 선택된 학생만 모달에 전달
+                    setModalType("unchecked");
+                    return;
+                  }
 
                   setPendingStudent(student);
                   setConfirmType(isPresent ? "cancel" : "present");
@@ -341,11 +352,11 @@ function AttendanceBoard() {
         routineTitle={routineTitle} // ✅ Pass dynamic title
       />
 
-      {/* 미체크 학생 관리 모달 */}
+      {/* 미체크 학생 관리 모달 (재사용: 미체크 목록 또는 특정 학생 상태 변경) */}
       <UncheckedStudentsModal
         isOpen={modalType === "unchecked"}
         onClose={() => setModalType(null)}
-        uncheckedStudents={uncheckedStudents}
+        uncheckedStudents={modalTargetStudents.length > 0 ? modalTargetStudents : uncheckedStudents}
         onSaved={() => {
           fetchStatus();
           fetchAttendance(); // 데이터 새로고침

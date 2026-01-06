@@ -3,36 +3,42 @@ import { useEffect, useRef, useState } from "react";
 const Seat = ({
   seat,
   student,
-  isActive,     // 활성화 체크 여부 (보라색 표시)
-  isDisabled,   // 비활성화 여부 (회색/클릭불가 - 결석 등)
+  status = 'unchecked', // 'present', 'unchecked', or detailed status string
   onToggleAttendance,
   onOpenMission,
-  alwaysActiveMission = false, // ✅ 추가: 미션 버튼 항상 활성화 여부 (쉬는시간/점심/하교 탭 등에서 사용)
+  alwaysActiveMission = false,
 }) => {
   // ... (keep existing state/useEffect) ...
   const [highlightMission, setHighlightMission] = useState(false);
-  const prevActiveRef = useRef(isActive);
+  const prevStatusRef = useRef(status);
 
-  // 상태 변화 감지 → 미션 버튼 첫 등장 강조
+  const isActive = status === 'present';
+  // Detailed status means not present and not unchecked
+  const isDetailedStatus = status !== 'present' && status !== 'unchecked';
+  // Disabled (visual) if detailed status is effectively absent type? 
+  // Actually user wants to see the status label. Click behavior:
+  // If detailed status -> user can still click seat to toggle? 
+  // AttendanceBoard logic says markPresent toggles between present/unchecked.
+  // We probably want clicking the seat to still toggle or open unchecked modal?
+  // Existing logic: markPresent toggles status.
+  // If detailed status is set, toggling might reset to present or unchecked. 
+  // Let's keep click handler simple: onToggleAttendance triggers the toggle logic in parent.
+
   useEffect(() => {
     if (!student) return;
 
-    // isActive가 false -> true 로 바뀌는 순간에만 '빠직' 애니메이션 효과
-    if (!prevActiveRef.current && isActive) {
+    // Pulse animation when becoming present
+    if (prevStatusRef.current !== 'present' && status === 'present') {
       setHighlightMission(true);
-
-      const timer = setTimeout(() => {
-        setHighlightMission(false);
-      }, 1000);
-
+      const timer = setTimeout(() => setHighlightMission(false), 1000);
       return () => clearTimeout(timer);
     }
-
-    prevActiveRef.current = isActive;
-  }, [isActive, student]);
+    prevStatusRef.current = status;
+  }, [status, student]);
 
   const handleSeatClick = () => {
-    if (!student || isDisabled) return;
+    if (!student) return;
+    // Allow toggle even if detailed status (to undo it easily)
     onToggleAttendance?.(student);
   };
 
@@ -44,29 +50,43 @@ const Seat = ({
     );
   }
 
+  // Define Status Display Config (Similar to AttendanceStatsSection but simpler styles for card)
+  const STATUS_CONFIG = {
+    "sick-absent": { label: "질병결석", icon: "🏥", color: "bg-blue-50 text-blue-600 border-blue-200" },
+    "sick-late": { label: "질병지각", icon: "🏥", color: "bg-blue-50 text-blue-600 border-blue-200" },
+    "sick-early-leave": { label: "질병조퇴", icon: "🏥", color: "bg-blue-50 text-blue-600 border-blue-200" },
+    "authorized-absent": { label: "인정결석", icon: "📋", color: "bg-purple-50 text-purple-600 border-purple-200" },
+    "authorized-late": { label: "인정지각", icon: "📋", color: "bg-purple-50 text-purple-600 border-purple-200" },
+    "authorized-early-leave": { label: "인정조퇴", icon: "📋", color: "bg-purple-50 text-purple-600 border-purple-200" },
+    "unauthorized-absent": { label: "미인정결석", icon: "❌", color: "bg-red-50 text-red-600 border-red-200" },
+    "unauthorized-late": { label: "미인정지각", icon: "❌", color: "bg-red-50 text-red-600 border-red-200" },
+    "unauthorized-early-leave": { label: "미인정조퇴", icon: "❌", color: "bg-red-50 text-red-600 border-red-200" },
+  };
+
+  const statusInfo = STATUS_CONFIG[status];
+
   // 스타일 결정 로직
-  // 1) Disabled (결석 or 준비안됨): 회색, 클릭불가
-  // 2) Active (체크됨/출석함): 보라색, 활성
-  // 3) Inactive (미체크/미출석): 흰색, 클릭가능
+  // 1) Active (출석): 보라색, 활성
+  // 2) Detailed (결석 등): 해당 상태 컬러
+  // 3) Inactive (미체크): 흰색
 
   let containerStyle = "";
   let badgeStyle = "";
   let nameStyle = "";
-  let buttonStyle = ""; // unused in JSX below but kept for reference if needed
 
-  if (isDisabled) {
-    // Disabled State (결석)
-    containerStyle = "bg-slate-100 border border-transparent opacity-60 cursor-not-allowed";
-    badgeStyle = "bg-slate-300";
-    nameStyle = "text-slate-400"; // 이름은 흐리게
-    buttonStyle = ""; // 버튼 스타일 사용 안 함/별도 처리
-  } else if (isActive) {
-    // Active State (체크됨 - 보라색)
+  if (isActive) {
+    // Present
     containerStyle = "bg-gradient-to-br from-indigo-50 to-purple-50 shadow-md border border-purple-300 cursor-pointer";
     badgeStyle = student.gender === "male" ? "bg-blue-500" : student.gender === "female" ? "bg-pink-500" : "bg-emerald-500";
     nameStyle = "text-gray-900";
+  } else if (statusInfo) {
+    // Detailed Status (Sick, Late, etc)
+    // Use the color from config for border/bg, but simpler
+    containerStyle = `border ${statusInfo.color.split(' ')[2]} ${statusInfo.color.split(' ')[0]} cursor-pointer opacity-90`;
+    badgeStyle = "bg-gray-400";
+    nameStyle = "text-gray-600";
   } else {
-    // Inactive (Default) State (미체크 - 흰색)
+    // Unchecked
     containerStyle = "bg-white border border-slate-200 cursor-pointer hover:border-indigo-300 hover:shadow-md";
     badgeStyle = "bg-slate-400";
     nameStyle = "text-slate-600";
@@ -104,25 +124,22 @@ const Seat = ({
         </div>
       </div>
 
-      {/* 3. 하단: 미션 푸터 버튼 OR 결석 라벨 
-          - isDisabled(결석): '결석' 라벨 표시
-          - isActive(착석) 또는 alwaysActiveMission(항상활성): 보라색 활성 버튼 (클릭 가능)
-          - 그 외(미착석 & 등교탭): 흰색/하늘색 비활성 버튼 (클릭 불가/안함 -> 위 로직 수정됨, 클릭은 안됨)
-      */}
+      {/* 3. 하단: 미션 푸터 버튼 OR 상세 상태 표시 */}
       <div className="w-full flex-none">
-        {isDisabled ? (
-          <div className="w-full py-2 text-[10px] font-bold text-rose-500 text-center bg-rose-50 border-t border-rose-100 tracking-widest uppercase">
-            결석
+        {statusInfo ? (
+          // 상세 상태 표시 (Footer Label)
+          <div className={`w-full py-2 text-[10px] font-bold text-center border-t tracking-widest uppercase flex items-center justify-center gap-1 ${statusInfo.color.replace('bg-', 'bg-opacity-50 ')}`}>
+            <span>{statusInfo.icon}</span>
+            <span>{statusInfo.label}</span>
           </div>
         ) : (
+          // 미션 버튼 (Checking not detailed status)
           <button
             onClick={(e) => {
               e.stopPropagation(); // 좌석 클릭 이벤트 전파 방지
 
-              // 미션 모달 열기 조건:
-              // 1. 결석이 아니어야 함 (!isDisabled)
-              // 2. '착석 상태'이거나 OR '항상 활성화 모드'여야 함
-              if (!isDisabled && (isActive || alwaysActiveMission)) {
+              // 미션 모달 열기: 출석 상태이거나 alwaysActiveMission일 때만
+              if (isActive || alwaysActiveMission) {
                 onOpenMission?.(student);
               }
             }}
@@ -130,8 +147,8 @@ const Seat = ({
               w-full py-2 text-[10px] font-bold uppercase tracking-widest
               transition-all border-t
               ${isActive || alwaysActiveMission
-                ? "text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 active:brightness-90 border-purple-200/50" // 활성 스타일 (보라색)
-                : "text-indigo-600 bg-white hover:bg-indigo-50 border-indigo-100" // 비활성 스타일 (흰색)
+                ? "text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 active:brightness-90 border-purple-200/50 cursor-pointer"
+                : "text-indigo-400 bg-white border-indigo-100 cursor-default" // 비활성 (미체크) - 클릭해도 반응 X (이름표 눌러서 출석해야 함)
               }
               ${highlightMission && isActive ? "animate-pulse" : ""}
             `}

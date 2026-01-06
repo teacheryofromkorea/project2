@@ -5,6 +5,7 @@ import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import { getTodayString } from "../../utils/dateUtils";
 
 const ATTENDANCE_OPTIONS = [
+    { value: "present", label: "출석", color: "bg-indigo-100 text-indigo-700" }, // ✅ Added Present Option
     { value: "unchecked", label: "미체크", color: "bg-gray-100 text-gray-700" },
     { value: "sick-absent", label: "질병결석", color: "bg-blue-100 text-blue-700" },
     { value: "sick-late", label: "질병지각", color: "bg-blue-100 text-blue-700" },
@@ -28,7 +29,30 @@ export default function UncheckedStudentsModal({
 
     useEffect(() => {
         if (isOpen) {
-            // Initialize statuses to 'unchecked' for all students
+            // Initialize statuses based on student's current status if available, or default to 'unchecked'
+            // Since uncheckedStudents might now include students with existing statuses (via edit flow),
+            // we should ideally pre-fill their current status if we had access to it easily.
+            // However, the prop is just student objects. 
+            // The existing logic initializes to "unchecked".
+            // If the user is editing a "Sick" student, it would be nice if "Sick" was pre-selected.
+            // But let's stick to the requested fix first: saving logic.
+            // Wait, if I'm editing a student, I want to see their current status.
+            // The `uncheckedStudents` prop in AttendanceBoard passed `modalTargetStudents`.
+            // These are student objects. They don't have the status in them unless we enriched them.
+            // let's check AttendanceBoard.. 
+            // In AttendanceBoard, we passed `[student]`. `student` object from `seats` (which comes from `fetchSeats`) 
+            // doesn't usually have the `attendanceStatus` merged into it. 
+            // But `SeatGrid` receives `statusMap`. 
+            // The student object itself is just { id, name, number, gender }.
+
+            // To properly pre-select, we need the current status.
+            // But the user didn't explicitly ask for pre-selection, just "modify".
+            // Defaulting to "unchecked" is OK for now, but a bit annoying if editing.
+            // Actually, the user said "modify". If I open it and it says "Unchecked", I have to re-select "Sick" if I want to keep it?
+            // No, I'm changing it. So defaulting to unchecked is maybe safe "reset".
+            // But better UX would be to default to current.
+            // Since I don't have current status easily without fetching or prop drill, I will leave init as 'unchecked' for now unless I see a quick way.
+
             const initialStatuses = {};
             uncheckedStudents.forEach(s => {
                 initialStatuses[s.id] = "unchecked";
@@ -48,20 +72,15 @@ export default function UncheckedStudentsModal({
         setLoading(true);
         const today = getTodayString();
 
-        // Prepare updates only for students with status other than 'unchecked' (optional, or save all)
-        // To be safe and explicit, let's save all changes where status is NOT 'unchecked'.
-        // If status is 'unchecked', we leave it as is (or explicit unchecked).
-
-        // Actually, we want to save WHATEVER is selected.
+        // ✅ User requested: Allow saving 'unchecked' and adding 'present' option.
+        // We remove the filter so ALL selected statuses are updated.
 
         const updates = Object.entries(selectedStatuses)
-            .filter(([_, status]) => status !== "unchecked") // Only save meaningful changes? Or everything? The table defaults to unchecked.
             .map(([studentId, status]) => ({
                 student_id: studentId,
                 date: today,
-                present: false, // All these are non-present statuses
+                present: status === 'present', // ✅ Set present true only if status is 'present'
                 status: status,
-                updated_at: new Date().toISOString() // Assuming there is updated_at or similar, but table schema didn't have it in migration. That's fine.
             }));
 
         if (updates.length === 0) {

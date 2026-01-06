@@ -9,8 +9,7 @@ const GROUP_COLOR_MAP = {
 
 function SeatGrid({
   seats,
-  activeMap,        // 활성화 여부 맵 (key: student.id, value: boolean) - 등교여부, 착석여부 등
-  disabledMap = {}, // 비활성화 여부 맵 (key: student.id, value: boolean) - 결석 등
+  statusMap = {},   // ✅ 상세 상태 맵 (key: student.id, value: status string)
   onToggleAttendance, // 좌석 클릭 시 실행될 함수
   onOpenMission,      // 미션 버튼 클릭 시 실행될 함수
   totalCols,          // 그리드 컬럼 수 (반응형/고정값)
@@ -30,22 +29,14 @@ function SeatGrid({
     >
       {seats.map((seat) => {
         const student = seat.students || null;
-
-        let isActive = false;
-        let isDisabled = false;
-
-        if (student) {
-          isActive = !!activeMap[student.id];
-          isDisabled = !!disabledMap[student.id];
-        }
+        const status = student ? (statusMap[student.id] || 'unchecked') : null;
 
         return (
           <Seat
             key={seat.id}
             seat={seat}
             student={student}
-            isActive={isActive}
-            isDisabled={isDisabled}
+            status={status}
             onToggleAttendance={onToggleAttendance}
             onOpenMission={onOpenMission}
             alwaysActiveMission={alwaysActiveMission} // 자식에게 옵션 전달
