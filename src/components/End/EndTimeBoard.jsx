@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { getTodayString } from "../../utils/dateUtils";
 import EndTaskModal from "./EndTaskModal";
 import useEndRoutine from "../../hooks/End/useEndRoutine";
 import GenericRoutineSidebar from "../shared/GenericRoutineSidebar";
@@ -51,7 +52,7 @@ export default function EndTimeBoard() {
     saveRoutineTitle,
   } = endRoutine;
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => getTodayString(), []);
 
   const fetchStudents = useCallback(async () => {
     const { data, error } = await supabase

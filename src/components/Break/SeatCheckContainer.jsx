@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getTodayString } from "../../utils/dateUtils";
 import { supabase } from "../../lib/supabaseClient";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
 
@@ -26,14 +27,7 @@ export default function SeatCheckContainer({ blockId, students }) {
   const [modalType, setModalType] = useState(null); // "seat" or "unseat"
 
   // 오늘 날짜 "YYYY-MM-DD" 형식으로 만들기 (로컬 시간 기준)
-  const getToday = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-  const today = getToday();
+  const today = getTodayString();
 
   // 2) 오늘자 착석 상태 불러오기
   // - blockId가 없으면(자동전환 OFF + 아직 쉬는시간 선택 전) 빈 상태맵을 반환
@@ -168,10 +162,9 @@ export default function SeatCheckContainer({ blockId, students }) {
                   }}
                   disabled={isSaving}
                   className={`px-3 py-2 rounded-full text-sm font-semibold shadow-sm transition
-                    ${
-                      seated
-                        ? "bg-emerald-500 text-white"
-                        : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                    ${seated
+                      ? "bg-emerald-500 text-white"
+                      : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
                     }${isSaving ? " opacity-60 cursor-not-allowed" : ""}`}
                 >
                   {student.name}
@@ -190,7 +183,7 @@ export default function SeatCheckContainer({ blockId, students }) {
             })}
           </div>
         </div>
-        
+
         {/* 🛑 여학생 (오른쪽으로 이동) */}
         <div>
           <h4 className="text-sm font-semibold text-pink-600 mb-2">
@@ -209,10 +202,9 @@ export default function SeatCheckContainer({ blockId, students }) {
                   }}
                   disabled={isSaving}
                   className={`px-3 py-2 rounded-full text-sm font-semibold shadow-sm transition
-                    ${
-                      seated
-                        ? "bg-emerald-500 text-white"
-                        : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                    ${seated
+                      ? "bg-emerald-500 text-white"
+                      : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
                     }${isSaving ? " opacity-60 cursor-not-allowed" : ""}`}
                 >
                   {student.name}
@@ -261,12 +253,12 @@ export default function SeatCheckContainer({ blockId, students }) {
               {modalType === "seat" ? (
                 <>
                   <span className="text-2xl font-black text-blue-600">{modalStudent.name}</span>
-                  <span className="text-gray-700"> <br/>착석 처리할까요?</span>
+                  <span className="text-gray-700"> <br />착석 처리할까요?</span>
                 </>
               ) : (
                 <>
                   <span className="text-2xl font-black text-blue-600">{modalStudent.name}</span>
-                  <span className="text-gray-700"> <br/>착석 취소할까요?</span>
+                  <span className="text-gray-700"> <br />착석 취소할까요?</span>
                 </>
               )}
             </h3>

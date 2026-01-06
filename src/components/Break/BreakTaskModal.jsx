@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import BaseModal from "../common/BaseModal";
 import confetti from "canvas-confetti";
+import { getTodayString } from "../../utils/dateUtils";
 import { supabase } from "../../lib/supabaseClient";
 
 // 🔥 도장 버튼 컴포넌트
@@ -37,7 +38,7 @@ function BreakTaskModal({
     const [saving, setSaving] = useState(false);
     const [loaded, setLoaded] = useState(false);
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayString();
 
     useEffect(() => {
         if (isOpen) {

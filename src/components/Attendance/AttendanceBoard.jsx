@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
+import { getTodayString } from "../../utils/dateUtils";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import AttendanceTaskModal from "./AttendanceTaskModal";
 import SeatGrid from "./SeatGrid";
 import AttendanceConfirmModal from "./AttendanceConfirmModal";
 
 function AttendanceBoard() {
-  const today = new Date().toISOString().split("T")[0]; // 오늘 날짜 (YYYY-MM-DD)
+  const today = getTodayString(); // 오늘 날짜 (Local Time)
   const todayLabel = new Date().toLocaleDateString("ko-KR", {
     month: "long",
     day: "numeric",
@@ -169,7 +168,7 @@ function AttendanceBoard() {
   }, []);
 
   const markPresent = async (id) => {
-    const today = new Date().toISOString().split("T")[0]; // today 변수 재정의
+    const today = getTodayString(); // today 변수 재정의
 
     const isPresent = attendanceStatus.some(
       (a) => a.student_id === id && a.present

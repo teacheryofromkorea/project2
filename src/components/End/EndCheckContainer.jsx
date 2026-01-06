@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getTodayString } from "../../utils/dateUtils";
 import { supabase } from "../../lib/supabaseClient";
 
 /*
@@ -16,14 +17,7 @@ export default function EndCheckContainer({ students }) {
   const [modalType, setModalType] = useState(null); // "check" | "uncheck"
 
   // 오늘 날짜 YYYY-MM-DD
-  const getToday = () => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  };
-  const today = getToday();
+  const today = getTodayString();
 
   /* ===============================
      오늘 하교 체크 상태
@@ -128,10 +122,9 @@ export default function EndCheckContainer({ students }) {
                   }}
                   disabled={isSaving}
                   className={`px-3 py-2 rounded-full text-sm font-semibold shadow-sm transition
-                    ${
-                      checked
-                        ? "bg-emerald-500 text-white"
-                        : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                    ${checked
+                      ? "bg-emerald-500 text-white"
+                      : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
                     }${isSaving ? " opacity-60 cursor-not-allowed" : ""}`}
                 >
                   {student.name}
@@ -158,10 +151,9 @@ export default function EndCheckContainer({ students }) {
                   }}
                   disabled={isSaving}
                   className={`px-3 py-2 rounded-full text-sm font-semibold shadow-sm transition
-                    ${
-                      checked
-                        ? "bg-emerald-500 text-white"
-                        : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                    ${checked
+                      ? "bg-emerald-500 text-white"
+                      : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
                     }${isSaving ? " opacity-60 cursor-not-allowed" : ""}`}
                 >
                   {student.name}
@@ -207,10 +199,9 @@ export default function EndCheckContainer({ students }) {
                   setModalType(null);
                 }}
                 className={`w-full py-3 rounded-2xl text-white shadow-md text-sm font-semibold
-                  ${
-                    modalType === "check"
-                      ? "bg-green-500 hover:bg-green-600"
-                      : "bg-red-500 hover:bg-red-600"
+                  ${modalType === "check"
+                    ? "bg-green-500 hover:bg-green-600"
+                    : "bg-red-500 hover:bg-red-600"
                   }`}
               >
                 확인

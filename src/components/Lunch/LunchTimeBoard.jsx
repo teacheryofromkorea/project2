@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { getTodayString } from "../../utils/dateUtils";
 import { supabase } from "../../lib/supabaseClient";
 import LunchTaskModal from "./LunchTaskModal";
 import useLunchRoutine from "../../hooks/Lunch/useLunchRoutine";
@@ -50,7 +51,7 @@ export default function LunchTimeBoard() {
     saveRoutineTitle,
   } = useLunchRoutine();
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => getTodayString(), []);
 
   const fetchStudents = useCallback(async () => {
     const { data, error } = await supabase

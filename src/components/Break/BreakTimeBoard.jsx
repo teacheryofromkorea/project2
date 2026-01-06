@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { getTodayString } from "../../utils/dateUtils";
 import useBreakBlockSelection from "../../hooks/Break/useBreakBlockSelection";
 import { supabase } from "../../lib/supabaseClient";
 import BreakTaskModal from "./BreakTaskModal";
@@ -60,7 +61,7 @@ export default function BreakTimeBoard() {
     saveRoutineTitle,
   } = useBreakRoutine({ routineId: ROUTINE_ID });
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => getTodayString(), []);
 
   const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
 

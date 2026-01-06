@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLock } from "../../context/LockContext";
+import { getTodayString } from "../../utils/dateUtils";
 import { supabase } from "../../lib/supabaseClient";
 
 const TOOL_TAB_STORAGE_KEY = "tools_active_tab_v1";
@@ -59,7 +60,7 @@ function ToolsPage() {
 
   const [students, setStudents] = useState([]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayString();
 
   useEffect(() => {
     const fetchStudentsWithAttendance = async () => {

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { getTodayString } from "../../utils/dateUtils";
 import ClassSeatDeck from "./ClassSeatDeck";
 import ClassStatModal from "./ClassStatModal";
 import BaseModal from "../common/BaseModal";
@@ -45,7 +46,8 @@ function ClassPage() {
 
   const [attendanceStatus, setAttendanceStatus] = useState([]);
 
-  const today = new Date().toISOString().slice(0, 10);
+
+  const today = getTodayString();
 
   const presentStudentIds = useMemo(
     () => attendanceStatus.map((row) => row.student_id),
@@ -302,7 +304,7 @@ function ClassPage() {
       .map(([studentId, point]) => ({
         student_id: studentId,
         class_block_id: selectedClassBlockId,
-        date: new Date().toISOString().slice(0, 10), // YYYY-MM-DD
+        date: getTodayString(), // YYYY-MM-DD
         delta: point,
         reason: "수업 상점",
       }));
