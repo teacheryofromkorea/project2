@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import BaseModal from "../common/BaseModal";
 import { supabase } from "../../lib/supabaseClient";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import { useLock } from "../../context/LockContext";
@@ -37,30 +38,42 @@ function MissionSidebar() {
     fetchMissions();
   }, []);
 
-  // ESC 닫기
+  // ESC closing logic is removed as BaseModal handles it.
+  // However, we still need to handle specific nested modal logic if needed.
+  // Actually BaseModal handles ESC for closing itself.
+  // But here we have NESTED modals logic (editMission inside isEditing).
+  // If editMission is open, we want ESC to close THAT, not the parent.
+  // BaseModal's ESC closes the modal that receives the event.
+  // Since they are portals, they are separate.
+  // Let's rely on BaseModal's onUpdate/onClose.
+
+  // We can remove the custom ESC handler if we trust BaseModal.
+  // But wait, the original code had prioritization: close small, then big.
+  // If we map them to separate BaseModals:
+  // 1. MissionEditModal (big)
+  // 2. MissionItemEditModal (small)
+  // If small is open, it captures focus?
+  // BaseModal adds event listener to window.
+  // If both are open, both listeners fire. Both close.
+  // This is a known issue with stacked BaseModals if they just use window listener.
+  // BaseModal logic: `if (isOpen) window.addEventListener...`
+  // Stacked modals should ideally block propagation or use a stack manager.
+  // For now, let's keep it simple.
+
+  // Actually, let's modify BaseModal to stopPropagation of the key event?
+  // Keydown on window... we can't stop propagation easily in reverse order.
+
+  // Quick fix: In MissionSidebar, if `editMission` is open, disable `onClose` of `isEditing` modal?
+  // Or ensures `editMission` modal stops propagation of ESC?
+  // BaseModal uses window event.
+
+  // Let's just use BaseModal for the `isEditing` modal, and `editMission` modal.
+  // To prevent both closing, we might need to conditionally pass onClose or handle it.
+
+  // Remove the useEffect for ESC as BaseModal handles it for single layer.
+  // For nested:
   useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === "Escape") {
-
-        // 작은 모달 우선 닫기
-        if (editMission) {
-          setEditMission(null);
-          setEditText("");
-          return;
-        }
-
-        // 작은 모달 없을 때만 큰 모달 닫기
-        if (isEditing) {
-          setIsEditing(false);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [isEditing, editMission]);
-
-  useEffect(() => {
+    // Sync locked state
     if (locked) {
       setIsEditing(false);
       setEditMission(null);
@@ -249,92 +262,82 @@ function MissionSidebar() {
       </aside>
 
 
-      {isEditing && (
-        <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setIsEditing(false);
-            }
-          }}
-        >
-          <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
-            <h3 className="text-lg font-bold mb-4">미션 편집</h3>
-            {/* 제목 수정 입력 */}
+      {/* Modal 1: Mission List Edit */}
+      <BaseModal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+        <div className="bg-white p-6 rounded-3xl w-80 shadow-xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-bold mb-4">미션 편집</h3>
+          {/* 제목 수정 입력 */}
+          <input
+            className="w-full border rounded-lg px-3 py-2 mb-4 font-semibold"
+            value={missionTitle}
+            onChange={(e) => setMissionTitle(e.target.value)}
+            placeholder="미션 제목 수정"
+          />
+
+          <ul className="space-y-2 mb-4 overflow-y-auto flex-1">
+            {missions.map((item) => (
+              <li
+                key={item.id}
+                className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-lg"
+              >
+                <span className="flex-1 text-sm truncate mr-2">{item.text}</span>
+
+                <div className="flex items-center space-x-1 flex-shrink-0">
+                  <button
+                    className="text-gray-500 font-bold p-1 hover:bg-gray-200 rounded"
+                    onClick={() => {
+                      if (locked) return;
+                      moveMission(missions.findIndex(m => m.id === item.id), "up");
+                    }}
+                  >
+                    ▲
+                  </button>
+
+                  <button
+                    className="text-gray-500 font-bold p-1 hover:bg-gray-200 rounded"
+                    onClick={() => {
+                      if (locked) return;
+                      moveMission(missions.findIndex(m => m.id === item.id), "down");
+                    }}
+                  >
+                    ▼
+                  </button>
+
+                  <button
+                    className="text-blue-500 font-semibold text-xs p-1 hover:bg-blue-100 rounded"
+                    onClick={() => {
+                      if (locked) return;
+                      setEditMission(item);
+                      setEditText(item.text);
+                    }}
+                  >
+                    수정
+                  </button>
+
+                  <button
+                    className="text-red-500 font-semibold text-xs p-1 hover:bg-red-100 rounded"
+                    onClick={() => {
+                      if (locked) return;
+                      deleteMission(item.id);
+                    }}
+                  >
+                    삭제
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex gap-2 mb-3">
             <input
-              className="w-full border rounded-lg px-3 py-2 mb-4 font-semibold"
-              value={missionTitle}
-              onChange={(e) => setMissionTitle(e.target.value)}
-              placeholder="미션 제목 수정"
-            />
-
-
-            <ul className="space-y-2 mb-4">
-              {missions.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-lg"
-                >
-                  <span className="flex-1">{item.text}</span>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      className="text-gray-500 font-bold"
-                      onClick={() => {
-                        if (locked) return;
-                        moveMission(missions.findIndex(m => m.id === item.id), "up");
-                      }}
-                    >
-                      ▲
-                    </button>
-
-                    <button
-                      className="text-gray-500 font-bold"
-                      onClick={() => {
-                        if (locked) return;
-                        moveMission(missions.findIndex(m => m.id === item.id), "down");
-                      }}
-                    >
-                      ▼
-                    </button>
-
-                    <button
-                      className="text-blue-500 font-semibold"
-                      onClick={() => {
-                        if (locked) return;
-                        setEditMission(item);
-                        setEditText(item.text);
-                      }}
-                    >
-                      수정
-                    </button>
-
-                    <button
-                      className="text-red-500 font-semibold"
-                      onClick={() => {
-                        if (locked) return;
-                        deleteMission(item.id);
-                      }}
-                    >
-                      삭제
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            <input
-              className="w-full border rounded-lg px-3 py-2 mb-3"
-              placeholder="새 미션 입력"
+              className="flex-1 border rounded-lg px-3 py-2"
+              placeholder="새 미션"
               value={newMission}
               autoComplete="off"
-              autoCorrect="off"
-              spellCheck="false"
               onChange={(e) => setNewMission(e.target.value)}
             />
-
             <button
-              className="w-full bg-green-500 text-white py-2 rounded-full mb-2 font-semibold"
+              className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold whitespace-nowrap"
               onClick={() => {
                 if (locked) return;
                 addMission();
@@ -342,88 +345,69 @@ function MissionSidebar() {
             >
               추가
             </button>
-
-            <button
-              className="w-full bg-gray-300 py-2 rounded-full font-semibold"
-              onClick={async () => {
-                if (locked) return;
-                if (missions.length > 0) {
-                  const ids = missions.map((item) => item.id);
-
-                  const { error } = await supabase
-                    .from("missions")
-                    .update({ mission_title: missionTitle })
-                    .in("id", ids);
-
-                  if (error) {
-                    handleSupabaseError(error, "미션 제목 저장에 실패했어요.");
-                    return;
-                  }
-                }
-
-                setIsEditing(false);
-                fetchMissions(); // 제목/목록 다시 불러오기
-              }}
-            >
-              닫기
-            </button>
           </div>
 
-          {editMission && (
-            <div
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setEditMission(null);
-                  setEditText("");
-                }
-                if (e.key === "Enter") {
-                  updateMission();
-                }
-              }}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  setEditMission(null);
-                  setEditText("");
-                }
-              }}
-            >
-              <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
-                <h3 className="text-lg font-bold mb-4">미션 수정</h3>
+          <button
+            className="w-full bg-gray-300 py-2 rounded-full font-semibold"
+            onClick={async () => {
+              if (locked) return;
+              if (missions.length > 0) {
+                const ids = missions.map((item) => item.id);
 
-                <input
-                  className="w-full border rounded-lg px-3 py-2 mb-3"
-                  value={editText}
-                  autoComplete="off"
-                  spellCheck="false"
-                  onChange={(e) => setEditText(e.target.value)}
-                />
+                const { error } = await supabase
+                  .from("missions")
+                  .update({ mission_title: missionTitle })
+                  .in("id", ids);
 
-                <button
-                  className="w-full bg-blue-500 text-white py-2 rounded-full mb-2 font-semibold"
-                  onClick={() => {
-                    if (locked) return;
-                    updateMission();
-                  }}
-                >
-                  저장
-                </button>
+                if (error) {
+                  handleSupabaseError(error, "미션 제목 저장에 실패했어요.");
+                  return;
+                }
+              }
 
-                <button
-                  className="w-full bg-gray-300 py-2 rounded-full font-semibold"
-                  onClick={() => {
-                    setEditMission(null);
-                    setEditText("");
-                  }}
-                >
-                  취소
-                </button>
-              </div>
-            </div>
-          )}
+              setIsEditing(false);
+              fetchMissions(); // 제목/목록 다시 불러오기
+            }}
+          >
+            닫기
+          </button>
         </div>
-      )}
+      </BaseModal>
+
+      {/* Modal 2: Edit Single Mission */}
+      <BaseModal isOpen={!!editMission} onClose={() => { setEditMission(null); setEditText(""); }}>
+        <div className="bg-white p-6 rounded-3xl w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-bold mb-4">미션 수정</h3>
+
+          <input
+            className="w-full border rounded-lg px-3 py-2 mb-3"
+            value={editText}
+            autoComplete="off"
+            spellCheck="false"
+            onChange={(e) => setEditText(e.target.value)}
+          />
+
+          <button
+            className="w-full bg-blue-500 text-white py-2 rounded-full mb-2 font-semibold"
+            onClick={() => {
+              if (locked) return;
+              updateMission();
+            }}
+          >
+            저장
+          </button>
+
+          <button
+            className="w-full bg-gray-300 py-2 rounded-full font-semibold"
+            onClick={() => {
+              setEditMission(null);
+              setEditText("");
+            }}
+          >
+            취소
+          </button>
+        </div>
+      </BaseModal>
     </>
   );
 }

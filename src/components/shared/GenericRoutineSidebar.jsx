@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import BaseModal from "../common/BaseModal";
 import { useLock } from "../../context/LockContext";
 
 /**
@@ -29,23 +30,7 @@ export default function GenericRoutineSidebar({
     const { locked } = useLock();
     const [isEditing, setIsEditing] = useState(false);
 
-    useEffect(() => {
-        const handleKey = (e) => {
-            if (e.key === "Escape") {
-                if (editRoutine !== null && editRoutine !== undefined) {
-                    setEditRoutine?.(null);
-                    setEditText?.("");
-                    return;
-                }
-                if (isEditing) {
-                    setIsEditing(false);
-                }
-            }
-        };
-
-        window.addEventListener("keydown", handleKey);
-        return () => window.removeEventListener("keydown", handleKey);
-    }, [isEditing, editRoutine, setEditRoutine, setEditText]);
+    // ESC handler removed (BaseModal handles it)
 
     useEffect(() => {
         if (locked) {
@@ -131,123 +116,112 @@ export default function GenericRoutineSidebar({
             </aside>
 
             {/* Edit Modal */}
-            {isEditing && (
-                <div
-                    className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            setIsEditing(false);
-                        }
-                    }}
-                >
-                    <div className="bg-white p-6 rounded-3xl w-[400px] shadow-xl">
-                        <h3 className="text-xl font-bold mb-4">루틴 편집</h3>
+            <BaseModal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+                <div className="bg-white p-6 rounded-3xl w-[400px] shadow-xl" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-xl font-bold mb-4">루틴 편집</h3>
 
-                        <label className="block text-sm font-medium text-gray-700 mb-2">루틴 제목</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">루틴 제목</label>
+                    <input
+                        className="w-full border rounded-lg px-3 py-2 mb-4 font-semibold"
+                        value={tempTitle || routineTitle}
+                        onChange={(e) => setTempTitle?.(e.target.value)}
+                    />
+
+                    <ul className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                        {routineItems.map((item, index) => (
+                            <li key={item.id || index} className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-lg text-sm">
+                                <span className="flex-1 truncate mr-2">{item.text || item.content}</span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button onClick={() => { if (locked) return; moveRoutine?.(index, "up"); }} className="text-gray-500 font-bold">▲</button>
+                                    <button onClick={() => { if (locked) return; moveRoutine?.(index, "down"); }} className="text-gray-500 font-bold">▼</button>
+                                    <button
+                                        onClick={() => {
+                                            if (locked) return;
+                                            setEditRoutine?.(item);
+                                            setEditText?.(item.text || item.content);
+                                        }}
+                                        className="text-blue-600 hover:text-blue-800 font-semibold"
+                                    >
+                                        수정
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (locked) return;
+                                            deleteRoutineItem?.(item.id);
+                                        }}
+                                        className="text-red-600 hover:text-red-800 font-bold"
+                                    >
+                                        삭제
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+
+                    <label className="block text-sm font-medium text-gray-700 mb-2">새 루틴 항목</label>
+                    <div className="flex gap-2 mb-6">
                         <input
-                            className="w-full border rounded-lg px-3 py-2 mb-4 font-semibold"
-                            value={tempTitle || routineTitle}
-                            onChange={(e) => setTempTitle?.(e.target.value)}
-                        />
-
-                        <ul className="space-y-2 mb-4 max-h-48 overflow-y-auto">
-                            {routineItems.map((item, index) => (
-                                <li key={item.id || index} className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-lg text-sm">
-                                    <span className="flex-1 truncate mr-2">{item.text || item.content}</span>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <button onClick={() => { if (locked) return; moveRoutine?.(index, "up"); }} className="text-gray-500 font-bold">▲</button>
-                                        <button onClick={() => { if (locked) return; moveRoutine?.(index, "down"); }} className="text-gray-500 font-bold">▼</button>
-                                        <button
-                                            onClick={() => {
-                                                if (locked) return;
-                                                setEditRoutine?.(item);
-                                                setEditText?.(item.text || item.content);
-                                            }}
-                                            className="text-blue-600 hover:text-blue-800 font-semibold"
-                                        >
-                                            수정
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                if (locked) return;
-                                                deleteRoutineItem?.(item.id);
-                                            }}
-                                            className="text-red-600 hover:text-red-800 font-bold"
-                                        >
-                                            삭제
-                                        </button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-
-                        <label className="block text-sm font-medium text-gray-700 mb-2">새 루틴 항목</label>
-                        <div className="flex gap-2 mb-6">
-                            <input
-                                type="text"
-                                placeholder="새 루틴 추가"
-                                value={newContent || ""}
-                                onChange={(e) => setNewContent?.(e.target.value)}
-                                className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
-                            />
-                            <button
-                                onClick={() => { if (locked) return; addRoutineItem?.(); }}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                            >
-                                추가
-                            </button>
-                        </div>
-
-                        <div className="flex justify-end gap-2">
-                            <button
-                                onClick={() => {
-                                    if (locked) return;
-                                    setIsEditing(false);
-                                }}
-                                className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-                            >
-                                닫기
-                            </button>
-                            <button
-                                onClick={handleSaveAndClose}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                            >
-                                저장
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Edit Item Modal */}
-            {editRoutine && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60]">
-                    <div className="bg-white p-6 rounded-2xl w-[300px] shadow-xl">
-                        <h3 className="text-lg font-bold mb-4">루틴 수정</h3>
-                        <input
-                            value={editText || ""}
-                            onChange={(e) => setEditText?.(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            type="text"
+                            placeholder="새 루틴 추가"
+                            value={newContent || ""}
+                            onChange={(e) => setNewContent?.(e.target.value)}
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
                         />
                         <button
-                            onClick={() => { if (locked) return; updateRoutine?.(); }}
-                            className="w-full bg-blue-600 text-white rounded-full py-2 mb-2 font-semibold"
+                            onClick={() => { if (locked) return; addRoutineItem?.(); }}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                         >
-                            저장
+                            추가
                         </button>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
                         <button
                             onClick={() => {
                                 if (locked) return;
-                                setEditRoutine?.(null);
-                                setEditText?.("");
+                                setIsEditing(false);
                             }}
-                            className="w-full bg-gray-300 rounded-full py-2 font-semibold"
+                            className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
                         >
-                            취소
+                            닫기
+                        </button>
+                        <button
+                            onClick={handleSaveAndClose}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                            저장
                         </button>
                     </div>
                 </div>
-            )}
+            </BaseModal>
+
+            {/* Edit Item Modal */}
+            <BaseModal isOpen={!!editRoutine} onClose={() => { setEditRoutine?.(null); setEditText?.(""); }}>
+                <div className="bg-white p-6 rounded-2xl w-[300px] shadow-xl" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-lg font-bold mb-4">루틴 수정</h3>
+                    <input
+                        value={editText || ""}
+                        onChange={(e) => setEditText?.(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                        onClick={() => { if (locked) return; updateRoutine?.(); }}
+                        className="w-full bg-blue-600 text-white rounded-full py-2 mb-2 font-semibold"
+                    >
+                        저장
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (locked) return;
+                            setEditRoutine?.(null);
+                            setEditText?.("");
+                        }}
+                        className="w-full bg-gray-300 rounded-full py-2 font-semibold"
+                    >
+                        취소
+                    </button>
+                </div>
+            </BaseModal>
         </>
     );
 }

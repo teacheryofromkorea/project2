@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { createPortal } from "react-dom";
+import React from "react";
+import BaseModal from "../common/BaseModal";
 
 
 
@@ -19,13 +19,8 @@ export default function GachaResultModal({
   rewardLabel,
   onClose,
 }) {
-  if (!isOpen || !pet) return null;
-
-  useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // isOpen check managed by BaseModal
+  if (!pet) return null;
 
   // 🎨 등급별 테마 설정
   const theme = {
@@ -71,24 +66,28 @@ export default function GachaResultModal({
     },
   }[pet.rarity];
 
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
-      {/* Dim Overlay */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-500 pointer-events-auto"
-        onClick={onClose}
-      />
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      // BaseModal의 기본 transition 애니메이션 비활성화 (CSS 애니메이션 충돌 방지)
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0 }}
+    >
+      <div className="relative flex items-center justify-center pointer-events-none">
 
-      {/* ✨ Legendary Background Rays (Screen Wide) */}
-      {pet.rarity === "legendary" && (
-        <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
-          <div className="w-[150vw] h-[150vw] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(255,215,0,0.1)_20deg,transparent_40deg,rgba(255,215,0,0.1)_60deg,transparent_80deg,rgba(255,215,0,0.1)_100deg,transparent_120deg,rgba(255,215,0,0.1)_140deg,transparent_160deg,rgba(255,215,0,0.1)_180deg,transparent_200deg,rgba(255,215,0,0.1)_220deg,transparent_240deg,rgba(255,215,0,0.1)_260deg,transparent_280deg,rgba(255,215,0,0.1)_300deg,transparent_320deg,rgba(255,215,0,0.1)_340deg,transparent_360deg)] animate-spin-slow-custom opacity-50" />
-        </div>
-      )}
+        {/* ✨ Legendary Background Rays (Screen Wide) - Moved inside BaseModal content but positioned fixed/absolute */}
+        {pet.rarity === "legendary" && (
+          <div className="fixed inset-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
+            <div className="w-[150vw] h-[150vw] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(255,215,0,0.1)_20deg,transparent_40deg,rgba(255,215,0,0.1)_60deg,transparent_80deg,rgba(255,215,0,0.1)_100deg,transparent_120deg,rgba(255,215,0,0.1)_140deg,transparent_160deg,rgba(255,215,0,0.1)_180deg,transparent_200deg,rgba(255,215,0,0.1)_220deg,transparent_240deg,rgba(255,215,0,0.1)_260deg,transparent_280deg,rgba(255,215,0,0.1)_300deg,transparent_320deg,rgba(255,215,0,0.1)_340deg,transparent_360deg)] animate-spin-slow-custom opacity-50" />
+          </div>
+        )}
 
-      {/* 🃏 Card Container */}
-      <div
-        className={`
+        {/* 🃏 Card Container */}
+        <div
+          className={`
           relative z-10 w-[380px] rounded-[32px] p-8
           flex flex-col items-center pointer-events-auto
           shadow-2xl transition-all duration-500
@@ -97,94 +96,94 @@ export default function GachaResultModal({
           ${pet.rarity === "epic" ? "shadow-[0_0_50px_rgba(168,85,247,0.3)]" : ""}
           ${theme.animation}
         `}
-      >
-        {/* ✨ Background Effects per Rarity */}
-        {pet.rarity === "rare" && (
-          <div className="absolute inset-0 overflow-hidden rounded-[30px] pointer-events-none">
-            <div className="absolute top-0 left-[-100%] w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg] animate-shine" />
-          </div>
-        )}
+        >
+          {/* ✨ Background Effects per Rarity */}
+          {pet.rarity === "rare" && (
+            <div className="absolute inset-0 overflow-hidden rounded-[30px] pointer-events-none">
+              <div className="absolute top-0 left-[-100%] w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg] animate-shine" />
+            </div>
+          )}
 
-        {pet.rarity === "epic" && (
-          <div className="absolute inset-0 overflow-hidden rounded-[30px] pointer-events-none">
-            <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)] animate-pulse" />
-            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 blur-[50px] rounded-full" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-500/20 blur-[50px] rounded-full" />
-          </div>
-        )}
+          {pet.rarity === "epic" && (
+            <div className="absolute inset-0 overflow-hidden rounded-[30px] pointer-events-none">
+              <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle,rgba(168,85,247,0.1)_0%,transparent_70%)] animate-pulse" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 blur-[50px] rounded-full" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-500/20 blur-[50px] rounded-full" />
+            </div>
+          )}
 
-        {/* 🏷️ Badge */}
-        <div className={`
+          {/* 🏷️ Badge */}
+          <div className={`
           flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase mb-6
           ${theme.badgeData.color}
         `}>
-          <span>{theme.badgeData.icon}</span>
-          <span>{theme.badgeData.label}</span>
-        </div>
-
-        {/* 🦁 Pet Circle */}
-        <div className="relative mb-6">
-          {/* Epic/Legendary Back Glow */}
-          {(pet.rarity === "epic" || pet.rarity === "legendary") && (
-            <div className={`absolute inset-0 rounded-full blur-2xl opacity-50 scale-110 ${pet.rarity === "legendary" ? "bg-yellow-500" : "bg-purple-500"}`} />
-          )}
-
-          <div className={`
-            relative z-10 w-40 h-40 rounded-full flex items-center justify-center text-8xl shadow- inner
-            ${pet.rarity === "legendary" ? "bg-gradient-to-br from-yellow-300 to-amber-600 border-4 border-yellow-200" :
-              pet.rarity === "epic" ? "bg-gradient-to-br from-purple-400 to-indigo-600 border-4 border-purple-300/50" :
-                pet.rarity === "rare" ? "bg-gradient-to-br from-blue-400 to-cyan-300 border-4 border-white" :
-                  "bg-gray-100 border-4 border-white"}
-            shadow-xl
-          `}>
-            <span className="drop-shadow-md transform hover:scale-110 transition-transform duration-300">{pet.emoji}</span>
+            <span>{theme.badgeData.icon}</span>
+            <span>{theme.badgeData.label}</span>
           </div>
 
-          {/* Legendary Crown/Sparkles */}
-          {pet.rarity === "legendary" && (
-            <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-4xl animate-bounce pointer-events-none">👑</div>
-          )}
-        </div>
+          {/* 🦁 Pet Circle */}
+          <div className="relative mb-6">
+            {/* Epic/Legendary Back Glow */}
+            {(pet.rarity === "epic" || pet.rarity === "legendary") && (
+              <div className={`absolute inset-0 rounded-full blur-2xl opacity-50 scale-110 ${pet.rarity === "legendary" ? "bg-yellow-500" : "bg-purple-500"}`} />
+            )}
 
-        {/* 📝 Name */}
-        <h2 className={`text-2xl font-black mb-2 text-center ${theme.text}`}>
-          {pet.name}
-        </h2>
+            <div className={`
+            relative z-10 w-40 h-40 rounded-full flex items-center justify-center text-8xl shadow- inner
+            ${pet.rarity === "legendary" ? "bg-gradient-to-br from-yellow-300 to-amber-600 border-4 border-yellow-200" :
+                pet.rarity === "epic" ? "bg-gradient-to-br from-purple-400 to-indigo-600 border-4 border-purple-300/50" :
+                  pet.rarity === "rare" ? "bg-gradient-to-br from-blue-400 to-cyan-300 border-4 border-white" :
+                    "bg-gray-100 border-4 border-white"}
+            shadow-xl
+          `}>
+              <span className="drop-shadow-md transform hover:scale-110 transition-transform duration-300">{pet.emoji}</span>
+            </div>
 
-        {/* 📄 Description */}
-        <p className={`text-sm text-center mb-6 leading-relaxed px-2 ${theme.subText}`}>
-          {pet.description || "새로운 친구를 획득했습니다! 이 친구가 마음에 드시나요?"}
-        </p>
+            {/* Legendary Crown/Sparkles */}
+            {pet.rarity === "legendary" && (
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-4xl animate-bounce pointer-events-none">👑</div>
+            )}
+          </div>
 
-        {/* ♻️ Duplicate Info */}
-        {isDuplicate && (
-          <div className={`
+          {/* 📝 Name */}
+          <h2 className={`text-2xl font-black mb-2 text-center ${theme.text}`}>
+            {pet.name}
+          </h2>
+
+          {/* 📄 Description */}
+          <p className={`text-sm text-center mb-6 leading-relaxed px-2 ${theme.subText}`}>
+            {pet.description || "새로운 친구를 획득했습니다! 이 친구가 마음에 드시나요?"}
+          </p>
+
+          {/* ♻️ Duplicate Info */}
+          {isDuplicate && (
+            <div className={`
             w-full mb-6 p-4 rounded-xl text-center
             ${pet.rarity === "legendary" || pet.rarity === "epic" ? "bg-white/10" : "bg-gray-50"}
           `}>
-            <div className={`text-xs font-bold mb-1 ${pet.rarity === "legendary" || pet.rarity === "epic" ? "text-white/90" : "text-gray-900"}`}>
-              이미 함께하고 있는 친구네요!
+              <div className={`text-xs font-bold mb-1 ${pet.rarity === "legendary" || pet.rarity === "epic" ? "text-white/90" : "text-gray-900"}`}>
+                이미 함께하고 있는 친구네요!
+              </div>
+              <div className={`text-sm font-bold ${pet.rarity === "legendary" || pet.rarity === "epic" ? "text-yellow-300" : "text-indigo-600"}`}>
+                {rewardLabel} 획득 완료
+              </div>
             </div>
-            <div className={`text-sm font-bold ${pet.rarity === "legendary" || pet.rarity === "epic" ? "text-yellow-300" : "text-indigo-600"}`}>
-              {rewardLabel} 획득 완료
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* ✅ Button */}
-        <button
-          onClick={onClose}
-          className={`
+          {/* ✅ Button */}
+          <button
+            onClick={onClose}
+            className={`
             relative z-50 w-full py-4 rounded-2xl font-bold text-lg shadow-lg
             transform transition-all duration-200 hover:scale-[1.02] active:scale-95
             ${theme.btn}
           `}
-        >
-          확인
-        </button>
-      </div>
+          >
+            확인
+          </button>
+        </div>
 
-      <style>{`
+        <style>{`
         @keyframes shine {
           0% { left: -100%; opacity: 0; }
           50% { opacity: 0.5; }
@@ -242,8 +241,8 @@ export default function GachaResultModal({
           100% { transform: scale(1); }
         }
       `}</style>
-    </div>,
-    document.body
+      </div>
+    </BaseModal>
   );
 }
 // animation helpers expected:

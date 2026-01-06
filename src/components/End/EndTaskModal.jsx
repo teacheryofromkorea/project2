@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import BaseModal from "../common/BaseModal";
 import confetti from "canvas-confetti";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -141,18 +142,11 @@ function EndTaskModal({
         }
     }, [loaded, completedCount, totalCount]);
 
-    if (typeof isOpen !== "undefined" && !isOpen) return null;
+    // isOpen check removed to allow exit animation by BaseModal
     if (!student) return null;
 
     return (
-        <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                    onClose();
-                }
-            }}
-        >
+        <BaseModal isOpen={isOpen} onClose={onClose}>
             <div
                 className="
           bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl
@@ -346,7 +340,7 @@ function EndTaskModal({
                     </button>
                 </div>
             </div>
-        </div>
+        </BaseModal>
     );
 }
 

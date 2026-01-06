@@ -1,5 +1,4 @@
-import React from "react";
-import { createPortal } from "react-dom";
+import BaseModal from "../common/BaseModal";
 import { petsData, petSets } from "../../constants/pets";
 
 // 🔤 내부 rarity -> 한글 표시 매핑
@@ -26,7 +25,8 @@ export default function PetShopModal({
     ownedPetIds = [],
     onBuy,         // (pet) => void
 }) {
-    if (!isOpen) return null;
+    // isOpen check handled by BaseModal, but good to have for safety if props are missing
+    // However BaseModal handles null return.
 
     // 1. 해당 등급의 펫 필터링
     const availablePets = petsData.filter((p) => p.rarity === rarity);
@@ -36,11 +36,8 @@ export default function PetShopModal({
         return petSets.find((s) => s.id === setId)?.name || "알 수 없음";
     };
 
-    return createPortal(
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-            onClick={onClose}
-        >
+    return (
+        <BaseModal isOpen={isOpen} onClose={onClose}>
             <div
                 className="w-full max-w-4xl bg-[#1a1c23] rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
@@ -129,7 +126,6 @@ export default function PetShopModal({
                     </div>
                 </div>
             </div>
-        </div>,
-        document.body
+        </BaseModal>
     );
 }

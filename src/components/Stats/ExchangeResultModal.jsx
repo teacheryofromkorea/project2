@@ -1,12 +1,13 @@
-import React from "react";
+import BaseModal from "../common/BaseModal";
 
 export default function ExchangeResultModal({ open, result, onClose }) {
-  if (!open || !result) return null;
+  // result가 없으면 렌더링하지 않음 (isOpen이 true라도)
+  if (!result) return null;
 
   const { type, pet, refund } = result;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <BaseModal isOpen={open} onClose={onClose}>
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
         {type === "new" && (
           <>
@@ -35,6 +36,6 @@ export default function ExchangeResultModal({ open, result, onClose }) {
           확인
         </button>
       </div>
-    </div>
+    </BaseModal>
   );
 }

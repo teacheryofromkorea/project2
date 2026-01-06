@@ -1,15 +1,11 @@
-import React, { useEffect } from "react";
-import { createPortal } from "react-dom";
+import React from "react";
+import BaseModal from "../common/BaseModal";
 
 export default function PetDetailModal({ pet, isOpen, onClose }) {
   if (!isOpen || !pet) return null;
 
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
+  // isOpen check handled by BaseModal
+  if (!pet) return null;
 
   const rarityStyle = {
     common: {
@@ -34,8 +30,15 @@ export default function PetDetailModal({ pet, isOpen, onClose }) {
     },
   }[pet.rarity];
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fadeIn" onClick={onClose}>
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ type: "spring", duration: 0.5 }}
+    >
       <div
         className={`relative w-[360px] rounded-[28px]
   bg-gradient-to-br from-[#24123f] via-[#1b0f2e] to-[#120b24]
@@ -92,7 +95,6 @@ export default function PetDetailModal({ pet, isOpen, onClose }) {
           </span>
         </div>
       </div>
-    </div>,
-    document.body
+    </BaseModal>
   );
 }

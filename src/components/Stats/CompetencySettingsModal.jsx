@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
+import BaseModal from "../common/BaseModal";
 
 export default function CompetencySettingsModal({
     isOpen,
@@ -12,11 +12,7 @@ export default function CompetencySettingsModal({
     useEffect(() => {
         if (isOpen) {
             setValue(currentMax);
-            document.body.style.overflow = "hidden";
         }
-        return () => {
-            document.body.style.overflow = "";
-        };
     }, [isOpen, currentMax]);
 
     if (!isOpen) return null;
@@ -28,9 +24,9 @@ export default function CompetencySettingsModal({
         }
     };
 
-    return createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl scale-100 animate-scaleIn">
+    return (
+        <BaseModal isOpen={isOpen} onClose={onClose}>
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
                 <h2 className="text-xl font-bold text-gray-900 mb-2">
                     최대 수치 설정
                 </h2>
@@ -67,7 +63,6 @@ export default function CompetencySettingsModal({
                     </button>
                 </div>
             </div>
-        </div>,
-        document.body
+        </BaseModal>
     );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import BaseModal from "../common/BaseModal";
 
 const BASE_TIMING = {
   SPIN: 2200,
@@ -61,206 +62,215 @@ export default function GachaSlotModal({
     }, BASE_TIMING.SPIN);
   };
 
-  if (!isOpen) return null;
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {impact && (
-        <div className="absolute inset-0 z-40 bg-white animate-gacha-flash pointer-events-none" />
+
+  // We remove the manual portal and backdrop here, and use BaseModal.
+  // We keep the effects in a portal to ensure they overlay everything properly, 
+  // or we can put them inside BaseModal if we adjust z-indices?
+  // Since BaseModal has z-50/100, we want effects to be z-120 (above modal).
+  // So a separate portal is best for Effects.
+
+  return (
+    <>
+      {/* 🌟 Global Effects Layer (Fixed on top of everything) */}
+      {createPortal(
+        <div className="fixed inset-0 z-[150] pointer-events-none">
+          {impact && (
+            <div className="absolute inset-0 bg-white animate-gacha-flash" />
+          )}
+          {phase === "pause" && (
+            <div className="absolute inset-0">
+              {/* Breathing Darken - We want this to be global dim? 
+                   BaseModal already dims. So maybe we skip this or make it subtle?
+                   Original was bg-black/40. BaseModal is bg-black/50.
+                   Let's keep the effects but maybe not the solid dark bg if it conflicts.
+                   Actually, stacking dims is fine for drama.
+               */}
+              <div className="absolute inset-0 bg-black/40 animate-pause-breath" />
+              <div className="absolute inset-0 animate-pause-radial" />
+              <div className="absolute inset-0 animate-pause-heartbeat" />
+            </div>
+          )}
+          {phase === "result" && rarity === "legendary" && (
+            <div className="absolute inset-0 animate-legendary-world" />
+          )}
+          {phase === "result" && rarity === "legendary" && (
+            <>
+              {/* Legendary Radial Burst */}
+              <div className="absolute inset-0 animate-legendary-burst" />
+              {/* Legendary Shockwave Ring */}
+              <div className="absolute inset-0 animate-legendary-ring" />
+              {/* Legendary Particles */}
+              <div className="absolute inset-0 overflow-hidden">
+                {Array.from({ length: 14 }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="absolute text-yellow-300 text-xl animate-legendary-particle"
+                    style={{
+                      top: "50%",
+                      left: "50%",
+                      transform: `rotate(${i * 25}deg) translateY(-140px)`,
+                      animationDelay: `${i * 0.04}s`,
+                    }}
+                  >
+                    ✨
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+        </div>,
+        document.body
       )}
-      {phase === "pause" && (
-        <div className="absolute inset-0 z-30 pointer-events-none">
-          {/* Breathing Darken */}
-          <div className="absolute inset-0 bg-black/40 animate-pause-breath" />
 
-          {/* Slow Radial Glow */}
-          <div className="absolute inset-0 animate-pause-radial" />
-
-          {/* Heartbeat Pulse */}
-          <div className="absolute inset-0 animate-pause-heartbeat" />
-        </div>
-      )}
-      {phase === "result" && rarity === "legendary" && (
-        <div className="absolute inset-0 z-20 pointer-events-none animate-legendary-world" />
-      )}
-      {phase === "result" && rarity === "legendary" && (
-        <>
-          {/* Legendary Radial Burst */}
-          <div className="absolute inset-0 z-30 pointer-events-none animate-legendary-burst" />
-
-          {/* Legendary Shockwave Ring */}
-          <div className="absolute inset-0 z-30 pointer-events-none animate-legendary-ring" />
-
-          {/* Legendary Particles */}
-          <div className="absolute inset-0 z-30 pointer-events-none overflow-hidden">
-            {Array.from({ length: 14 }).map((_, i) => (
-              <span
-                key={i}
-                className="absolute text-yellow-300 text-xl animate-legendary-particle"
-                style={{
-                  top: "50%",
-                  left: "50%",
-                  transform: `rotate(${i * 25}deg) translateY(-140px)`,
-                  animationDelay: `${i * 0.04}s`,
-                }}
-              >
-                ✨
-              </span>
-            ))}
+      {/* 🎰 Main Modal Content */}
+      <BaseModal isOpen={isOpen} onClose={onClose}>
+        {/* Modal Card */}
+        <div
+          className={`relative w-[720px] max-w-[90vw] rounded-[28px] 
+                bg-[#0A1020] border border-white/10 
+                shadow-[0_20px_80px_rgba(0,0,0,0.6)] 
+                overflow-hidden
+                ${phase === "spinning" ? "gacha-shake" : ""}
+                ${impact ? "gacha-impact-scale" : ""}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-8 py-5 border-b border-white/10">
+            <h2 className="text-xl font-semibold text-white tracking-tight">
+              🎰 신비로운 가챠머신
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-white/50 hover:text-white transition text-2xl"
+            >
+              ✕
+            </button>
           </div>
-        </>
-      )}
-      {/* Dim */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
 
-      {/* Modal */}
-      <div
-        className={`relative z-10 w-[720px] max-w-[90vw] rounded-[28px] 
-        bg-[#0A1020] border border-white/10 
-        shadow-[0_20px_80px_rgba(0,0,0,0.6)] 
-        overflow-hidden
-        ${phase === "spinning" ? "gacha-shake" : ""}
-        ${impact ? "gacha-impact-scale" : ""}`}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-white/10">
-          <h2 className="text-xl font-semibold text-white tracking-tight">
-            🎰 신비로운 가챠머신
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-white/50 hover:text-white transition text-2xl"
-          >
-            ✕
-          </button>
-        </div>
+          {/* Body */}
+          <div className="px-10 py-14">
+            {/* Gradient Card */}
+            <div className={`relative rounded-[32px] px-12 py-16 bg-gradient-to-br from-pink-400 via-purple-400 to-indigo-500 flex flex-col items-center justify-center shadow-[0_0_80px_rgba(168,85,247,0.35)] ${impact ? "gacha-impact-glow" : ""}`}>
+              {/* Inner glow */}
+              <div className="absolute inset-0 rounded-[32px] bg-white/10 blur-3xl" />
 
-        {/* Body */}
-        <div className="px-10 py-14">
-          {/* Gradient Card */}
-          <div className={`relative rounded-[32px] px-12 py-16 bg-gradient-to-br from-pink-400 via-purple-400 to-indigo-500 flex flex-col items-center justify-center shadow-[0_0_80px_rgba(168,85,247,0.35)] ${impact ? "gacha-impact-glow" : ""}`}>
-            {/* Inner glow */}
-            <div className="absolute inset-0 rounded-[32px] bg-white/10 blur-3xl" />
-
-            {/* Dice Orb */}
-            <div className="relative z-10 w-56 h-56 rounded-full bg-white/25 flex items-center justify-center">
-              {phase === "idle" && (
-                <div className="w-36 h-36 rounded-full bg-white/35 flex items-center justify-center text-[72px]">
-                  🎲
-                </div>
-              )}
-              {phase === "spinning" && (
-                <div className="relative w-36 h-36 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full bg-white/40 blur-xl animate-pulse" />
-                  <div className="w-36 h-36 rounded-full bg-white/35 flex items-center justify-center text-[72px] gacha-spin">
+              {/* Dice Orb */}
+              <div className="relative z-10 w-56 h-56 rounded-full bg-white/25 flex items-center justify-center">
+                {phase === "idle" && (
+                  <div className="w-36 h-36 rounded-full bg-white/35 flex items-center justify-center text-[72px]">
                     🎲
                   </div>
-                </div>
-              )}
-              {phase === "pause" && (
-                <div className="relative w-36 h-36 rounded-full bg-white/40 flex items-center justify-center text-[72px] gacha-pause-scale-pulse">
-                  <div className="absolute inset-0 rounded-full animate-pause-orb-shiver" />
-                  🎲
-                </div>
-              )}
-              {phase === "result" && (
-                <div className="relative w-56 h-56 flex items-center justify-center">
-                  {/* 🌌 Epic Portal */}
-                  {rarity === "epic" && (
-                    <>
-                      <div className="absolute inset-0 rounded-full animate-epic-portal" />
-                      <div className="absolute inset-0 rounded-full animate-epic-ring" />
-                    </>
-                  )}
-                  {/* 💎 Rare Portal */}
-                  {rarity === "rare" && (
-                    <>
-                      {/* Soft Blue Aura */}
-                      <div className="absolute inset-0 rounded-full animate-rare-aura" />
+                )}
+                {phase === "spinning" && (
+                  <div className="relative w-36 h-36 flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-full bg-white/40 blur-xl animate-pulse" />
+                    <div className="w-36 h-36 rounded-full bg-white/35 flex items-center justify-center text-[72px] gacha-spin">
+                      🎲
+                    </div>
+                  </div>
+                )}
+                {phase === "pause" && (
+                  <div className="relative w-36 h-36 rounded-full bg-white/40 flex items-center justify-center text-[72px] gacha-pause-scale-pulse">
+                    <div className="absolute inset-0 rounded-full animate-pause-orb-shiver" />
+                    🎲
+                  </div>
+                )}
+                {phase === "result" && (
+                  <div className="relative w-56 h-56 flex items-center justify-center">
+                    {/* 🌌 Epic Portal */}
+                    {rarity === "epic" && (
+                      <>
+                        <div className="absolute inset-0 rounded-full animate-epic-portal" />
+                        <div className="absolute inset-0 rounded-full animate-epic-ring" />
+                      </>
+                    )}
+                    {/* 💎 Rare Portal */}
+                    {rarity === "rare" && (
+                      <>
+                        {/* Soft Blue Aura */}
+                        <div className="absolute inset-0 rounded-full animate-rare-aura" />
 
-                      {/* Expanding Spark Ring */}
-                      <div className="absolute inset-0 rounded-full animate-rare-spark-ring" />
+                        {/* Expanding Spark Ring */}
+                        <div className="absolute inset-0 rounded-full animate-rare-spark-ring" />
 
-                      {/* Floating Spark Particles */}
-                      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                        {Array.from({ length: 8 }).map((_, i) => (
-                          <span
-                            key={i}
-                            className="absolute text-blue-200 text-lg animate-rare-particle"
-                            style={{
-                              top: "50%",
-                              left: "50%",
-                              transform: `rotate(${i * 45}deg) translateY(-110px)`,
-                              animationDelay: `${i * 0.05}s`,
-                            }}
-                          >
-                            ✦
-                          </span>
-                        ))}
-                      </div>
-                    </>
-                  )}
+                        {/* Floating Spark Particles */}
+                        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                          {Array.from({ length: 8 }).map((_, i) => (
+                            <span
+                              key={i}
+                              className="absolute text-blue-200 text-lg animate-rare-particle"
+                              style={{
+                                top: "50%",
+                                left: "50%",
+                                transform: `rotate(${i * 45}deg) translateY(-110px)`,
+                                animationDelay: `${i * 0.05}s`,
+                              }}
+                            >
+                              ✦
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    )}
 
-                  {/* 🎴 Result Card */}
-                  <div
-                    className={`
+                    {/* 🎴 Result Card */}
+                    <div
+                      className={`
                       relative z-10 w-40 h-48 rounded-2xl
                       bg-gradient-to-b from-white to-gray-100
                       shadow-[0_20px_60px_rgba(0,0,0,0.45)]
                       flex flex-col items-center justify-center
                       text-gray-900 font-bold
                       ${rarity === "epic"
-                        ? "animate-epic-card-emerge"
-                        : rarity === "rare"
-                          ? "animate-rare-card-rise"
-                          : rarity === "common"
-                            ? "animate-common-pop"
-                            : ""
-                      }
+                          ? "animate-epic-card-emerge"
+                          : rarity === "rare"
+                            ? "animate-rare-card-rise"
+                            : rarity === "common"
+                              ? "animate-common-pop"
+                              : ""
+                        }
                     `}
-                  >
-                    <div className="text-5xl mb-2">
-                      {resultPet?.emoji || "❓"}
-                    </div>
-                    <div className="text-sm font-semibold uppercase tracking-wide">
-                      {resultPet?.rarity?.toUpperCase() || ""}
+                    >
+                      <div className="text-5xl mb-2">
+                        {resultPet?.emoji || "❓"}
+                      </div>
+                      <div className="text-sm font-semibold uppercase tracking-wide">
+                        {resultPet?.rarity?.toUpperCase() || ""}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="mt-12 flex justify-center gap-6">
+              <button
+                onClick={handlePull}
+                disabled={disabled || phase === "spinning"}
+                className={`px-12 py-5 rounded-2xl text-lg font-bold transition-all ${disabled || phase === "spinning"
+                  ? "bg-white/10 text-white/40 cursor-not-allowed"
+                  : "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_10px_30px_rgba(168,85,247,0.6)] hover:scale-[1.04]"
+                  }`}
+              >
+                🎲 가챠 뽑기
+              </button>
+
+              <button
+                onClick={onClose}
+                className="px-12 py-5 rounded-2xl text-lg font-semibold bg-white text-gray-800 hover:bg-gray-200 transition"
+              >
+                닫기
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-6 text-center text-sm text-white/60">
+              쿠폰 1장 필요
             </div>
           </div>
-
-          {/* Buttons */}
-          <div className="mt-12 flex justify-center gap-6">
-            <button
-              onClick={handlePull}
-              disabled={disabled || phase === "spinning"}
-              className={`px-12 py-5 rounded-2xl text-lg font-bold transition-all ${disabled || phase === "spinning"
-                ? "bg-white/10 text-white/40 cursor-not-allowed"
-                : "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_10px_30px_rgba(168,85,247,0.6)] hover:scale-[1.04]"
-                }`}
-            >
-              🎲 가챠 뽑기
-            </button>
-
-            <button
-              onClick={onClose}
-              className="px-12 py-5 rounded-2xl text-lg font-semibold bg-white text-gray-800 hover:bg-gray-200 transition"
-            >
-              닫기
-            </button>
-          </div>
-
-          {/* Footer */}
-          <div className="mt-6 text-center text-sm text-white/60">
-            쿠폰 1장 필요
-          </div>
-        </div>
-        <style>{`
+          <style>{`
 @keyframes rare-aura {
   0% {
     opacity: 0;
@@ -646,9 +656,9 @@ export default function GachaSlotModal({
 }
   
         `}</style>
-      </div>
-    </div>,
-    document.body
+        </div>
+      </BaseModal>
+    </>
   );
 }
 

@@ -1,8 +1,10 @@
 // src/components/BreakTime/EditItemModal.jsx
 
 import React from 'react';
+import BaseModal from "../common/BaseModal";
 
 export default function EditItemModal({
+  isOpen = true, // Added default true if mostly rendered conditionally, or expect prop
   editRoutine,
   editText,
   setEditText,
@@ -14,7 +16,7 @@ export default function EditItemModal({
   if (!editRoutine) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+    <BaseModal isOpen={isOpen} onClose={onClose}>
       <div className="bg-white p-6 rounded-2xl shadow-xl w-[300px]">
         <h3 className="text-lg font-bold mb-4">{title}</h3>
         <input
@@ -35,6 +37,6 @@ export default function EditItemModal({
           취소
         </button>
       </div>
-    </div>
+    </BaseModal>
   );
 }

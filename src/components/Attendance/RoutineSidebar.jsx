@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import BaseModal from "../common/BaseModal";
 import { supabase } from "../../lib/supabaseClient";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import { useLock } from "../../context/LockContext";
@@ -71,33 +72,7 @@ function RoutineSidebar({
     fetchRoutines();
   }, [usingExternalData]);
 
-  // ESC 닫기
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === "Escape") {
-        // 🔹 작은 모달 우선 닫기
-        if (usingExternalData ? editRoutine !== null : internalEditIndex !== null) {
-          if (usingExternalData) {
-            setEditRoutine?.(null);
-            setEditText?.("");
-          } else {
-            setInternalEditIndex(null);
-            setInternalEditText("");
-          }
-          return;
-        }
-
-        // 🔹 그 다음 큰 모달 닫기
-        if (isEditing) {
-          setIsEditing(false);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [isEditing, editRoutine, internalEditIndex, usingExternalData, setEditRoutine, setEditText]);
-
+  // ESC handlers removed in favor of BaseModal (simple fallback)
   useEffect(() => {
     if (locked) {
       setIsEditing(false);
@@ -307,189 +282,163 @@ function RoutineSidebar({
         </button>
       </aside>
 
-      {isEditing && (
-        <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setIsEditing(false);
-            }
-          }}
-        >
-          <div className="bg-white p-6 rounded-3xl w-80 shadow-xl max-h-[80vh] flex flex-col">
-            <h3 className="text-lg font-bold mb-4 flex-shrink-0">루틴 편집</h3>
+      <BaseModal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+        <div className="bg-white p-6 rounded-3xl w-80 shadow-xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-bold mb-4 flex-shrink-0">루틴 편집</h3>
 
-            <input
-              className="w-full border rounded-lg px-3 py-2 mb-3 font-semibold flex-shrink-0"
-              value={usingExternalData && tempTitle !== undefined ? tempTitle : internalTitle}
-              onChange={(e) => usingExternalData ? setTempTitle?.(e.target.value) : setInternalTitle(e.target.value)}
-            />
+          <input
+            className="w-full border rounded-lg px-3 py-2 mb-3 font-semibold flex-shrink-0"
+            value={usingExternalData && tempTitle !== undefined ? tempTitle : internalTitle}
+            onChange={(e) => usingExternalData ? setTempTitle?.(e.target.value) : setInternalTitle(e.target.value)}
+          />
 
-            <ul className="space-y-2 mb-4 overflow-y-auto flex-1 min-h-0">
-              {routineItems.map((item, index) => (
-                <li key={item.id || index} className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-lg">
-                  <span className="flex-1 truncate mr-2">{item.text || item.content}</span>
-                  <div className="flex items-center space-x-1 flex-shrink-0">
-                    <button
-                      className="text-gray-500 font-bold p-1 hover:bg-gray-200 rounded"
-                      onClick={() => {
-                        if (locked) return;
-                        handleMoveRoutine(index, "up");
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      className="text-gray-500 font-bold p-1 hover:bg-gray-200 rounded"
-                      onClick={() => {
-                        if (locked) return;
-                        handleMoveRoutine(index, "down");
-                      }}
-                    >
-                      ▼
-                    </button>
-                    <button
-                      className="text-blue-500 font-semibold p-1 hover:bg-blue-100 rounded text-sm"
-                      onClick={() => {
-                        if (locked) return;
-                        if (usingExternalData) {
-                          setEditRoutine?.(item);
-                        } else {
-                          setInternalEditIndex(index);
-                        }
-                        setCurrentEditText(item.text || item.content);
-                      }}
-                    >
-                      수정
-                    </button>
-                    <button
-                      className="text-red-500 font-semibold p-1 hover:bg-red-100 rounded text-sm"
-                      onClick={() => {
-                        if (locked) return;
-                        handleDeleteRoutine(index);
-                      }}
-                    >
-                      삭제
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            <div className="flex-shrink-0">
-              <input
-                className="w-full border rounded-lg px-3 py-2 mb-3"
-                placeholder="새 루틴 입력"
-                value={currentNewContent}
-                onChange={(e) => setCurrentNewContent(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    if (locked) return;
-                    handleAddRoutine();
-                  }
-                }}
-              />
-
-              <button
-                className="w-full bg-green-500 text-white py-2 rounded-full mb-2 font-semibold hover:bg-green-600 transition-colors"
-                onClick={() => {
-                  if (locked) return;
-                  handleAddRoutine();
-                }}
-              >
-                추가
-              </button>
-
-              <button
-                className="w-full bg-gray-300 py-2 rounded-full font-semibold hover:bg-gray-400 transition-colors"
-                onClick={async () => {
-                  if (locked) return;
-                  // 🔥 제목 저장
-                  if (usingExternalData) {
-                    saveRoutineTitle?.();
-                  } else {
-                    if (internalItems.length > 0) {
-                      const ids = internalItems.map((item) => item.id);
-                      const { error } = await supabase
-                        .from("routines")
-                        .update({ routine_title: internalTitle })
-                        .in("id", ids);
-
-                      if (error) {
-                        handleSupabaseError(error, "루틴 제목 저장에 실패했어요.");
-                        return;
+          <ul className="space-y-2 mb-4 overflow-y-auto flex-1 min-h-0">
+            {routineItems.map((item, index) => (
+              <li key={item.id || index} className="flex justify-between items-center bg-gray-100 px-3 py-2 rounded-lg">
+                <span className="flex-1 truncate mr-2">{item.text || item.content}</span>
+                <div className="flex items-center space-x-1 flex-shrink-0">
+                  <button
+                    className="text-gray-500 font-bold p-1 hover:bg-gray-200 rounded"
+                    onClick={() => {
+                      if (locked) return;
+                      handleMoveRoutine(index, "up");
+                    }}
+                  >
+                    ▲
+                  </button>
+                  <button
+                    className="text-gray-500 font-bold p-1 hover:bg-gray-200 rounded"
+                    onClick={() => {
+                      if (locked) return;
+                      handleMoveRoutine(index, "down");
+                    }}
+                  >
+                    ▼
+                  </button>
+                  <button
+                    className="text-blue-500 font-semibold p-1 hover:bg-blue-100 rounded text-sm"
+                    onClick={() => {
+                      if (locked) return;
+                      if (usingExternalData) {
+                        setEditRoutine?.(item);
+                      } else {
+                        setInternalEditIndex(index);
                       }
-                    }
-                  }
-                  setIsEditing(false);
-                }}
-              >
-                닫기
-              </button>
-            </div>
-          </div>
+                      setCurrentEditText(item.text || item.content);
+                    }}
+                  >
+                    수정
+                  </button>
+                  <button
+                    className="text-red-500 font-semibold p-1 hover:bg-red-100 rounded text-sm"
+                    onClick={() => {
+                      if (locked) return;
+                      handleDeleteRoutine(index);
+                    }}
+                  >
+                    삭제
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
 
-          {/* Inner Edit Modal (Existing Item) */}
-          {(usingExternalData ? currentEditRoutine : internalEditIndex !== null) && (
-            <div
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60]"
-              tabIndex={0}
-              onKeyDown={async (e) => {
-                if (e.key === "Escape") {
-                  setCurrentEditText("");
-                  if (usingExternalData) setEditRoutine?.(null);
-                  else setInternalEditIndex(null);
-                }
+          <div className="flex-shrink-0">
+            <input
+              className="w-full border rounded-lg px-3 py-2 mb-3"
+              placeholder="새 루틴 입력"
+              value={currentNewContent}
+              onChange={(e) => setCurrentNewContent(e.target.value)}
+              onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
                   if (locked) return;
-                  await handleUpdateRoutine(); // Use unified handler
+                  handleAddRoutine();
                 }
               }}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  setCurrentEditText("");
-                  if (usingExternalData) setEditRoutine?.(null);
-                  else setInternalEditIndex(null);
-                }
+            />
+
+            <button
+              className="w-full bg-green-500 text-white py-2 rounded-full mb-2 font-semibold hover:bg-green-600 transition-colors"
+              onClick={() => {
+                if (locked) return;
+                handleAddRoutine();
               }}
             >
-              <div className="bg-white p-6 rounded-3xl w-80 shadow-xl">
-                <h3 className="text-lg font-bold mb-4">루틴 수정</h3>
+              추가
+            </button>
 
-                <input
-                  className="w-full border rounded-lg px-3 py-2 mb-3"
-                  value={currentEditText}
-                  onChange={(e) => setCurrentEditText(e.target.value)}
-                  autoFocus
-                />
+            <button
+              className="w-full bg-gray-300 py-2 rounded-full font-semibold hover:bg-gray-400 transition-colors"
+              onClick={async () => {
+                if (locked) return;
+                // 🔥 제목 저장
+                if (usingExternalData) {
+                  saveRoutineTitle?.();
+                } else {
+                  if (internalItems.length > 0) {
+                    const ids = internalItems.map((item) => item.id);
+                    const { error } = await supabase
+                      .from("routines")
+                      .update({ routine_title: internalTitle })
+                      .in("id", ids);
 
-                <button
-                  className="w-full bg-blue-500 text-white py-2 rounded-full mb-2 font-semibold hover:bg-blue-600 transition-colors"
-                  onClick={async () => {
-                    if (locked) return;
-                    await handleUpdateRoutine();
-                  }}
-                >
-                  저장
-                </button>
-
-                <button
-                  className="w-full bg-gray-300 py-2 rounded-full font-semibold hover:bg-gray-400 transition-colors"
-                  onClick={() => {
-                    setCurrentEditText("");
-                    if (usingExternalData) setEditRoutine?.(null);
-                    else setInternalEditIndex(null);
-                  }}
-                >
-                  취소
-                </button>
-              </div>
-            </div>
-          )}
+                    if (error) {
+                      handleSupabaseError(error, "루틴 제목 저장에 실패했어요.");
+                      return;
+                    }
+                  }
+                }
+                setIsEditing(false);
+              }}
+            >
+              닫기
+            </button>
+          </div>
         </div>
-      )}
+      </BaseModal>
+
+      {/* Inner Edit Modal (Existing Item) */}
+      <BaseModal
+        isOpen={usingExternalData ? !!currentEditRoutine : internalEditIndex !== null}
+        onClose={() => {
+          setCurrentEditText("");
+          if (usingExternalData) setEditRoutine?.(null);
+          else setInternalEditIndex(null);
+        }}
+      >
+        <div className="bg-white p-6 rounded-3xl w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-bold mb-4">루틴 수정</h3>
+
+          <input
+            className="w-full border rounded-lg px-3 py-2 mb-3"
+            value={currentEditText}
+            onChange={(e) => setCurrentEditText(e.target.value)}
+            autoFocus
+          />
+
+          <button
+            className="w-full bg-blue-500 text-white py-2 rounded-full mb-2 font-semibold hover:bg-blue-600 transition-colors"
+            onClick={async () => {
+              if (locked) return;
+              await handleUpdateRoutine();
+            }}
+          >
+            저장
+          </button>
+
+          <button
+            className="w-full bg-gray-300 py-2 rounded-full font-semibold hover:bg-gray-400 transition-colors"
+            onClick={() => {
+              setCurrentEditText("");
+              if (usingExternalData) setEditRoutine?.(null);
+              else setInternalEditIndex(null);
+            }}
+          >
+            취소
+          </button>
+        </div>
+      </BaseModal>
     </>
   );
 }

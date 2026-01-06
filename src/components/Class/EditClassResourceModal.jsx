@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import BaseModal from "../common/BaseModal";
 
 export default function EditClassResourceModal({
   isOpen,
@@ -57,90 +58,90 @@ export default function EditClassResourceModal({
     onClose();
   };
 
-  if (!isOpen || !resource) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-6 space-y-4">
-        <h2 className="text-lg font-bold">✏️ 콘텐츠 편집</h2>
+    <BaseModal isOpen={isOpen} onClose={onClose}>
+      {resource && (
+        <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-6 space-y-4">
+          <h2 className="text-lg font-bold">✏️ 콘텐츠 편집</h2>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">아이콘</label>
-          <input
-            value={icon}
-            onChange={(e) => setIcon(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2"
-          />
-        </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">아이콘</label>
+            <input
+              value={icon}
+              onChange={(e) => setIcon(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">제목</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2"
-          />
-        </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">제목</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">URL</label>
-          <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2"
-          />
-        </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">URL</label>
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">간단한 설명</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm"
-            rows={3}
-            placeholder="선택 사항"
-          />
-        </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">간단한 설명</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+              rows={3}
+              placeholder="선택 사항"
+            />
+          </div>
 
-        <div className="flex justify-between items-center pt-4">
-          <button
-            onClick={async () => {
-              if (!window.confirm("이 콘텐츠를 삭제할까요?\n(복구할 수 없습니다)")) return;
-
-              const { error } = await supabase
-                .from("class_resources")
-                .delete()
-                .eq("id", resource.id);
-
-              if (error) {
-                alert("삭제 중 오류가 발생했습니다.");
-                return;
-              }
-
-              onUpdated();
-              onClose();
-            }}
-            className="text-sm text-red-600 hover:underline"
-          >
-            삭제
-          </button>
-          <div className="flex gap-2">
+          <div className="flex justify-between items-center pt-4">
             <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-gray-200 text-sm"
+              onClick={async () => {
+                if (!window.confirm("이 콘텐츠를 삭제할까요?\n(복구할 수 없습니다)")) return;
+
+                const { error } = await supabase
+                  .from("class_resources")
+                  .delete()
+                  .eq("id", resource.id);
+
+                if (error) {
+                  alert("삭제 중 오류가 발생했습니다.");
+                  return;
+                }
+
+                onUpdated();
+                onClose();
+              }}
+              className="text-sm text-red-600 hover:underline"
             >
-              취소
+              삭제
             </button>
-            <button
-              onClick={handleUpdate}
-              disabled={loading}
-              className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600 disabled:opacity-50"
-            >
-              {loading ? "저장 중..." : "저장"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg bg-gray-200 text-sm"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleUpdate}
+                disabled={loading}
+                className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600 disabled:opacity-50"
+              >
+                {loading ? "저장 중..." : "저장"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </BaseModal>
   );
 }

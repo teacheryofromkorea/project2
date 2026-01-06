@@ -1,17 +1,19 @@
 
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import BaseModal from "../../common/BaseModal";
 import { supabase } from "../../../lib/supabaseClient";
 
-function StudentSelectModal({ seat, onClose, onAssigned }) {
+function StudentSelectModal({ seat, isOpen, onClose, onAssigned }) {
   const [maleStudents, setMaleStudents] = useState([]);
   const [femaleStudents, setFemaleStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!seat) return;
-    fetchAvailableStudents();
-  }, [seat]);
+    if (isOpen && seat) {
+      fetchAvailableStudents();
+    }
+  }, [seat, isOpen]);
 
   const fetchAvailableStudents = async () => {
     setLoading(true);
@@ -76,7 +78,7 @@ function StudentSelectModal({ seat, onClose, onAssigned }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+    <BaseModal isOpen={isOpen} onClose={onClose}>
       <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl p-6">
         <h2 className="text-lg font-semibold mb-4 text-center">
           학생 선택
@@ -157,7 +159,7 @@ function StudentSelectModal({ seat, onClose, onAssigned }) {
           </button>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 }
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import BaseModal from "../common/BaseModal";
 
 export default function AddClassResourceModal({ isOpen, onClose, onAdded }) {
   const [title, setTitle] = useState("");
@@ -10,7 +11,7 @@ export default function AddClassResourceModal({ isOpen, onClose, onAdded }) {
   const [icon, setIcon] = useState("🌐");
   const [loading, setLoading] = useState(false);
 
-  if (!isOpen) return null;
+  // isOpen check handled by BaseModal
 
   const handleSubmit = async () => {
     if (!title || !url) {
@@ -33,18 +34,18 @@ export default function AddClassResourceModal({ isOpen, onClose, onAdded }) {
         ? lastItem.order_index + 1
         : 0;
 
-const normalizedUrl =
-  url.startsWith("http://") || url.startsWith("https://")
-    ? url
-    : `https://${url}`;
+    const normalizedUrl =
+      url.startsWith("http://") || url.startsWith("https://")
+        ? url
+        : `https://${url}`;
 
-const { error } = await supabase.from("class_resources").insert({
-  title,
-  url: normalizedUrl,
-  description,
-  icon,
-  order_index: nextOrderIndex,
-});
+    const { error } = await supabase.from("class_resources").insert({
+      title,
+      url: normalizedUrl,
+      description,
+      icon,
+      order_index: nextOrderIndex,
+    });
 
     setLoading(false);
 
@@ -65,7 +66,7 @@ const { error } = await supabase.from("class_resources").insert({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <BaseModal isOpen={isOpen} onClose={onClose}>
       <div className="bg-white rounded-2xl w-[420px] p-6 space-y-4">
         <h3 className="text-lg font-bold">📚 수업 콘텐츠 추가</h3>
 
@@ -125,6 +126,6 @@ const { error } = await supabase.from("class_resources").insert({
           </button>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import ClassSeatDeck from "./ClassSeatDeck";
 import ClassStatModal from "./ClassStatModal";
+import BaseModal from "../common/BaseModal";
 import useClassTimeBlockSelection from "../../hooks/useClassTimeBlockSelection";
 import useInitClassResources from "../../hooks/useInitClassResources";
 import ClassResourceBoard from "./ClassResourceBoard";
@@ -65,7 +66,6 @@ function ClassPage() {
   // 🔹 미니 능력치 모달용 상태 (클릭된 학생)
   const [statModalStudent, setStatModalStudent] = useState(null);
 
-  // 🔹 현재 활성화된 수업 도구 (null | 'timer' | 'picker' | 'memo' | 'team' | 'quest')
   const [activeTool, setActiveTool] = useState(() => {
     try {
       return localStorage.getItem("class_active_tool");
@@ -73,6 +73,15 @@ function ClassPage() {
       return null;
     }
   });
+
+  // 🔹 마지막 활성 도구 (애니메이션 exit용)
+  const [lastActiveTool, setLastActiveTool] = useState(activeTool);
+
+  useEffect(() => {
+    if (activeTool) {
+      setLastActiveTool(activeTool);
+    }
+  }, [activeTool]);
 
   // 🔹 도구 상태 저장
   useEffect(() => {
@@ -495,46 +504,48 @@ function ClassPage() {
 
       {/* 🔹 도구 모달 오버레이 (활성화 시 등장) */}
       {/* 🔹 도구 모달 오버레이 (활성화 시 등장) - 퀘스트는 제외 (대시보드로 표시) */}
-      {activeTool && activeTool !== 'quest' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setActiveTool(null)}>
-          <div
-            className="relative w-[90vw] max-w-6xl flex flex-col animate-in fade-in zoom-in duration-200"
-            onClick={(e) => e.stopPropagation()}
+      {/* 🔹 도구 모달 오버레이 (활성화 시 등장) - 퀘스트는 제외 (대시보드로 표시) */}
+      <BaseModal isOpen={activeTool && activeTool !== 'quest'} onClose={() => setActiveTool(null)}>
+        <div
+          className="relative w-[90vw] max-w-6xl flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* 닫기 버튼 (외부 플로팅) */}
+          <button
+            onClick={() => setActiveTool(null)}
+            className="absolute -top-12 right-0 text-white/80 hover:text-white flex items-center gap-2 font-bold transition-colors"
           >
-            {/* 닫기 버튼 (외부 플로팅) */}
-            <button
-              onClick={() => setActiveTool(null)}
-              className="absolute -top-12 right-0 text-white/80 hover:text-white flex items-center gap-2 font-bold transition-colors"
-            >
-              <span>닫기</span>
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-lg">✕</div>
-            </button>
+            <span>닫기</span>
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-lg">✕</div>
+          </button>
 
-            {/* 위젯 본문 렌더링 (투명 컨테이너, 도구 자체 스타일 사용) */}
-            <div className="w-full h-full">
-              {(() => {
-                const TargetWidget = tools.find(t => t.id === activeTool)?.component;
-                // 퀘스트는 대시보드 형태이므로 모달에 띄우지 않음 (혹은 모달로 띄워도 되지만, 기획상 대시보드로 변경)
-                if (activeTool === 'quest') return null;
+          {/* 위젯 본문 렌더링 (투명 컨테이너, 도구 자체 스타일 사용) */}
+          <div className="w-full h-full">
+            {(() => {
+              const targetToolId = activeTool || lastActiveTool;
+              if (!targetToolId) return null; // Should not happen if lastActiveTool works
 
-                return TargetWidget ? (
-                  <TargetWidget
-                    students={presentStudents}
-                    onClose={() => setActiveTool(null)}
+              const TargetWidget = tools.find(t => t.id === targetToolId)?.component;
+              // 퀘스트는 대시보드 형태이므로 모달에 띄우지 않음 (혹은 모달로 띄워도 되지만, 기획상 대시보드로 변경)
+              if (targetToolId === 'quest') return null;
 
-                    // 퀘스트 위젯 전용 props
-                    quests={quests}
-                    activeQuestId={activeQuestId}
-                    onAddQuest={addQuest}
-                    onDeleteQuest={deleteQuest}
-                    onSetActiveQuest={toggleQuestActive}
-                  />
-                ) : null;
-              })()}
-            </div>
+              return TargetWidget ? (
+                <TargetWidget
+                  students={presentStudents}
+                  onClose={() => setActiveTool(null)}
+
+                  // 퀘스트 위젯 전용 props
+                  quests={quests}
+                  activeQuestId={activeQuestId}
+                  onAddQuest={addQuest}
+                  onDeleteQuest={deleteQuest}
+                  onSetActiveQuest={toggleQuestActive}
+                />
+              ) : null;
+            })()}
           </div>
         </div>
-      )}
+      </BaseModal>
 
       {toast && (
         <div

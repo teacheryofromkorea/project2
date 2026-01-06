@@ -10,6 +10,7 @@ function SeatingPlanPage() {
   const [totalCols, setTotalCols] = useState(0);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [seatForAssign, setSeatForAssign] = useState(null);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [seatToClear, setSeatToClear] = useState(null);
   const [hoveredStudentId, setHoveredStudentId] = useState(null);
   const [isGroupEditMode, setIsGroupEditMode] = useState(false);
@@ -108,7 +109,10 @@ function SeatingPlanPage() {
             selectedSeatIds={selectedSeatIds}
             onToggleSeatSelect={toggleSeatSelect}
             onSeatEmptyClick={(seat) => {
-              if (!isGroupEditMode) setSeatForAssign(seat);
+              if (!isGroupEditMode) {
+                setSeatForAssign(seat);
+                setIsAssignModalOpen(true);
+              }
             }}
             onSeatOccupiedClick={(seat) => {
               if (!isGroupEditMode) setSeatToClear(seat);
@@ -300,17 +304,16 @@ function SeatingPlanPage() {
       </div>
 
       {/* 학생 배치 모달 */}
-      {seatForAssign && (
-        <StudentSelectModal
-          seat={seatForAssign}
-          onClose={() => setSeatForAssign(null)}
-          onAssigned={() => {
-            setSeatForAssign(null);
-            setRefreshKey((k) => k + 1);
-            setStudentRefreshKey((k) => k + 1); // ⭐ 학생 목록 갱신 신호
-          }}
-        />
-      )}
+      <StudentSelectModal
+        isOpen={isAssignModalOpen}
+        seat={seatForAssign}
+        onClose={() => setIsAssignModalOpen(false)}
+        onAssigned={() => {
+          setIsAssignModalOpen(false);
+          setRefreshKey((k) => k + 1);
+          setStudentRefreshKey((k) => k + 1); // ⭐ 학생 목록 갱신 신호
+        }}
+      />
 
       {seatToClear && (
         <div

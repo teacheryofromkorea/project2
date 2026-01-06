@@ -1,6 +1,7 @@
-
-
+import React from "react";
+import BaseModal from "../common/BaseModal";
 function AttendanceConfirmModal({
+  isOpen, // Add isOpen prop
   type, // "present" | "cancel"
   student,
   onConfirm,
@@ -11,10 +12,7 @@ function AttendanceConfirmModal({
   const isCancel = type === "cancel";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <BaseModal isOpen={isOpen} onClose={onClose}>
       <div
         className="
           w-[360px]
@@ -27,7 +25,6 @@ function AttendanceConfirmModal({
           flex-col
           gap-6
         "
-        onClick={(e) => e.stopPropagation()}
       >
         {/* 상단 아이콘 */}
         <div className="flex justify-center text-4xl">
@@ -74,10 +71,9 @@ function AttendanceConfirmModal({
               font-semibold
               text-white
               transition
-              ${
-                isCancel
-                  ? "bg-red-500 hover:bg-red-600"
-                  : "bg-blue-600 hover:bg-blue-700"
+              ${isCancel
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-blue-600 hover:bg-blue-700"
               }
             `}
           >
@@ -85,7 +81,7 @@ function AttendanceConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 }
 

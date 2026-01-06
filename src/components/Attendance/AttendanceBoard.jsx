@@ -282,6 +282,7 @@ function AttendanceBoard() {
 
       {confirmType && pendingStudent && (
         <AttendanceConfirmModal
+          isOpen={true}
           type={confirmType}
           student={pendingStudent}
           onClose={() => {

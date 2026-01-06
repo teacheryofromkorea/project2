@@ -19,6 +19,17 @@ export default function EndTimeBoard() {
   const [targetStudent, setTargetStudent] = useState(null);
   const [showIncompleteOnly, setShowIncompleteOnly] = useState(false);
 
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  const handleOpenTaskModal = (student) => {
+    setTargetStudent(student);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleCloseTaskModal = () => {
+    setIsTaskModalOpen(false);
+  };
+
   const endRoutine = useEndRoutine();
   const {
     routineItems,
@@ -330,7 +341,7 @@ export default function EndTimeBoard() {
                     return acc;
                   }, {})}
                   onToggleAttendance={handleToggleDismissal}
-                  onOpenMission={setTargetStudent}
+                  onOpenMission={handleOpenTaskModal}
                   alwaysActiveMission={true} // ✅ 하교시간 탭은 미션버튼 항상 활성
                 />
               </div>
@@ -341,30 +352,26 @@ export default function EndTimeBoard() {
               missions={missions}
               students={students.filter((s) => presentStudentIds.includes(s.id))}
               studentMissionStatus={missionStatus}
-              onOpenModal={setTargetStudent}
+              onOpenModal={handleOpenTaskModal}
             />
           </div>
         </div>
       </div>
 
-      {/* Student Task Modal */}
-      {
-        targetStudent && (
-          <EndTaskModal
-            isOpen={!!targetStudent}
-            student={targetStudent}
-            missions={missions}
-            routines={routineItems}
-            routineLabel={routineTitle || "하교시간 루틴"}
-            onClose={() => setTargetStudent(null)}
-            onSaved={async () => {
-              await fetchMissionStatus();
-              await fetchRoutineItems();
-              await fetchRoutineStatus();
-            }}
-          />
-        )
-      }
+      {/* Student Task Modal - Always rendered, controlled by isOpen */}
+      <EndTaskModal
+        isOpen={isTaskModalOpen}
+        student={targetStudent}
+        missions={missions}
+        routines={routineItems}
+        routineLabel={routineTitle || "하교시간 루틴"}
+        onClose={handleCloseTaskModal}
+        onSaved={async () => {
+          await fetchMissionStatus();
+          await fetchRoutineItems();
+          await fetchRoutineStatus();
+        }}
+      />
     </>
   );
 }

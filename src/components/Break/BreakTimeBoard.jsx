@@ -21,6 +21,17 @@ export default function BreakTimeBoard() {
   const [targetStudent, setTargetStudent] = useState(null);
   const [showIncompleteOnly, setShowIncompleteOnly] = useState(false);
 
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  const handleOpenTaskModal = (student) => {
+    setTargetStudent(student);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleCloseTaskModal = () => {
+    setIsTaskModalOpen(false);
+  };
+
   const {
     breakBlocks,
     selectedBlockId,
@@ -382,7 +393,7 @@ export default function BreakTimeBoard() {
                     return acc;
                   }, {})}
                   onToggleAttendance={handleToggleSeat}
-                  onOpenMission={setTargetStudent}
+                  onOpenMission={handleOpenTaskModal}
                   alwaysActiveMission={true} // ✅ 쉬는시간 탭은 미션버튼 항상 활성
                 />
               </div>
@@ -393,30 +404,26 @@ export default function BreakTimeBoard() {
               missions={missions}
               students={students.filter((s) => presentStudentIds.includes(s.id))}
               studentMissionStatus={missionStatus}
-              onOpenModal={setTargetStudent}
+              onOpenModal={handleOpenTaskModal}
             />
           </div>
         </div>
       </div>
 
-      {/* Student Task Modal */}
-      {
-        targetStudent && (
-          <BreakTaskModal
-            isOpen={!!targetStudent}
-            student={targetStudent}
-            missions={missions}
-            routines={routineItems}
-            blockId={selectedBlockId}
-            onClose={() => setTargetStudent(null)}
-            onSaved={async () => {
-              await fetchMissionStatus();
-              await fetchRoutineItems();
-              await fetchRoutineStatus();
-            }}
-          />
-        )
-      }
+      {/* Student Task Modal - Always rendered if we have a target, controlled by isOpen */}
+      <BreakTaskModal
+        isOpen={isTaskModalOpen}
+        student={targetStudent}
+        missions={missions}
+        routines={routineItems}
+        blockId={selectedBlockId}
+        onClose={handleCloseTaskModal}
+        onSaved={async () => {
+          await fetchMissionStatus();
+          await fetchRoutineItems();
+          await fetchRoutineStatus();
+        }}
+      />
 
       {/* Auto-switch toast */}
       {

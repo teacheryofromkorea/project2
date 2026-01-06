@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import BaseModal from "../common/BaseModal";
 import confetti from "canvas-confetti";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -136,21 +137,13 @@ function AttendanceTaskModal({
         }
     }, [loaded, completedCount, totalCount]);
 
-    // isOpen이 명시적으로 false이면 렌더링하지 않음
-    if (typeof isOpen !== "undefined" && !isOpen) return null;
+    // isOpen check removed to allow exit animation by BaseModal
 
     // student가 없으면 렌더링하지 않음
     if (!student) return null;
 
     return (
-        <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                    onClose();
-                }
-            }}
-        >
+        <BaseModal isOpen={isOpen} onClose={onClose}>
             <div
                 className="
           bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl
@@ -180,8 +173,8 @@ function AttendanceTaskModal({
                         className="bg-gradient-to-r from-emerald-400 via-sky-400 to-indigo-400 h-3 rounded-full transition-all duration-500"
                         style={{
                             width: `${!loaded || totalCount === 0
-                                    ? 0
-                                    : Math.round((completedCount / totalCount) * 100)
+                                ? 0
+                                : Math.round((completedCount / totalCount) * 100)
                                 }%`,
                         }}
                     ></div>
@@ -206,8 +199,8 @@ function AttendanceTaskModal({
                                 <li key={r.id} className="flex items-center justify-between gap-2">
                                     <span
                                         className={`text-lg ${routineStatus[r.id]
-                                                ? "text-emerald-700 font-semibold line-through"
-                                                : "text-black-700"
+                                            ? "text-emerald-700 font-semibold line-through"
+                                            : "text-black-700"
                                             }`}
                                     >
                                         {r.text}
@@ -237,8 +230,8 @@ function AttendanceTaskModal({
                                 <li key={m.id} className="flex items-center justify-between gap-2">
                                     <span
                                         className={`text-lg ${missionStatus[m.id]
-                                                ? "text-purple-700 font-semibold line-through"
-                                                : "text-black-700"
+                                            ? "text-purple-700 font-semibold line-through"
+                                            : "text-black-700"
                                             }`}
                                     >
                                         {m.text}
@@ -334,7 +327,7 @@ function AttendanceTaskModal({
                     </button>
                 </div>
             </div>
-        </div>
+        </BaseModal>
     );
 }
 

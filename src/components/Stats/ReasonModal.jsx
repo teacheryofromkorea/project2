@@ -1,4 +1,5 @@
 import React from "react";
+import BaseModal from "../common/BaseModal";
 
 export default function ReasonModal({
   open,
@@ -10,15 +11,14 @@ export default function ReasonModal({
   onConfirm,
   onClose,
 }) {
-  if (!open) return null;
+  // open prop passed to isOpen
 
-  const title = `${statName ?? "능력치"} ${
-    mode === "increase" ? "증가" : "감소"
-  } 사유`;
+  const title = `${statName ?? "능력치"} ${mode === "increase" ? "증가" : "감소"
+    } 사유`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl w-full max-w-md p-6">
+    <BaseModal isOpen={open} onClose={onClose}>
+      <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
 
         <p className="text-sm text-gray-600 mb-3">
@@ -48,6 +48,6 @@ export default function ReasonModal({
           </button>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 }
