@@ -12,6 +12,7 @@ function SeatGrid({
   statusMap = {},   // ✅ 상세 상태 맵 (key: student.id, value: status string)
   activeMap = {},   // ✅ (Simple) 활성/비활성 맵 (key: student.id, value: boolean) - Break/Lunch/End용
   disabledMap = {}, // ✅ 비활성화 맵 (key: student.id, value: boolean) - 결석생 등 아예 클릭 불가 처리
+  progressMap = {}, // ✅ (New) 학생별 미션/루틴 진행 상황 { completed: n, total: n }
   onToggleAttendance, // 좌석 클릭 시 실행될 함수
   onOpenMission,      // 미션 버튼 클릭 시 실행될 함수
   totalCols,          // 그리드 컬럼 수 (반응형/고정값)
@@ -34,6 +35,7 @@ function SeatGrid({
 
         let status = 'unchecked';
         let disabled = false;
+        let progress = null;
 
         if (student) {
           // 1. Status 결정
@@ -47,6 +49,11 @@ function SeatGrid({
           if (disabledMap[student.id]) {
             disabled = true;
           }
+
+          // 3. Progress 결정
+          if (progressMap && progressMap[student.id]) {
+            progress = progressMap[student.id];
+          }
         }
 
         return (
@@ -56,6 +63,7 @@ function SeatGrid({
             student={student}
             status={status}
             disabled={disabled}
+            progress={progress}
             onToggleAttendance={onToggleAttendance}
             onOpenMission={onOpenMission}
             alwaysActiveMission={alwaysActiveMission} // 자식에게 옵션 전달

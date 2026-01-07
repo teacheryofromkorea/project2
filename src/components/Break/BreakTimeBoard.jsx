@@ -332,6 +332,40 @@ export default function BreakTimeBoard() {
     return { total, attended, seated };
   }, [students, presentStudentIds, seatStatus]);
 
+  // ✅ 진행률 계산 (Progress Calculation)
+  const progressMap = useMemo(() => {
+    const map = {};
+    if (!routineItems || !missions) return map;
+
+    const totalCount = routineItems.length + missions.length;
+
+    students.forEach((s) => {
+      map[s.id] = { completed: 0, total: totalCount };
+    });
+
+    // 1. Routine (Break Routine)
+    const activeRoutineIds = new Set(routineItems.map((r) => r.id));
+    routineStatus.forEach((row) => {
+      // note: break routine uses 'routine_item_id' and usually 'done' or 'completed' depending on table schema
+      if ((row.done || row.completed) && activeRoutineIds.has(row.routine_item_id)) {
+        if (!map[row.student_id]) map[row.student_id] = { completed: 0, total: totalCount };
+        map[row.student_id].completed += 1;
+      }
+    });
+
+    // 2. Mission (Common)
+    const activeMissionIds = new Set(missions.map((m) => m.id));
+    missionStatus.forEach((row) => {
+      if ((row.done || row.completed) && activeMissionIds.has(row.mission_id)) {
+        if (!map[row.student_id]) map[row.student_id] = { completed: 0, total: totalCount };
+        map[row.student_id].completed += 1;
+      }
+    });
+
+    return map;
+  }, [routineItems, missions, students, routineStatus, missionStatus]);
+
+
   return (
     <>
       <div className="relative w-full flex-1 flex flex-col bg-transparent min-h-0">
@@ -409,6 +443,7 @@ export default function BreakTimeBoard() {
                 <SeatGrid
                   seats={filteredSeats}
                   statusMap={combinedStatusMap}
+                  progressMap={progressMap} // ✅ Pass progress map
                   disabledMap={seats.reduce((acc, seat) => {
                     const student = seat.students;
                     // If student is NOT present (absent or unchecked), disable them

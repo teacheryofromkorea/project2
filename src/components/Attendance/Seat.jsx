@@ -5,6 +5,7 @@ const Seat = ({
   student,
   status = 'unchecked', // 'present', 'unchecked', or detailed status string
   disabled = false,
+  progress = null, // ✅ { completed, total }
   onToggleAttendance,
   onOpenMission,
   alwaysActiveMission = false,
@@ -147,16 +148,37 @@ const Seat = ({
               }
             }}
             className={`
-              w-full py-2 text-[10px] font-bold uppercase tracking-widest
-              transition-all border-t
+              relative w-full py-2 text-[10px] font-bold uppercase tracking-widest
+              transition-all border-t overflow-hidden
               ${isActive || alwaysActiveMission
-                ? "text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 active:brightness-90 border-purple-200/50 cursor-pointer"
-                : "text-indigo-400 bg-white border-indigo-100 cursor-default" // 비활성 (미체크) - 클릭해도 반응 X (이름표 눌러서 출석해야 함)
+                ? (progress && progress.total > 0 && progress.completed === progress.total)
+                  ? "bg-gradient-to-r from-emerald-400 to-green-500 text-white border-green-200/50 cursor-pointer hover:brightness-105" // 완료됨
+                  : "bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-purple-200/50 cursor-pointer hover:brightness-105" // 진행중
+                : "text-indigo-400 bg-white border-indigo-100 cursor-default" // 비활성
               }
               ${highlightMission && isActive ? "animate-pulse" : ""}
             `}
           >
-            미션
+            {/* Progress Bar (진행 중일 때만 백그라운드 오버레이) */}
+            {(isActive || alwaysActiveMission) && progress && progress.total > 0 && progress.completed < progress.total && (
+              <div
+                className="absolute left-0 top-0 bottom-0 bg-black/20 transition-all duration-500 ease-out"
+                style={{ width: `${(progress.completed / progress.total) * 100}%` }}
+              />
+            )}
+
+            {/* 텍스트 라벨 */}
+            <span className="relative z-10 flex items-center justify-center gap-1">
+              {(isActive || alwaysActiveMission) && progress && progress.total > 0 && progress.completed > 0 ? (
+                progress.completed === progress.total ? (
+                  <><span>완료!</span><span>✨</span></>
+                ) : (
+                  <span>{progress.completed} / {progress.total}</span>
+                )
+              ) : (
+                <span>미션</span>
+              )}
+            </span>
           </button>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getTodayString } from "../../utils/dateUtils";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
@@ -43,6 +43,48 @@ function AttendanceBoard() {
   const [modalConfig, setModalConfig] = useState({ title: null, description: null }); // ✅ 모달 텍스트 설정
   // const [routines, setRoutines] = useState([]); // Removed
   const [missions, setMissions] = useState([]);
+
+  // ✅ 진행률 계산 (Progress Calculation)
+  const progressMap = useMemo(() => {
+    const map = {};
+    if (!routines || !missions) return map;
+
+    // Total items count (Routine + Mission)
+    // Note: We count *active* routines and missions.
+    const totalCount = routines.length + missions.length;
+
+    // Initialize for known students
+    students.forEach((s) => {
+      map[s.id] = { completed: 0, total: totalCount };
+    });
+
+    // 1. Routine Completion
+    // routineStatus contains rows for all students: { student_id, routine_id, completed }
+    // We only count if routine_id is in current 'routines' list (active routines)
+    const activeRoutineIds = new Set(routines.map((r) => r.id));
+    routineStatus.forEach((row) => {
+      if (row.completed && activeRoutineIds.has(row.routine_id)) {
+        if (!map[row.student_id]) {
+          // 혹시 students 목록 로딩 전이라도 처리
+          map[row.student_id] = { completed: 0, total: totalCount };
+        }
+        map[row.student_id].completed += 1;
+      }
+    });
+
+    // 2. Mission Completion
+    const activeMissionIds = new Set(missions.map((m) => m.id));
+    missionStatus.forEach((row) => {
+      if (row.completed && activeMissionIds.has(row.mission_id)) {
+        if (!map[row.student_id]) {
+          map[row.student_id] = { completed: 0, total: totalCount };
+        }
+        map[row.student_id].completed += 1;
+      }
+    });
+
+    return map;
+  }, [routines, missions, routineStatus, missionStatus, students]);
 
   // 미체크 학생 목록 계산
   const uncheckedStudents = students.filter(student => {
@@ -346,6 +388,7 @@ function AttendanceBoard() {
           <div className="flex-1 flex items-center justify-center min-h-0 overflow-y-auto">
             <SeatGrid
               seats={seats}
+              progressMap={progressMap} // ✅ Pass progress map
               statusMap={attendanceStatus.reduce((acc, row) => {
                 acc[row.student_id] = row.status || (row.present ? 'present' : 'unchecked');
                 return acc;
