@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom"; // [추가] URL 쿼리 파라미터 사용
+// import { useSearchParams } from "react-router-dom"; // [삭제] URL 쿼리 파라미터 미사용
 import { supabase } from "../../lib/supabaseClient";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import { getTodayString } from "../../utils/dateUtils";
@@ -15,12 +15,11 @@ export default function AttendanceStatsSection() {
     const [statsData, setStatsData] = useState([]); // All attendance data for the month
     const [students, setStudents] = useState([]);
 
-    // [URL 파라미터 연동]
-    const [searchParams, setSearchParams] = useSearchParams();
+    // [URL 파라미터 연동 해제]
+    // const [searchParams, setSearchParams] = useSearchParams();
 
-    // [날짜 선택 상태] URL에 'date' 파라미터가 있으면 그것을, 없으면 오늘 날짜를 사용
-    const initialDate = searchParams.get("date") || getTodayString();
-    const [selectedDateStr, setSelectedDateStr] = useState(initialDate);
+    // [날짜 선택 상태] 항상 오늘 날짜로 초기화 (새로고침 시 Today로 리셋)
+    const [selectedDateStr, setSelectedDateStr] = useState(getTodayString());
 
     // [상태 데이터 관리]
     const [todayAttendanceData, setTodayAttendanceData] = useState([]); // 선택된 날짜의 출결 데이터 원본 저장
@@ -40,10 +39,18 @@ export default function AttendanceStatsSection() {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     };
 
+    // Year navigation
+    const handlePrevYear = () => {
+        setCurrentDate(new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), 1));
+    };
+    const handleNextYear = () => {
+        setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), 1));
+    };
+
     // [일자 네비게이션 핸들러]
     const updateSelectedDate = (newDateStr) => {
         setSelectedDateStr(newDateStr);
-        setSearchParams({ date: newDateStr }); // URL 업데이트
+        // setSearchParams({ date: newDateStr }); // [삭제] URL 업데이트 안 함
     };
 
     const handleDateChange = (days) => {
@@ -170,7 +177,35 @@ export default function AttendanceStatsSection() {
 
     const handleModalUpdate = async () => {
         await fetchAttendanceData(); // 데이터 새로고침
+        await fetchYearlyDocStats(); // [추가] 서류 미제출 건수도 즉시 갱신
         // setIsModalOpen(false); // 모달 내부에서 닫힘 처리됨
+    };
+
+    // [연간 통계 상태]
+    const [yearlyDocCounts, setYearlyDocCounts] = useState({});
+
+    // [연간 통계 조회 함수]
+    const fetchYearlyDocStats = async () => {
+        const year = currentDate.getFullYear();
+        const startOfYear = `${year}-01-01`;
+        const endOfYear = `${year}-12-31`;
+
+        const { data, error } = await supabase
+            .from("student_attendance_status")
+            .select("date")
+            .gte("date", startOfYear)
+            .lte("date", endOfYear)
+            .eq("document_submitted", false)
+            .or("status.ilike.sick%,status.ilike.authorized%"); // 질병 or 인정
+
+        if (!error && data) {
+            const counts = {};
+            data.forEach(record => {
+                const month = new Date(record.date).getMonth() + 1;
+                counts[month] = (counts[month] || 0) + 1;
+            });
+            setYearlyDocCounts(counts);
+        }
     };
 
     useEffect(() => {
@@ -180,8 +215,10 @@ export default function AttendanceStatsSection() {
     useEffect(() => {
         if (students.length > 0) {
             fetchAttendanceData();
+            fetchYearlyDocStats(); // 연간 통계 조회
         }
-    }, [currentDate, students, selectedDateStr]); // [수정] selectedDateStr 변경 시 재조회
+    }, [currentDate, students, selectedDateStr]);
+
 
     const docRequiredLogs = statsData.filter(d =>
         d.status && (d.status.startsWith('sick') || d.status.startsWith('authorized'))
@@ -195,7 +232,25 @@ export default function AttendanceStatsSection() {
 
         if (!error) {
             setStatsData(prev => prev.map(d => d.id === logId ? { ...d, document_submitted: !currentStatus } : d));
+            fetchYearlyDocStats(); // [추가] 상태 변경 시 통계 갱신
         }
+    };
+
+    // [추가] 월별 테이블 셀 클릭 처리
+    const handleCellClick = (student, dateStr, currentStatus) => {
+        // 1. 해당 날짜로 선택 변경 (데이터 조회 트리거됨)
+        updateSelectedDate(dateStr);
+
+        // 2. 모달 열기 준비
+        setModalTargetStudents([{
+            ...student,
+            status: currentStatus || 'unchecked' // 현재 상태가 있으면 가져오고, 없으면 unchecked
+        }]);
+        setModalConfig({
+            title: `${student.name} 학생 출결 수정`,
+            description: `${dateStr} 출결 상태를 수정합니다.`
+        });
+        setIsModalOpen(true);
     };
 
     return (
@@ -218,6 +273,7 @@ export default function AttendanceStatsSection() {
                 statsData={statsData}
                 students={students}
                 loading={loading}
+                onCellClick={handleCellClick} // [추가] 셀 클릭 핸들러 전달
             />
 
             {/* 3. Document Management */}
@@ -226,6 +282,11 @@ export default function AttendanceStatsSection() {
                 students={students}
                 loading={loading}
                 onToggleDocumentStatus={toggleDocumentStatus}
+                onMonthSelect={updateSelectedDate}
+                monthlyCounts={yearlyDocCounts}
+                currentDate={currentDate} // [추가] 년도 표시용
+                onPrevYear={handlePrevYear} // [추가] 이전 해
+                onNextYear={handleNextYear} // [추가] 다음 해
             />
 
             {/* [추가] 상세 확인/수정 모달 */}
@@ -236,6 +297,7 @@ export default function AttendanceStatsSection() {
                 title={modalConfig.title}
                 description={modalConfig.description}
                 onSaved={handleModalUpdate}
+                targetDate={selectedDateStr} // [수정] 선택된 날짜 전달 (없으면 오늘 날짜는 Modal 내부에서 처리)
             />
         </div>
     );

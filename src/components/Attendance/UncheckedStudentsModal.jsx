@@ -25,6 +25,7 @@ export default function UncheckedStudentsModal({
     onSaved, // Callback to refresh parent data
     title, // ✅ Optional customizable title
     description, // ✅ Optional customizable description
+    targetDate, // [추가] 출결 저장할 날짜
 }) {
     const [loading, setLoading] = useState(false);
     const [selectedStatuses, setSelectedStatuses] = useState({});
@@ -49,7 +50,7 @@ export default function UncheckedStudentsModal({
 
     const handleSave = async () => {
         setLoading(true);
-        const today = getTodayString();
+        const dateToSave = targetDate || getTodayString(); // [수정] props로 받은 날짜 사용
 
         // ✅ User requested: Allow saving 'unchecked' and adding 'present' option.
         // We remove the filter so ALL selected statuses are updated.
@@ -57,7 +58,7 @@ export default function UncheckedStudentsModal({
         const updates = Object.entries(selectedStatuses)
             .map(([studentId, status]) => ({
                 student_id: studentId,
-                date: today,
+                date: dateToSave,
                 present: status === 'present', // ✅ Set present true only if status is 'present'
                 status: status,
             }));
