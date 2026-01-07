@@ -9,7 +9,10 @@ export default function AttendanceMonthlyTable({
     students,
     loading
 }) {
-    // --- Grid Helpers ---
+    // [추가] 컬럼 하이라이트를 위한 hover state
+    const [hoveredDay, setHoveredDay] = React.useState(null);
+
+    // Grid Helpers
     const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
     const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
@@ -121,7 +124,15 @@ export default function AttendanceMonthlyTable({
                         <tr className="bg-gray-50 border-b border-gray-200 h-10">
                             <th className="px-2 text-center font-bold text-gray-700 min-w-[80px] sticky left-0 bg-gray-50 z-10 border-r border-gray-200 shadow-[1px_0_3px_rgba(0,0,0,0.05)]">학생명</th>
                             {daysArray.map(day => (
-                                <th key={day} className="w-[30px] min-w-[30px] text-center font-normal text-gray-500 text-xs">{day}</th>
+                                <th
+                                    key={day}
+                                    className={`w-[30px] min-w-[30px] text-center font-normal text-xs transition-colors cursor-default ${hoveredDay === day ? "bg-blue-100/50 text-blue-800 font-bold" : "text-gray-500 hover:bg-gray-100"
+                                        }`}
+                                    onMouseEnter={() => setHoveredDay(day)}
+                                    onMouseLeave={() => setHoveredDay(null)}
+                                >
+                                    {day}
+                                </th>
                             ))}
                         </tr>
                     </thead>
@@ -140,9 +151,16 @@ export default function AttendanceMonthlyTable({
                                     {daysArray.map(day => {
                                         const status = getStatusForCell(student.id, day);
                                         const config = STATUS_CONFIG[status];
-                                        // Weekend styling could go here
+                                        const isHoveredCol = hoveredDay === day;
+
                                         return (
-                                            <td key={day} className="text-center border-r border-gray-50 last:border-0 relative cursor-default p-0 align-middle">
+                                            <td
+                                                key={day}
+                                                className={`text-center border-r border-gray-50 last:border-0 relative cursor-default p-0 align-middle transition-colors ${isHoveredCol ? "bg-blue-50/50" : ""
+                                                    }`}
+                                                onMouseEnter={() => setHoveredDay(day)}
+                                                onMouseLeave={() => setHoveredDay(null)}
+                                            >
                                                 {status && (
                                                     <div className="w-full h-10 flex items-center justify-center group relative">
                                                         <span className={`text-base leading-none select-none ${config?.color}`}>{config?.icon}</span>
