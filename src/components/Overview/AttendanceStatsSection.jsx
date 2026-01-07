@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom"; // [추가] URL 쿼리 파라미터 사용
 import { supabase } from "../../lib/supabaseClient";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import { getTodayString } from "../../utils/dateUtils";
@@ -7,15 +8,19 @@ import { getTodayString } from "../../utils/dateUtils";
 import AttendanceTodayStats from "./AttendanceTodayStats";
 import AttendanceMonthlyTable from "./AttendanceMonthlyTable";
 import AttendanceDocumentList from "./AttendanceDocumentList";
-import UncheckedStudentsModal from "../Attendance/UncheckedStudentsModal"; // [추가] 모달 재사용
+import UncheckedStudentsModal from "../Attendance/UncheckedStudentsModal";
 
 export default function AttendanceStatsSection() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [statsData, setStatsData] = useState([]); // All attendance data for the month
     const [students, setStudents] = useState([]);
 
-    // [날짜 선택 상태 추가]
-    const [selectedDateStr, setSelectedDateStr] = useState(getTodayString());
+    // [URL 파라미터 연동]
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // [날짜 선택 상태] URL에 'date' 파라미터가 있으면 그것을, 없으면 오늘 날짜를 사용
+    const initialDate = searchParams.get("date") || getTodayString();
+    const [selectedDateStr, setSelectedDateStr] = useState(initialDate);
 
     // [상태 데이터 관리]
     const [todayAttendanceData, setTodayAttendanceData] = useState([]); // 선택된 날짜의 출결 데이터 원본 저장
@@ -36,18 +41,23 @@ export default function AttendanceStatsSection() {
     };
 
     // [일자 네비게이션 핸들러]
+    const updateSelectedDate = (newDateStr) => {
+        setSelectedDateStr(newDateStr);
+        setSearchParams({ date: newDateStr }); // URL 업데이트
+    };
+
     const handleDateChange = (days) => {
         const [year, month, day] = selectedDateStr.split('-').map(Number);
         const newDate = new Date(year, month - 1, day + days);
         const newDateStr = newDate.toLocaleDateString('en-CA');
 
-        setSelectedDateStr(newDateStr);
+        updateSelectedDate(newDateStr);
     };
 
     // [직접 날짜 선택 핸들러]
     const handleDateSelect = (newDateStr) => {
         if (!newDateStr) return;
-        setSelectedDateStr(newDateStr);
+        updateSelectedDate(newDateStr);
     };
 
     const handlePrevDate = () => handleDateChange(-1);

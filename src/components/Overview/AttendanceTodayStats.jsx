@@ -1,4 +1,5 @@
 import React from "react";
+import CustomDatePicker from "../common/CustomDatePicker";
 // import { getTodayString } from "../../utils/dateUtils"; // [삭제] props로 전달받음
 
 // [변경됨] 날짜 네비게이션 props 추가 (selectedDateStr, onPrevDate, onNextDate, onDateSelect)
@@ -15,12 +16,10 @@ export default function AttendanceTodayStats({ todayStats, onCardClick, selected
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
                     </button>
 
-                    {/* Native Date Picker Input */}
-                    <input
-                        type="date"
+                    {/* Custom Date Picker */}
+                    <CustomDatePicker
                         value={selectedDateStr}
-                        onChange={(e) => onDateSelect(e.target.value)}
-                        className="bg-transparent text-sm font-bold text-gray-700 text-center font-mono focus:outline-none cursor-pointer hover:bg-white/50 rounded px-1 min-w-[110px]"
+                        onChange={onDateSelect}
                     />
 
                     <button onClick={onNextDate} className="p-1 hover:bg-white rounded-md transition text-gray-500 hover:text-blue-600">
