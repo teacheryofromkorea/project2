@@ -11,6 +11,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { AnimatePresence } from "framer-motion"; // 🔹 Import AnimatePresence
 import TopNav from "./components/TopNav";
 import { LockProvider } from "./context/LockContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import PageTransition from "./components/common/PageTransition"; // 🔹 Import PageTransition
 
 import RoutineSidebar from "./components/Attendance/RoutineSidebar";
@@ -48,10 +49,17 @@ function AttendanceLayout() {
   );
 }
 
+import LandingPage from "./components/Landing/LandingPage";
+import AuthPage from "./components/Auth/AuthPage";
+import ProtectedRoute from "./components/Auth/ProtectedRoute";
+import PrivacyPolicy from "./components/Legal/PrivacyPolicy";
+import TermsOfService from "./components/Legal/TermsOfService";
+
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const isStatsPage = location.pathname.startsWith("/stats");
+  const isLandingPage = location.pathname === "/"; // ✅ Landing Page Check
   const autoNavigatedRef = useRef(false);
   const prevPathRef = useRef(location.pathname);
   const userNavigatingRef = useRef(false);
@@ -69,6 +77,7 @@ function AppContent() {
     if (loading || !activeBlock) return;
     if (!autoSwitchEnabled) return;
     if (location.pathname.startsWith("/settings")) return;
+    if (isLandingPage) return; // ✅ 랜딩 페이지에서는 자동전환 방지
 
     const map = {
       arrival: "/attendance",
@@ -86,7 +95,7 @@ function AppContent() {
       navigate(nextPath, { replace: true });
       toast.success("시간표에 따라 화면이 자동 전환되었습니다");
     }
-  }, [activeBlock, loading, autoSwitchEnabled, location.pathname, navigate]);
+  }, [activeBlock, loading, autoSwitchEnabled, location.pathname, navigate, isLandingPage]);
 
   // 사용자 수동 이동 감지 → 자동전환 OFF
   useEffect(() => {
@@ -95,6 +104,7 @@ function AppContent() {
     prevPathRef.current = location.pathname;
 
     if (location.pathname.startsWith("/settings")) return;
+    if (isLandingPage) return; // ✅ 랜딩 페이지 예외 처리
 
     // If this route change was initiated via our explicit user handler, just consume the flag
     if (userNavigatingRef.current) {
@@ -134,14 +144,16 @@ function AppContent() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col relative overflow-x-hidden transition-colors duration-500 ${isStatsPage
-        ? "bg-[#0a051a] text-white" // Deep Space Void
-        : "text-slate-800 bg-slate-50"
-        }`}
+      className={`min-h-screen flex flex-col relative transition-colors duration-500 
+        ${isLandingPage ? "bg-white" : (
+          isStatsPage
+            ? "bg-[#0a051a] text-white overflow-x-hidden" // Deep Space Void
+            : "text-slate-800 bg-slate-50 overflow-x-hidden"
+        )}`}
     >
 
       {/* 🌌 Stats Page Background (Cosmic Aurora & Geometric Dreams) */}
-      {isStatsPage && (
+      {!isLandingPage && isStatsPage && (
         <div className="fixed inset-0 z-0 pointer-events-none bg-[#0a051a] overflow-hidden">
           {/* 1. Nebula Orbs (Ambient Light) */}
           <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-violet-600/30 rounded-full blur-[120px] animate-pulse-slow mix-blend-screen" />
@@ -157,7 +169,7 @@ function AppContent() {
       )}
 
       {/* Background Layer: Artistic Mesh Gradient (MMCA Style) */}
-      {!isStatsPage && (
+      {!isLandingPage && !isStatsPage && (
         <div className="fixed inset-0 z-0 pointer-events-none bg-slate-50">
           {/* Noise Texture Overlay */}
           <div className="absolute inset-0 opacity-[0.03] mix-blend-multiply pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
@@ -176,33 +188,50 @@ function AppContent() {
       {/* Main Content Wrapper */}
       <div className="relative z-10 flex-1 flex flex-col">
         <Toaster position="top-center" />
-        <TopNav
-          autoSwitchEnabled={autoSwitchEnabled}
-          onToggleAutoSwitch={() => setAutoSwitchEnabled((v) => !v)}
-          onUserNavigate={handleUserNavigate}
-        />
 
-        <main className="flex-1 flex flex-col min-h-0 px-8 pb-10 pt-4">
+        {/* ✅ 랜딩 페이지가 아닐 때만 TopNav 표시 */}
+        {!isLandingPage && (
+          <TopNav
+            autoSwitchEnabled={autoSwitchEnabled}
+            onToggleAutoSwitch={() => setAutoSwitchEnabled((v) => !v)}
+            onUserNavigate={handleUserNavigate}
+          />
+        )}
+
+        {/* ✅ 랜딩 페이지일 땐 패딩 0, 아닐 땐 기존 패딩 유지 */}
+        <main className={`flex-1 flex flex-col min-h-0 ${isLandingPage ? "p-0" : "px-8 pb-10 pt-4"}`}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
-              {/* 기본 경로 → 출석 탭 */}
-              <Route path="/" element={<Navigate to="/attendance" replace />} />
+              {/* Public Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<AuthPage />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
 
+              {/* Protected Routes */}
               {/* 출석 (PageTransition inside layout component) */}
-              <Route path="/attendance" element={<AttendanceLayout />} />
+              <Route path="/attendance" element={
+                <ProtectedRoute>
+                  <AttendanceLayout />
+                </ProtectedRoute>
+              } />
 
               {/* 쉬는시간 */}
               <Route path="/break" element={
-                <PageTransition>
-                  <BreakTimeBoard />
-                </PageTransition>
+                <ProtectedRoute>
+                  <PageTransition>
+                    <BreakTimeBoard />
+                  </PageTransition>
+                </ProtectedRoute>
               } />
 
               {/* 설정 (PageTransition handles generic children) */}
               <Route path="/settings" element={
-                <PageTransition>
-                  <SettingsLayout />
-                </PageTransition>
+                <ProtectedRoute>
+                  <PageTransition>
+                    <SettingsLayout />
+                  </PageTransition>
+                </ProtectedRoute>
               }>
                 <Route path="students" element={<StudentsPage />} />
                 <Route path="timetable" element={<TimeTablePage />} />
@@ -212,52 +241,66 @@ function AppContent() {
 
               {/* 기타 탭 */}
               <Route path="/lunch" element={
-                <PageTransition>
-                  <LunchTimeBoard />
-                </PageTransition>
+                <ProtectedRoute>
+                  <PageTransition>
+                    <LunchTimeBoard />
+                  </PageTransition>
+                </ProtectedRoute>
               } />
               <Route path="/class" element={
-                <PageTransition>
-                  <ClassPage />
-                </PageTransition>
+                <ProtectedRoute>
+                  <PageTransition>
+                    <ClassPage />
+                  </PageTransition>
+                </ProtectedRoute>
               } />
               <Route path="/end" element={
-                <PageTransition>
-                  <EndTimeBoard />
-                </PageTransition>
+                <ProtectedRoute>
+                  <PageTransition>
+                    <EndTimeBoard />
+                  </PageTransition>
+                </ProtectedRoute>
               } />
               <Route path="/stats" element={
-                <PageTransition>
-                  <StatsPage />
-                </PageTransition>
+                <ProtectedRoute>
+                  <PageTransition>
+                    <StatsPage />
+                  </PageTransition>
+                </ProtectedRoute>
               } />
               <Route path="/overview" element={
-                <PageTransition>
-                  <OverviewPage />
-                </PageTransition>
+                <ProtectedRoute>
+                  <PageTransition>
+                    <OverviewPage />
+                  </PageTransition>
+                </ProtectedRoute>
               } />
               <Route path="/tools" element={
-                <PageTransition>
-                  <ToolsPage />
-                </PageTransition>
+                <ProtectedRoute>
+                  <PageTransition>
+                    <ToolsPage />
+                  </PageTransition>
+                </ProtectedRoute>
               } />
 
-              {/* 존재하지 않는 경로 → 출석 */}
-              <Route path="*" element={<Navigate to="/attendance" replace />} />
+              {/* 존재하지 않는 경로 → 랜딩 페이지로 (혹은 /attendance로?) */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AnimatePresence>
         </main>
       </div>
-    </div>
+    </div >
   );
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <LockProvider>
-        <AppContent />
-      </LockProvider>
+      <AuthProvider>
+        <LockProvider>
+          <AppContent />
+        </LockProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
