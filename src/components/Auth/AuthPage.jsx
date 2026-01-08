@@ -15,19 +15,29 @@ export default function AuthPage() {
         setLoading(true);
         setError(null);
 
+        // Timeout helper: 10 seconds limit
+        const withTimeout = (promise) => {
+            const timeout = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error("서버 응답이 지연되고 있습니다. 네트워크를 확인하거나 잠시 후 다시 시도해주세요.")), 10000);
+            });
+            return Promise.race([promise, timeout]);
+        };
+
         try {
             if (isLogin) {
-                const { error } = await supabase.auth.signInWithPassword({
+                const { error } = await withTimeout(supabase.auth.signInWithPassword({
                     email,
                     password,
-                });
+                }));
                 if (error) throw error;
+
+                // Navigation happens, AuthContext will handle loading state
                 navigate("/attendance");
             } else {
-                const { error } = await supabase.auth.signUp({
+                const { error } = await withTimeout(supabase.auth.signUp({
                     email,
                     password,
-                });
+                }));
                 if (error) throw error;
                 alert("회원가입 확인 메일을 전송했습니다! 이메일을 확인해주세요.");
             }

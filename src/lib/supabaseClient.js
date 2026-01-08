@@ -41,3 +41,10 @@ const createMockClient = () => {
 export const supabase = (supabaseUrl && supabaseKey)
     ? createClient(supabaseUrl, supabaseKey)
     : createMockClient();
+
+// Debug: expose to window for console testing
+if (typeof window !== 'undefined') {
+    window.__SUPABASE__ = supabase;
+    console.log("[Debug] Supabase client exposed as window.__SUPABASE__");
+}
+

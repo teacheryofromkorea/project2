@@ -52,6 +52,12 @@ function AttendanceLayout() {
 import LandingPage from "./components/Landing/LandingPage";
 import AuthPage from "./components/Auth/AuthPage";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
+
+import AdminRoute from "./components/Admin/AdminRoute";
+import AdminLayout from "./components/Admin/AdminLayout";
+import AdminDashboard from "./components/Admin/AdminDashboard";
+import UserList from "./components/Admin/UserList";
+
 import PrivacyPolicy from "./components/Legal/PrivacyPolicy";
 import TermsOfService from "./components/Legal/TermsOfService";
 
@@ -205,6 +211,17 @@ function AppContent() {
               {/* Public Routes */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<AuthPage />} />
+
+              {/* Admin Routes */}
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <AdminLayout />
+                </AdminRoute>
+              }>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<UserList />} />
+              </Route>
+
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
 

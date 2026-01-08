@@ -1,12 +1,16 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 import { useLock } from "../context/LockContext";
+import { useAuth } from "../contexts/AuthContext";
 import LockButton from "./LockButton";
+import { LogOut } from "lucide-react";
 
 function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const isStatsPage = location.pathname.startsWith("/stats");
   const { locked } = useLock();
+  const { user, signOut } = useAuth();
 
   const tabs = useMemo(
     () => [
@@ -26,6 +30,11 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
   // 현재 URL 과 매칭되는지 확인
   const isActive = (path) => location.pathname.startsWith(path);
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   return (
     <header
       className={
@@ -39,7 +48,7 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
         <nav className="flex gap-2">
           {tabs.map((tab) => (
             <button
-              type="button" // ⛔ submit 방지
+              type="button"
               key={tab.path}
               onClick={() => {
                 if (locked) return;
@@ -50,11 +59,11 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
                 ? "text-gray-400 cursor-not-allowed"
                 : isActive(tab.path)
                   ? isStatsPage
-                    ? "bg-white/90 text-indigo-900 shadow-[0_0_15px_rgba(255,255,255,0.3)] ring-1 ring-white/50" // Stats화면 Active
-                    : "bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100" // 일반화면 Active
+                    ? "bg-white/90 text-indigo-900 shadow-[0_0_15px_rgba(255,255,255,0.3)] ring-1 ring-white/50"
+                    : "bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100"
                   : isStatsPage
-                    ? "text-indigo-200/60 hover:text-white hover:bg-white/10" // Stats화면 Inactive
-                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50" // 일반화면 Inactive
+                    ? "text-indigo-200/60 hover:text-white hover:bg-white/10"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
                 }`}
             >
               {tab.label}
@@ -72,7 +81,7 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
               자동 전환
             </span>
             <button
-              type="button" // ⛔ submit 방지
+              type="button"
               onClick={onToggleAutoSwitch}
               className={`relative w-10 h-5 rounded-full transition ${autoSwitchEnabled ? "bg-green-500" : "bg-gray-300"
                 }`}
@@ -84,18 +93,22 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
             </button>
           </div>
 
-          <span
-            className={
-              isStatsPage
-                ? "inline-flex items-center rounded-full bg-indigo-500/80 border border-indigo-400/30 text-white px-3 py-1 text-xs font-semibold backdrop-blur-md"
-                : "inline-flex items-center rounded-full bg-purple-600 text-white px-3 py-1 text-xs font-semibold"
-            }
-          >
-            필수 세팅 가이드
-          </span>
-          <div className={isStatsPage ? "text-indigo-200/60 text-xs" : "text-gray-700 text-xs"}>
-            11:39
-          </div>
+          {/* 로그아웃 버튼 */}
+          {user && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isStatsPage
+                  ? "text-red-300 hover:bg-red-500/20 hover:text-red-200"
+                  : "text-red-500 hover:bg-red-50 hover:text-red-600"
+                }`}
+              title="로그아웃"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              로그아웃
+            </button>
+          )}
+
         </div>
 
       </div>
