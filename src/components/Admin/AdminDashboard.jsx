@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
 import { Users, UserPlus, Clock } from "lucide-react";
+
+// Supabase REST API config
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState({
@@ -12,23 +15,36 @@ export default function AdminDashboard() {
     useEffect(() => {
         async function fetchStats() {
             try {
-                // 1. Total Users
-                const { count: totalCount, error: totalError } = await supabase
-                    .from('profiles')
-                    .select('*', { count: 'exact', head: true });
+                // 1. Total Users - using fetch directly
+                const totalResponse = await fetch(
+                    `${SUPABASE_URL}/rest/v1/profiles?select=id`,
+                    {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Prefer': 'count=exact'
+                        }
+                    }
+                );
+                const totalCount = parseInt(totalResponse.headers.get('content-range')?.split('/')[1] || '0');
 
                 // 2. New Users Today
                 const today = new Date().toISOString().split('T')[0];
-                const { count: todayCount, error: todayError } = await supabase
-                    .from('profiles')
-                    .select('*', { count: 'exact', head: true })
-                    .gte('created_at', today);
-
-                if (totalError) throw totalError;
+                const todayResponse = await fetch(
+                    `${SUPABASE_URL}/rest/v1/profiles?created_at=gte.${today}&select=id`,
+                    {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Prefer': 'count=exact'
+                        }
+                    }
+                );
+                const todayCount = parseInt(todayResponse.headers.get('content-range')?.split('/')[1] || '0');
 
                 setStats({
-                    totalUsers: totalCount || 0,
-                    newUsersToday: todayCount || 0,
+                    totalUsers: totalCount,
+                    newUsersToday: todayCount,
                     loading: false
                 });
 
@@ -56,27 +72,27 @@ export default function AdminDashboard() {
     return (
         <div className="space-y-8">
             <div>
-                <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
-                <p className="text-gray-500 mt-1">Welcome back, Admin. Here's what's happening today.</p>
+                <h2 className="text-2xl font-bold text-gray-900">대시보드</h2>
+                <p className="text-gray-500 mt-1">관리자님, 오늘의 현황입니다.</p>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard
-                    title="Total Users"
+                    title="전체 사용자"
                     value={stats.totalUsers}
                     icon={Users}
                     color="bg-blue-500"
                 />
                 <StatCard
-                    title="New Users Today"
+                    title="오늘 가입자"
                     value={stats.newUsersToday}
                     icon={UserPlus}
                     color="bg-green-500"
                 />
                 <StatCard
-                    title="System Status"
-                    value="Healthy"
+                    title="시스템 상태"
+                    value="정상"
                     icon={Clock}
                     color="bg-indigo-500"
                 />
@@ -84,9 +100,9 @@ export default function AdminDashboard() {
 
             {/* Recent Activity Section Placeholder */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Platform Growth (Last 30 Days)</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">플랫폼 성장 추이 (최근 30일)</h3>
                 <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                    <p className="text-gray-400">Chart visualization coming soon...</p>
+                    <p className="text-gray-400">차트 시각화 준비 중...</p>
                 </div>
             </div>
         </div>
