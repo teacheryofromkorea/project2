@@ -37,15 +37,19 @@ function SeatingPlanPage() {
         .from("classroom_settings")
         .select("total_rows, total_cols")
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error(error);
+        setLoadingSettings(false);
         return;
       }
 
-      setTotalRows(data.total_rows);
-      setTotalCols(data.total_cols);
+      // 설정이 없으면 기본값 유지 (0)
+      if (data) {
+        setTotalRows(data.total_rows);
+        setTotalCols(data.total_cols);
+      }
       setLoadingSettings(false);
     };
 
@@ -237,7 +241,7 @@ function SeatingPlanPage() {
               .from("classroom_settings")
               .select("id, total_rows, total_cols")
               .limit(1)
-              .single();
+              .maybeSingle();
 
             if (fetchError) {
               console.error(fetchError);
@@ -253,7 +257,7 @@ function SeatingPlanPage() {
               return;
             }
 
-            const outOfRangeSeatIds = seats
+            const outOfRangeSeatIds = (seats || [])
               .filter(
                 (s) => s.row > newTotalRows || s.col > newTotalCols
               )
@@ -276,7 +280,7 @@ function SeatingPlanPage() {
               }
             }
 
-            const existingKeySet = new Set(seats.map(s => `${s.row}-${s.col}`));
+            const existingKeySet = new Set((seats || []).map(s => `${s.row}-${s.col}`));
             const newSeats = [];
             for (let r = 1; r <= newTotalRows; r++) {
               for (let c = 1; c <= newTotalCols; c++) {
@@ -289,10 +293,17 @@ function SeatingPlanPage() {
               await supabase.from("classroom_seats").insert(newSeats);
             }
 
-            await supabase
-              .from("classroom_settings")
-              .update({ total_rows: newTotalRows, total_cols: newTotalCols })
-              .eq("id", settingsRow.id);
+            // 설정이 없으면 INSERT, 있으면 UPDATE
+            if (settingsRow) {
+              await supabase
+                .from("classroom_settings")
+                .update({ total_rows: newTotalRows, total_cols: newTotalCols })
+                .eq("id", settingsRow.id);
+            } else {
+              await supabase
+                .from("classroom_settings")
+                .insert({ total_rows: newTotalRows, total_cols: newTotalCols });
+            }
 
             setRefreshKey((k) => k + 1);
             setStudentRefreshKey((k) => k + 1);
