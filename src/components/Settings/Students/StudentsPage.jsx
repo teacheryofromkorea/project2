@@ -26,7 +26,7 @@ export default function StudentsPage() {
   // 삭제 중 상태
   const [deletingId, setDeletingId] = useState(null);
 
-    // ✏️ 인라인 수정 편의 함수들
+  // ✏️ 인라인 수정 편의 함수들
   function startEditStudent(stu) {
     setTempNumber(stu.number ?? "");
     setTempName(stu.name || "");
@@ -56,46 +56,46 @@ export default function StudentsPage() {
 
 
   // 📌 학생 목록 불러오기
-const fetchStudents = async () => {
-  setLoading(true);
-  const { data, error } = await supabase
-    .from("students")
-    .select("*");
+  const fetchStudents = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("students")
+      .select("*");
 
-  console.log("▶ FETCH 결과:", { data, error });
+    console.log("▶ FETCH 결과:", { data, error });
 
-  if (error) {
-    console.error("학생 불러오기 오류:", error);
-    setLoading(false);
-    return;
-  }
+    if (error) {
+      console.error("학생 불러오기 오류:", error);
+      setLoading(false);
+      return;
+    }
 
-  // 🔧 gender 정규화 (F/M/M\n → female/male)
-  const normalized = (data || []).map(stu => {
-    const g = (stu.gender || "").trim().toLowerCase();
-    return {
-      ...stu,
-      gender: g === "f" ? "female"
-            : g === "m" ? "male"
+    // 🔧 gender 정규화 (F/M/M\n → female/male)
+    const normalized = (data || []).map(stu => {
+      const g = (stu.gender || "").trim().toLowerCase();
+      return {
+        ...stu,
+        gender: g === "f" ? "female"
+          : g === "m" ? "male"
             : g,
-    };
-  });
+      };
+    });
 
-  // 🔥 여기에서 정렬!
-  const sorted = normalized.sort((a, b) => {
-    const gA = a.gender || "";
-    const gB = b.gender || "";
+    // 🔥 여기에서 정렬!
+    const sorted = normalized.sort((a, b) => {
+      const gA = a.gender || "";
+      const gB = b.gender || "";
 
-    if (gA !== gB) return gA.localeCompare(gB);
+      if (gA !== gB) return gA.localeCompare(gB);
 
-    const nA = a.number ?? Infinity;
-    const nB = b.number ?? Infinity;
-    return nA - nB;
-  });
+      const nA = a.number ?? Infinity;
+      const nB = b.number ?? Infinity;
+      return nA - nB;
+    });
 
-  setStudents(sorted);
-  setLoading(false);
-};
+    setStudents(sorted);
+    setLoading(false);
+  };
 
   useEffect(() => {
     console.log("▶ useEffect 실행됨");
@@ -105,7 +105,7 @@ const fetchStudents = async () => {
 
   // 📝 학생 추가 처리
   async function handleAddStudent() {
- 
+
     if (saving) return;
 
     const trimmedName = newName.trim();
@@ -120,12 +120,12 @@ const fetchStudents = async () => {
 
     setSaving(true);
 
-const { error } = await supabase.from("students").insert({
-  name: trimmedName,
-  gender: newGender,
-  number: parsedNumber,
-  duty: newDuty || null,
-});
+    const { error } = await supabase.from("students").insert({
+      name: trimmedName,
+      gender: newGender,
+      number: parsedNumber,
+      duty: newDuty || null,
+    });
 
     if (error) {
       console.error("학생 추가 오류:", error);
@@ -136,13 +136,13 @@ const { error } = await supabase.from("students").insert({
     await fetchStudents();
     window.dispatchEvent(new Event(STUDENTS_UPDATED_EVENT));
 
-// 🔥 입력값 초기화
-setNewName("");
-setNewGender("male");
-setNewNumber("");
-setNewDuty("");
-setFormError("");
-setSaving(false);
+    // 🔥 입력값 초기화
+    setNewName("");
+
+    setNewNumber("");
+    setNewDuty("");
+    setFormError("");
+    setSaving(false);
 
   }
 
@@ -199,43 +199,43 @@ setSaving(false);
       {loading && <p className="text-gray-600">불러오는 중...</p>}
 
       {/* 학생 리스트 */}
-      
-{/* 학생 리스트 3열 분리 */}
-<StudentsList
-  data={{
-    femaleStudents,
-    maleStudents,
-  }}
-  edit={{
-    editingId,
-    tempNumber,
-    tempName,
-    tempDuty,
-    startEditStudent,
-    saveEditingStudent,
-    cancelEditStudent,
-    setTempNumber,
-    setTempName,
-    setTempDuty,
-  }}
-  add={{
-    newName,
-    setNewName,
-    newGender,
-    setNewGender,
-    newNumber,
-    setNewNumber,
-    newDuty,
-    setNewDuty,
-    formError,
-    saving,
-    handleAddStudent,
-  }}
-  remove={{
-    handleDeleteStudent,
-    deletingId,
-  }}
-/>
+
+      {/* 학생 리스트 3열 분리 */}
+      <StudentsList
+        data={{
+          femaleStudents,
+          maleStudents,
+        }}
+        edit={{
+          editingId,
+          tempNumber,
+          tempName,
+          tempDuty,
+          startEditStudent,
+          saveEditingStudent,
+          cancelEditStudent,
+          setTempNumber,
+          setTempName,
+          setTempDuty,
+        }}
+        add={{
+          newName,
+          setNewName,
+          newGender,
+          setNewGender,
+          newNumber,
+          setNewNumber,
+          newDuty,
+          setNewDuty,
+          formError,
+          saving,
+          handleAddStudent,
+        }}
+        remove={{
+          handleDeleteStudent,
+          deletingId,
+        }}
+      />
 
     </div>
   );

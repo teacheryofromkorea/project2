@@ -5,6 +5,7 @@ function StatCardsGrid({
   isMultiSelectMode = false,
   onIncrease,
   onDecrease,
+  gridClass = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
 }) {
   const getAverageValue = (statId) => {
     if (selectedStudentIds.length === 0) return 0;
@@ -23,7 +24,7 @@ function StatCardsGrid({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className={`grid gap-4 ${gridClass}`}>
       {statTemplates.map((stat) => {
         const statValue = getAverageValue(stat.id);
 
@@ -35,27 +36,31 @@ function StatCardsGrid({
         return (
           <div
             key={stat.id}
-            className="relative rounded-2xl bg-black/20 backdrop-blur-md border border-white/5 p-5 text-white shadow-lg"
+            className="rounded-2xl bg-black/20 backdrop-blur-md border border-white/5 p-4 text-white shadow-lg"
           >
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xl">{stat.icon}</span>
-              <span className="font-semibold">
+            {/* 상단: 아이콘 + 이름 */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">{stat.icon || "✨"}</span>
+              <span className="font-semibold text-sm truncate flex-1">
                 {stat.name}
               </span>
             </div>
 
-            <div className="text-3xl font-bold mb-2">
-              {statValue} / {stat.max_value}
+            {/* 중앙: 점수 표시 */}
+            <div className="text-2xl font-bold mb-3 text-center">
+              {statValue} <span className="text-base text-white/50">/ {stat.max_value}</span>
             </div>
 
-            <div className="w-full h-3 bg-gray-200 rounded">
+            {/* 프로그레스 바 */}
+            <div className="w-full h-2 bg-white/10 rounded-full mb-4 overflow-hidden">
               <div
-                className={`h-3 rounded ${stat.color}`}
+                className="h-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-300"
                 style={{ width: `${percent}%` }}
               />
             </div>
 
-            <div className="absolute top-4 right-4 flex gap-2">
+            {/* 하단: +/- 버튼 */}
+            <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() =>
                   onDecrease(
@@ -63,7 +68,7 @@ function StatCardsGrid({
                     selectedStudentIds
                   )
                 }
-                className="w-10 h-10 rounded-full bg-red-100 hover:bg-red-200 text-red-600 font-bold"
+                className="w-10 h-10 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-300 font-bold text-lg transition flex items-center justify-center"
               >
                 −
               </button>
@@ -75,7 +80,7 @@ function StatCardsGrid({
                     selectedStudentIds
                   )
                 }
-                className="w-10 h-10 rounded-full bg-green-100 hover:bg-green-200 text-green-600 font-bold"
+                className="w-10 h-10 rounded-full bg-green-500/20 hover:bg-green-500/40 text-green-300 font-bold text-lg transition flex items-center justify-center"
               >
                 +
               </button>

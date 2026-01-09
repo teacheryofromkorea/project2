@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import StatCardsGrid from "./StatCardsGrid";
 import ReasonModal from "./ReasonModal";
 import CompetencySettingsModal from "./CompetencySettingsModal";
+import RadarChart from "./RadarChart";
 import { Settings } from "lucide-react";
 
 // 🎟️ 가챠 쿠폰 지급 기준: 능력치 5 누적당 1장
@@ -272,14 +273,69 @@ function CoreStatsSection({
         </button>
       </div>
 
-      <StatCardsGrid
-        statTemplates={statTemplates}
-        studentStatsMap={studentStatsMap}
-        selectedStudentIds={targetStudentIds}
-        isMultiSelectMode={isMultiSelectMode}
-        onIncrease={handleIncrease}
-        onDecrease={handleDecrease}
-      />
+      <div className="flex flex-col lg:flex-row gap-8 items-start">
+        {/* 왼쪽: 레이더 차트 */}
+        <div className="w-full lg:w-1/3 flex flex-col items-center">
+          <div className="bg-black/20 backdrop-blur-md border border-white/5 rounded-3xl p-6 shadow-xl w-full flex flex-col items-center justify-center aspect-square">
+            {statTemplates.length >= 3 ? (
+              <RadarChart
+                stats={statTemplates.map((tpl) => {
+                  // 평균값 계산 (StatCardsGrid 로직과 동일하게)
+                  const values = targetStudentIds.map((studentId) => {
+                    const stats = studentStatsMap[studentId] || [];
+                    return (
+                      stats.find((s) => s.stat_template_id === tpl.id)?.value ?? 0
+                    );
+                  });
+                  const sum = values.reduce((a, b) => a + b, 0);
+                  const avg =
+                    values.length > 0 ? Math.round(sum / values.length) : 0;
+
+                  return {
+                    name: tpl.name,
+                    value: avg,
+                    max: tpl.max_value || 10,
+                  };
+                })}
+                size={320}
+              />
+            ) : (
+              <div className="text-center text-white/50 px-4">
+                <p className="text-lg mb-2">📊</p>
+                <p className="font-semibold text-white/80 mb-1">분석 그래프 준비 중</p>
+                <p className="text-xs">
+                  핵심 역량이 3개 이상일 때<br />
+                  그래프가 표시됩니다.<br />
+                  (현재: {statTemplates.length}개)
+                </p>
+              </div>
+            )}
+          </div>
+          {statTemplates.length >= 3 && (
+            <p className="text-white/40 text-xs mt-4 text-center">
+              * 그래프는 {isMultiSelectMode ? "선택된 학생들의 평균" : "학생의 현재"}{" "}
+              상태를 보여줍니다.
+            </p>
+          )}
+        </div>
+
+        {/* 오른쪽: 카드 그리드 */}
+        <div className="flex-1 w-full">
+          <StatCardsGrid
+            statTemplates={statTemplates}
+            studentStatsMap={studentStatsMap}
+            selectedStudentIds={targetStudentIds}
+            isMultiSelectMode={isMultiSelectMode}
+            onIncrease={handleIncrease}
+            onDecrease={handleDecrease}
+            gridClass={
+              statTemplates.length >= 3
+                ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" // 차트 있을 때: 기본 2열, 아주 넓으면 3열
+                : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" // 차트 없을 때: 기존대로
+            }
+          />
+        </div>
+      </div>
 
       <ReasonModal
         open={reasonModalOpen}
@@ -296,7 +352,8 @@ function CoreStatsSection({
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         currentMax={currentMax}
-        onUpdate={handleUpdateMaxValue}
+        onUpdateMaxValue={handleUpdateMaxValue}
+        onTemplatesUpdated={loadTemplates}
       />
     </section>
   );
