@@ -5,6 +5,8 @@ import ReasonModal from "./ReasonModal";
 import CompetencySettingsModal from "./CompetencySettingsModal";
 import HorizontalStatChart from "./HorizontalStatChart";
 import { Settings } from "lucide-react";
+import confetti from "canvas-confetti";
+import TicketGrantModal from "./TicketGrantModal";
 
 function CoreStatsSection({
   students = [],
@@ -28,6 +30,10 @@ function CoreStatsSection({
   const [reason, setReason] = useState("");
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 🎟️ 티켓 지급 모달 상태
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [grantedStudentNames, setGrantedStudentNames] = useState([]);
 
   // Notify parent whenever internal modal state changes
   useEffect(() => {
@@ -283,9 +289,46 @@ function CoreStatsSection({
       });
     }
 
-    // 부모 컴포넌트에 변경 알림
+    // 🎉 화려한 축하 효과
+    // 티켓 모양 confetti (중앙에서 터짐)
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ["#fbbf24", "#f59e0b", "#fcd34d", "#fef3c7"],
+      shapes: ["square"],
+      scalar: 1.2,
+    });
+
+    // 좌우에서 터지는 추가 confetti
+    setTimeout(() => {
+      confetti({
+        particleCount: 50,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ["#fbbf24", "#f59e0b"],
+      });
+      confetti({
+        particleCount: 50,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ["#fbbf24", "#f59e0b"],
+      });
+    }, 150);
+
+    // 모달로 알림 (학생 이름 표시)
+    const names = targetStudentIds.map((id) => {
+      const student = students.find((s) => s.id === id);
+      return student?.name || "알 수 없음";
+    });
+    setGrantedStudentNames(names);
+    setTicketModalOpen(true);
+
+    // 부모 컴포넌트에 변경 알림 (true = 백그라운드 업데이트, 로딩 스피너 X)
     if (onStudentsUpdated) {
-      await onStudentsUpdated();
+      await onStudentsUpdated(true);
     }
   };
 
@@ -391,6 +434,13 @@ function CoreStatsSection({
         currentMax={currentMax}
         onUpdateMaxValue={handleUpdateMaxValue}
         onTemplatesUpdated={loadTemplates}
+      />
+
+      <TicketGrantModal
+        isOpen={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+        studentNames={grantedStudentNames}
+        ticketCount={1}
       />
     </section>
   );

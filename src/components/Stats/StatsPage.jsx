@@ -12,8 +12,12 @@ function StatsPage() {
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchStudents = async () => {
-    setLoading(true);
+  /* 
+     isBackground = true이면 로딩 스피너 안 띄움 (데이터만 갱신)
+     기본값 false -> 로딩 스피너 띄움 (초기 로딩 등)
+  */
+  const fetchStudents = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
 
     // 1️⃣ 학생 기본 정보 fetch
     const { data: studentsData, error: studentsError } = await supabase
@@ -24,7 +28,7 @@ function StatsPage() {
     if (studentsError || !studentsData) {
       console.error("학생 fetch 오류:", studentsError);
       setStudents([]);
-      setLoading(false);
+      if (!isBackground) setLoading(false);
       return;
     }
 
@@ -72,7 +76,7 @@ function StatsPage() {
       }
     }
 
-    setLoading(false);
+    if (!isBackground) setLoading(false);
 
     // 개발 중 디버그용
     // console.log(
