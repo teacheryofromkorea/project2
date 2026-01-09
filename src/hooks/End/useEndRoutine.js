@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
 
@@ -23,6 +23,9 @@ export default function useEndRoutine() {
   const [newContent, setNewContent] = useState("");
   const [editRoutine, setEditRoutine] = useState(null);
   const [editText, setEditText] = useState("");
+
+  // 중복 INSERT 방지용 락
+  const isInsertingRef = useRef(false);
 
   /* ===============================
      1. 루틴 아이템 조회
@@ -70,35 +73,58 @@ export default function useEndRoutine() {
       currentTitle = data[0].title;
     } else {
       // 3. 데이터가 아예 없으면(최초 사용) -> 하나 생성
-      const { data: newData, error: insertError } = await supabase
-        .from("end_routine_title")
-        .insert({
-          title: "하교시간 루틴",
-          date: new Date().toISOString().slice(0, 10),
-        })
-        .select()
-        .maybeSingle();
-
-      if (insertError) {
-        console.error("End routine insert error:", insertError);
-        handleSupabaseError(insertError, "하교시간 루틴 초기 생성 실패");
-        return;
-      }
-
-      if (newData) {
-        currentId = newData.id;
-        currentTitle = newData.title;
-      } else {
-        // INSERT 후 데이터를 못 가져온 경우 다시 조회
-        const { data: refetchData } = await supabase
+      // 중복 INSERT 방지: 이미 진행 중이면 건너뛰고 잠시 후 refetch
+      if (isInsertingRef.current) {
+        // 다른 호출이 INSERT 중이므로 잠시 대기 후 refetch
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const { data: waitData } = await supabase
           .from("end_routine_title")
           .select("id, title")
           .order("created_at", { ascending: false })
           .limit(1);
 
-        if (refetchData && refetchData.length > 0) {
-          currentId = refetchData[0].id;
-          currentTitle = refetchData[0].title;
+        if (waitData && waitData.length > 0) {
+          currentId = waitData[0].id;
+          currentTitle = waitData[0].title;
+        }
+      } else {
+        // 락 획득
+        isInsertingRef.current = true;
+
+        const { data: newData, error: insertError } = await supabase
+          .from("end_routine_title")
+          .insert({
+            title: "하교시간 루틴",
+            date: new Date().toISOString().slice(0, 10),
+          })
+          .select()
+          .maybeSingle();
+
+        // 락 해제
+        isInsertingRef.current = false;
+
+        // 중복 키 에러(23505)면 이미 다른 곳에서 생성됨 -> 무시하고 refetch
+        if (insertError && insertError.code !== "23505") {
+          console.error("End routine insert error:", insertError);
+          handleSupabaseError(insertError, "하교시간 루틴 초기 생성 실패");
+          return;
+        }
+
+        if (newData) {
+          currentId = newData.id;
+          currentTitle = newData.title;
+        } else {
+          // INSERT 성공했지만 데이터 못가져왔거나, 중복 에러 발생 시 다시 조회
+          const { data: refetchData } = await supabase
+            .from("end_routine_title")
+            .select("id, title")
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          if (refetchData && refetchData.length > 0) {
+            currentId = refetchData[0].id;
+            currentTitle = refetchData[0].title;
+          }
         }
       }
     }

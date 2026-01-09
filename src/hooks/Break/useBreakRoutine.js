@@ -73,7 +73,8 @@ export default function useBreakRoutine() {
         .select()
         .maybeSingle();
 
-      if (insertError) {
+      // 중복 키 에러(23505)면 이미 다른 곳에서 생성됨 -> 무시하고 refetch
+      if (insertError && insertError.code !== "23505") {
         console.error("Break routine insert error:", insertError);
         handleSupabaseError(insertError, "쉬는시간 루틴 초기 생성 실패");
         return;
