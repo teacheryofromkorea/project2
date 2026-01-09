@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import CoreStatsSection from "./CoreStatsSection";
 import GachaSection from "./GachaSection";
 import PetCollectionSection from "./PetCollectionSection";
+import PraiseHistorySection from "./PraiseHistorySection";
 import { petSets } from "../../constants/pets";
 
 function StatsDashboard({
@@ -61,6 +62,13 @@ function StatsDashboard({
             selectedStudentIds={selectedStudentIds}
             isMultiSelectMode={isMultiSelectMode}
             onStudentsUpdated={onStudentsUpdated}
+          />
+        </div>
+
+        {/* Praise History - 칭찬 히스토리 (CoreStats 바로 아래) */}
+        <div className="rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10 p-8 shadow-2xl transition-all duration-500 hover:bg-white/10 hover:border-white/20 hover:shadow-emerald-500/10 h-[500px] overflow-y-auto custom-scrollbar">
+          <PraiseHistorySection
+            selectedStudentId={isMultiSelectMode ? null : selectedStudentId}
           />
         </div>
 
