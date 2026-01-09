@@ -163,7 +163,7 @@ function CoreStatsSection({
           .from("students")
           .select("gacha_progress")
           .eq("id", studentId)
-          .single();
+          .maybeSingle();
 
         if (progressReadError) {
           console.error("[gacha_progress] read failed", progressReadError);

@@ -243,7 +243,7 @@ export default function BasicTimeSection() {
         .from("time_blocks")
         .insert(payload)
         .select("id, name, block_type, order_index, start_time, end_time")
-        .single();
+        .maybeSingle();
 
       if (e) {
         setError(e.message || "저장 실패");
@@ -251,7 +251,9 @@ export default function BasicTimeSection() {
         return;
       }
 
-      setRows((prev) => ({ ...prev, [type]: data }));
+      if (data) {
+        setRows((prev) => ({ ...prev, [type]: data }));
+      }
     }
 
     setSavingType(null);
@@ -310,12 +312,12 @@ export default function BasicTimeSection() {
             onSave={() => saveBasic("end")}
             saving={savingType === "end"}
           />
-          
+
         </div>
-        
+
       )}
 
-      
+
     </div>
   );
 }

@@ -27,7 +27,7 @@ export default function AddClassResourceModal({ isOpen, onClose, onAdded }) {
       .select("order_index")
       .order("order_index", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const nextOrderIndex =
       lastItem?.order_index !== undefined

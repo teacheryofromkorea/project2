@@ -71,14 +71,29 @@ export default function useBreakRoutine() {
           title: "쉬는시간 루틴",
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (insertError) {
+        console.error("Break routine insert error:", insertError);
         handleSupabaseError(insertError, "쉬는시간 루틴 초기 생성 실패");
         return;
       }
-      currentId = newData.id;
-      currentTitle = newData.title;
+
+      if (newData) {
+        currentId = newData.id;
+        currentTitle = newData.title;
+      } else {
+        // INSERT 후 데이터를 못 가져온 경우 다시 조회
+        const { data: refetchData } = await supabase
+          .from("break_routine_title")
+          .select("id, title")
+          .limit(1);
+
+        if (refetchData && refetchData.length > 0) {
+          currentId = refetchData[0].id;
+          currentTitle = refetchData[0].title;
+        }
+      }
     }
 
     setTitleId(currentId);

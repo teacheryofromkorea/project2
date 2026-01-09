@@ -76,18 +76,32 @@ export default function useLunchRoutine() {
         .from("lunch_routine_title")
         .insert({
           title: "점심시간 루틴",
-          // date 컬럼이 필수인지 확인 필요. 보통 default now()거나 null 허용이면 생략 가능.
-          // 기존 코드 참조하니 date 컬럼을 안 넣었었음.
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (insertError) {
+        console.error("Lunch routine insert error:", insertError);
         handleSupabaseError(insertError, "점심시간 루틴 초기 생성 실패");
         return;
       }
-      currentId = newData.id;
-      currentTitle = newData.title;
+
+      if (newData) {
+        currentId = newData.id;
+        currentTitle = newData.title;
+      } else {
+        // INSERT 후 데이터를 못 가져온 경우 다시 조회
+        const { data: refetchData } = await supabase
+          .from("lunch_routine_title")
+          .select("id, title")
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (refetchData && refetchData.length > 0) {
+          currentId = refetchData[0].id;
+          currentTitle = refetchData[0].title;
+        }
+      }
     }
 
     setTitleId(currentId);

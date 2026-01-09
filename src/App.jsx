@@ -66,6 +66,7 @@ function AppContent() {
   const location = useLocation();
   const isStatsPage = location.pathname.startsWith("/stats");
   const isLandingPage = location.pathname === "/"; // ✅ Landing Page Check
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/signup"; // ✅ Auth Page Check
   const autoNavigatedRef = useRef(false);
   const prevPathRef = useRef(location.pathname);
   const userNavigatingRef = useRef(false);
@@ -195,8 +196,8 @@ function AppContent() {
       <div className="relative z-10 flex-1 flex flex-col">
         <Toaster position="top-center" />
 
-        {/* ✅ 랜딩 페이지가 아닐 때만 TopNav 표시 */}
-        {!isLandingPage && (
+        {/* ✅ 랜딩 페이지와 로그인/회원가입 페이지가 아닐 때만 TopNav 표시 */}
+        {!isLandingPage && !isAuthPage && (
           <TopNav
             autoSwitchEnabled={autoSwitchEnabled}
             onToggleAutoSwitch={() => setAutoSwitchEnabled((v) => !v)}
@@ -204,8 +205,8 @@ function AppContent() {
           />
         )}
 
-        {/* ✅ 랜딩 페이지일 땐 패딩 0, 아닐 땐 기존 패딩 유지 */}
-        <main className={`flex-1 flex flex-col min-h-0 ${isLandingPage ? "p-0" : "px-8 pb-10 pt-4"}`}>
+        {/* ✅ 랜딩/로그인 페이지일 땐 패딩 0, 아닐 땐 기존 패딩 유지 */}
+        <main className={`flex-1 flex flex-col min-h-0 ${(isLandingPage || isAuthPage) ? "p-0" : "px-8 pb-10 pt-4"}`}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               {/* Public Routes */}
