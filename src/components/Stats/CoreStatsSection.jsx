@@ -3,11 +3,8 @@ import { supabase } from "../../lib/supabaseClient";
 import StatCardsGrid from "./StatCardsGrid";
 import ReasonModal from "./ReasonModal";
 import CompetencySettingsModal from "./CompetencySettingsModal";
-import RadarChart from "./RadarChart";
+import HorizontalStatChart from "./HorizontalStatChart";
 import { Settings } from "lucide-react";
-
-// 🎟️ 가챠 쿠폰 지급 기준: 능력치 5 누적당 1장
-const STAT_PER_GACHA = 5;
 
 function CoreStatsSection({
   students = [],
@@ -20,6 +17,9 @@ function CoreStatsSection({
   const [statTemplates, setStatTemplates] = useState([]);
   const [studentStatsMap, setStudentStatsMap] = useState({});
   const [loading, setLoading] = useState(true);
+
+  // 🎟️ 가챠 티켓 지급 기준 (Supabase에서 불러옴)
+  const [statPerGacha, setStatPerGacha] = useState(5);
 
   const [reasonModalOpen, setReasonModalOpen] = useState(false);
   const [pendingMode, setPendingMode] = useState(null); // "increase" | "decrease"
@@ -66,8 +66,21 @@ function CoreStatsSection({
     }
   };
 
+  const loadStatPerGacha = async () => {
+    const { data, error } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "stat_per_gacha")
+      .maybeSingle();
+
+    if (!error && data) {
+      setStatPerGacha(parseInt(data.value, 10) || 5);
+    }
+  };
+
   useEffect(() => {
     loadTemplates();
+    loadStatPerGacha();
   }, []);
 
   useEffect(() => {
@@ -180,9 +193,9 @@ function CoreStatsSection({
           if (progressUpdateError) {
             console.error("[gacha_progress] update failed", progressUpdateError);
           } else {
-            // 🎟️ 기준(5점)을 넘긴 경우에만 티켓 지급
-            const beforeTickets = Math.floor(beforeProgress / STAT_PER_GACHA);
-            const afterTickets = Math.floor(afterProgress / STAT_PER_GACHA);
+            // 🎟️ 설정된 기준을 넘긴 경우에만 티켓 지급
+            const beforeTickets = Math.floor(beforeProgress / statPerGacha);
+            const afterTickets = Math.floor(afterProgress / statPerGacha);
             const ticketToGive = afterTickets - beforeTickets;
 
             for (let i = 0; i < ticketToGive; i++) {
@@ -260,63 +273,87 @@ function CoreStatsSection({
   // 대표 Max Value 가져오기 (없으면 기본 10)
   const currentMax = statTemplates.length > 0 ? statTemplates[0].max_value : 10;
 
+  // 🎟️ 가챠 티켓 직접 지급
+  const handleGiveTicket = async () => {
+    if (targetStudentIds.length === 0) return;
+
+    for (const studentId of targetStudentIds) {
+      await supabase.rpc("increment_gacha_ticket", {
+        target_student_id: studentId,
+      });
+    }
+
+    // 부모 컴포넌트에 변경 알림
+    if (onStudentsUpdated) {
+      await onStudentsUpdated();
+    }
+  };
+
   return (
     <section className="bg-transparent">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-white">{title}</h2>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition"
-          title="최대 수치 설정"
-        >
-          <Settings size={18} />
-        </button>
+
+        <div className="flex items-center gap-2">
+          {/* 🎟️ 가챠 티켓 직접 지급 버튼 (숨쉬는 반짝임 효과) */}
+          <button
+            onClick={handleGiveTicket}
+            disabled={targetStudentIds.length === 0}
+            className={`
+              relative px-4 py-2 rounded-xl font-bold text-sm transition-all duration-300
+              ${targetStudentIds.length > 0
+                ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-400 text-amber-900 shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 active:scale-95"
+                : "bg-white/10 text-white/30 cursor-not-allowed"}
+            `}
+            title="가챠 티켓 1장 지급"
+          >
+            {/* 숨쉬는 글로우 효과 */}
+            {targetStudentIds.length > 0 && (
+              <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 opacity-50 blur-md animate-pulse -z-10" />
+            )}
+            <span className="flex items-center gap-1.5">
+              <span>🎟️</span>
+              <span>티켓 +1</span>
+            </span>
+          </button>
+
+          {/* ⚙️ 설정 버튼 */}
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition"
+            title="최대 수치 설정"
+          >
+            <Settings size={18} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* 왼쪽: 레이더 차트 */}
-        <div className="w-full lg:w-1/3 flex flex-col items-center">
-          <div className="bg-black/20 backdrop-blur-md border border-white/5 rounded-3xl p-6 shadow-xl w-full flex flex-col items-center justify-center aspect-square">
-            {statTemplates.length >= 3 ? (
-              <RadarChart
-                stats={statTemplates.map((tpl) => {
-                  // 평균값 계산 (StatCardsGrid 로직과 동일하게)
-                  const values = targetStudentIds.map((studentId) => {
-                    const stats = studentStatsMap[studentId] || [];
-                    return (
-                      stats.find((s) => s.stat_template_id === tpl.id)?.value ?? 0
-                    );
-                  });
-                  const sum = values.reduce((a, b) => a + b, 0);
-                  const avg =
-                    values.length > 0 ? Math.round(sum / values.length) : 0;
+      <div className="flex flex-col lg:flex-row gap-8 items-center">
+        {/* 왼쪽: 수평 스탯 차트 */}
+        <div className="w-full lg:w-1/3 flex flex-col h-full">
+          <div className="bg-black/20 backdrop-blur-md border border-white/5 rounded-3xl p-6 shadow-xl w-full flex-1">
+            <HorizontalStatChart
+              stats={statTemplates.map((tpl) => {
+                // 평균값 계산 (StatCardsGrid 로직과 동일하게)
+                const values = targetStudentIds.map((studentId) => {
+                  const stats = studentStatsMap[studentId] || [];
+                  return (
+                    stats.find((s) => s.stat_template_id === tpl.id)?.value ?? 0
+                  );
+                });
+                const sum = values.reduce((a, b) => a + b, 0);
+                const avg =
+                  values.length > 0 ? Math.round(sum / values.length) : 0;
 
-                  return {
-                    name: tpl.name,
-                    value: avg,
-                    max: tpl.max_value || 10,
-                  };
-                })}
-                size={320}
-              />
-            ) : (
-              <div className="text-center text-white/50 px-4">
-                <p className="text-lg mb-2">📊</p>
-                <p className="font-semibold text-white/80 mb-1">분석 그래프 준비 중</p>
-                <p className="text-xs">
-                  핵심 역량이 3개 이상일 때<br />
-                  그래프가 표시됩니다.<br />
-                  (현재: {statTemplates.length}개)
-                </p>
-              </div>
-            )}
+                return {
+                  name: tpl.name,
+                  icon: tpl.icon,
+                  value: avg,
+                  max: tpl.max_value || 10,
+                };
+              })}
+            />
           </div>
-          {statTemplates.length >= 3 && (
-            <p className="text-white/40 text-xs mt-4 text-center">
-              * 그래프는 {isMultiSelectMode ? "선택된 학생들의 평균" : "학생의 현재"}{" "}
-              상태를 보여줍니다.
-            </p>
-          )}
         </div>
 
         {/* 오른쪽: 카드 그리드 */}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import BaseModal from "../common/BaseModal";
 import { supabase } from "../../lib/supabaseClient";
 import { Trash2, Edit2, Plus, X, Check } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function CompetencySettingsModal({
     isOpen,
@@ -24,13 +25,29 @@ export default function CompetencySettingsModal({
     const [editName, setEditName] = useState("");
     const [editIcon, setEditIcon] = useState("");
 
-    // 모달 열릴 때마다 목록 새로고침 & max값 동기화
+    // 가챠 티켓 지급 기준
+    const [statPerGacha, setStatPerGacha] = useState(5);
+
+    // 모달 열릴 때마다 목록 새로고침 & max값 동기화 & 가챠 설정 불러오기
     useEffect(() => {
         if (isOpen) {
             fetchTemplates();
             setMaxValue(currentMax);
+            fetchStatPerGacha();
         }
     }, [isOpen, currentMax]);
+
+    const fetchStatPerGacha = async () => {
+        const { data, error } = await supabase
+            .from("app_settings")
+            .select("value")
+            .eq("key", "stat_per_gacha")
+            .maybeSingle();
+
+        if (!error && data) {
+            setStatPerGacha(parseInt(data.value, 10) || 5);
+        }
+    };
 
     const fetchTemplates = async () => {
         setLoading(true);
@@ -88,6 +105,25 @@ export default function CompetencySettingsModal({
                 .gt("id", 0);
         }
         fetchTemplates();
+    };
+
+    /* ===============================
+       1-2. 가챠 티켓 기준 저장 (Supabase)
+       =============================== */
+    const handleSaveStatPerGacha = async () => {
+        const num = parseInt(statPerGacha, 10);
+        if (isNaN(num) || num <= 0) return;
+
+        const { error } = await supabase
+            .from("app_settings")
+            .upsert(
+                { key: "stat_per_gacha", value: num.toString() },
+                { onConflict: "key" }
+            );
+
+        if (!error) {
+            onClose(); // 저장 성공 시 모달 닫기
+        }
     };
 
     /* ===============================
@@ -190,6 +226,33 @@ export default function CompetencySettingsModal({
                         </div>
                         <p className="text-xs text-gray-400 mt-2">
                             * 적용 시 모든 역량의 최대 점수가 변경됩니다.
+                        </p>
+                    </div>
+
+                    {/* 섹션 1-2: 가챠 티켓 지급 기준 */}
+                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            🎟️ 가챠 티켓 지급 기준
+                        </label>
+                        <div className="flex gap-2 items-center">
+                            <span className="text-sm text-gray-600">역량 점수</span>
+                            <input
+                                type="number"
+                                value={statPerGacha}
+                                onChange={(e) => setStatPerGacha(e.target.value)}
+                                className="w-20 px-3 py-2 rounded-lg bg-white border border-amber-200 focus:ring-2 focus:ring-amber-200 outline-none font-bold text-center"
+                                min="1"
+                            />
+                            <span className="text-sm text-gray-600">점당 티켓 1장</span>
+                            <button
+                                onClick={handleSaveStatPerGacha}
+                                className="px-4 py-2 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600 transition text-sm ml-auto"
+                            >
+                                저장
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">
+                            * 예: 5로 설정 시, 역량 점수 5점마다 가챠 티켓 1장 지급
                         </p>
                     </div>
 

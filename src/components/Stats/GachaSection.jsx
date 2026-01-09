@@ -4,7 +4,7 @@ const FRAGMENTS_BY_RARITY = {
   epic: 6,
   legendary: 10,
 };
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { getRandomPet } from "../../constants/pets";
 import { getActivePityRule } from "../../constants/pitySystem";
@@ -58,10 +58,29 @@ export default function GachaSection({
   const [isSlotOpen, setIsSlotOpen] = useState(false);
   const [pendingResult, setPendingResult] = useState(null);
 
-  // 🛍️ 펫 상점 상태
+  // 🎰 상점 상태
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [shopRarity, setShopRarity] = useState("common"); // internal "common"
   const [shopCost, setShopCost] = useState(0);
+
+  // 🏟️ 가챠 티켓 지급 기준 (Supabase에서 불러옴)
+  const [statPerGacha, setStatPerGacha] = useState(5);
+
+  // 컴포넌트 마운트 시 Supabase에서 가챠 설정 불러오기
+  useEffect(() => {
+    const fetchStatPerGacha = async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "stat_per_gacha")
+        .maybeSingle();
+
+      if (!error && data) {
+        setStatPerGacha(parseInt(data.value, 10) || 5);
+      }
+    };
+    fetchStatPerGacha();
+  }, []);
 
   // 🎯 선택된 학생 계산
   const selectedStudents = useMemo(() => {
@@ -93,14 +112,14 @@ export default function GachaSection({
     0
   );
 
-  // gacha_progress는 5점 단위로 티켓 지급 → 나머지로 진행 상태 표시
-  const progressInCycle = totalGachaProgress % 5;
+  // gacha_progress는 설정된 점수 단위로 티켓 지급 → 나머지로 진행 상태 표시
+  const progressInCycle = totalGachaProgress % statPerGacha;
 
   // 다음 가챠까지 '항상' 남은 점수 기준
-  // (보상 직후에도 다시 5점이 필요하도록 UX 보정)
-  const remainingToNext = progressInCycle === 0 ? 5 : 5 - progressInCycle;
+  // (보상 직후에도 다시 n점이 필요하도록 UX 보정)
+  const remainingToNext = progressInCycle === 0 ? statPerGacha : statPerGacha - progressInCycle;
 
-  const progressRatio = progressInCycle / 5;
+  const progressRatio = progressInCycle / statPerGacha;
 
   // 🧩 다음 목표 계산 (UI용)
   const exchangeEntries = Object.entries(FRAGMENT_EXCHANGE_COST);
@@ -351,7 +370,7 @@ export default function GachaSection({
             </h3>
             {/* 부제목 텍스트 투명도 제거 */}
             <p className="text-base font-semibold text-white">
-              능력치 10점마다 쿠폰 1장 지급
+              능력치 {statPerGacha}점마다 쿠폰 1장 지급
             </p>
           </div>
 
