@@ -1,6 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import { Turnstile } from "@marsidev/react-turnstile";
+
+const TURNSTILE_SITE_KEY = "0x4AAAAAACLbh8kTgXZfdxt1";
 
 export default function AuthPage() {
     const navigate = useNavigate();
@@ -16,8 +19,11 @@ export default function AuthPage() {
     const [agreePrivacy, setAgreePrivacy] = useState(false);
     const [agreeAll, setAgreeAll] = useState(false);
 
-    // 로그인 시에도 신규 사용자면 약관 동의 필요
+    // Google 로그인 시 약관 동의 표시
     const [showTermsForGoogle, setShowTermsForGoogle] = useState(false);
+
+    // CAPTCHA 토큰
+    const [captchaToken, setCaptchaToken] = useState(null);
 
     const handleAgreeAll = (checked) => {
         setAgreeAll(checked);
@@ -29,13 +35,11 @@ export default function AuthPage() {
 
     // Google 로그인 처리
     const handleGoogleLogin = async () => {
-        // 로그인 모드에서 약관 동의 화면 표시
         if (isLogin && !showTermsForGoogle) {
             setShowTermsForGoogle(true);
             return;
         }
 
-        // 약관 동의 확인
         if (!isAgreementComplete) {
             setError("필수 약관에 모두 동의해주세요.");
             return;
@@ -62,6 +66,12 @@ export default function AuthPage() {
             return;
         }
 
+        // 회원가입 시 CAPTCHA 토큰 필수
+        if (!isLogin && !captchaToken) {
+            setError("보안 인증을 완료해주세요.");
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
@@ -81,14 +91,19 @@ export default function AuthPage() {
                 if (error) throw error;
                 navigate("/attendance");
             } else {
+                // 회원가입 시 CAPTCHA 토큰 포함
                 const { error } = await withTimeout(supabase.auth.signUp({
                     email,
                     password,
+                    options: {
+                        captchaToken,
+                    },
                 }));
                 if (error) throw error;
                 alert("회원가입이 완료되었습니다! 이제 로그인해주세요.");
                 setIsLogin(true);
                 setPassword("");
+                setCaptchaToken(null);
             }
         } catch (err) {
             setError(err.message);
@@ -103,6 +118,7 @@ export default function AuthPage() {
         setAgreeTerms(false);
         setAgreePrivacy(false);
         setShowTermsForGoogle(false);
+        setCaptchaToken(null);
         setError(null);
     };
 
@@ -237,9 +253,24 @@ export default function AuthPage() {
                             />
                         </div>
 
+                        {/* CAPTCHA - 회원가입 시에만 표시 */}
+                        {!isLogin && (
+                            <div className="flex justify-center">
+                                <Turnstile
+                                    siteKey={TURNSTILE_SITE_KEY}
+                                    onSuccess={(token) => setCaptchaToken(token)}
+                                    onError={() => {
+                                        setError("보안 인증에 실패했습니다. 새로고침 후 다시 시도해주세요.");
+                                        setCaptchaToken(null);
+                                    }}
+                                    onExpire={() => setCaptchaToken(null)}
+                                />
+                            </div>
+                        )}
+
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || (!isLogin && !captchaToken)}
                             className="w-full py-3.5 rounded-lg bg-blue-600 text-white font-bold text-base hover:bg-blue-500 active:scale-[0.98] transition-all shadow-md shadow-blue-200 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                             {loading ? "처리 중..." : (isLogin ? "로그인하기" : "가입하기")}
