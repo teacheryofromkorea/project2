@@ -97,7 +97,12 @@ export const AuthProvider = ({ children }) => {
         user,
         loading,
         signOut: async () => {
-            await supabase?.auth.signOut();
+            try {
+                // scope: 'global' ensures logout from all sessions
+                await supabase?.auth.signOut({ scope: 'global' });
+            } catch (error) {
+                console.error("[Auth] SignOut error:", error);
+            }
             setUser(null);
             setSession(null);
         },

@@ -32,7 +32,7 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
 
   const handleLogout = async () => {
     await signOut();
-    navigate("/");
+    window.location.href = "/"; // 전체 새로고침으로 랜딩페이지 이동
   };
 
   return (
@@ -99,8 +99,8 @@ function TopNav({ autoSwitchEnabled, onToggleAutoSwitch, onUserNavigate }) {
               type="button"
               onClick={handleLogout}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isStatsPage
-                  ? "text-red-300 hover:bg-red-500/20 hover:text-red-200"
-                  : "text-red-500 hover:bg-red-50 hover:text-red-600"
+                ? "text-red-300 hover:bg-red-500/20 hover:text-red-200"
+                : "text-red-500 hover:bg-red-50 hover:text-red-600"
                 }`}
               title="로그아웃"
             >
