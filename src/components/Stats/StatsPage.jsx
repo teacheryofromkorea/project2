@@ -134,6 +134,31 @@ function StatsPage() {
     setSelectedStudentId(students.length > 0 ? students[0].id : null);
   };
 
+  const handleOptimisticStatUpdate = ({ studentId, delta, statPerGacha }) => {
+    // 점수가 감소하는 경우는 gacha_progress에 영향 없음
+    if (delta <= 0) return;
+
+    setStudents((prevStudents) =>
+      prevStudents.map((student) => {
+        if (student.id !== studentId) return student;
+
+        const oldProgress = student.gacha_progress || 0;
+        const newProgress = oldProgress + 1;
+
+        // 티켓 계산
+        const beforeTickets = Math.floor(oldProgress / statPerGacha);
+        const afterTickets = Math.floor(newProgress / statPerGacha);
+        const earnedTickets = afterTickets - beforeTickets;
+
+        return {
+          ...student,
+          gacha_progress: newProgress,
+          gacha_tickets: (student.gacha_tickets || 0) + earnedTickets,
+        };
+      })
+    );
+  };
+
   return (
     <div className="h-full flex">
       <StudentSelectPanel
@@ -155,6 +180,7 @@ function StatsPage() {
         loading={loading}
         onStudentsUpdated={fetchStudents}
         onPetAcquired={handlePetAcquired}
+        onOptimisticStatUpdate={handleOptimisticStatUpdate}
       />
     </div>
   );

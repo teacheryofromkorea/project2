@@ -1,3 +1,17 @@
+import { useEffect } from "react";
+import { motion, useSpring, useTransform } from "framer-motion";
+
+function AnimatedNumber({ value }) {
+  const spring = useSpring(value, { mass: 0.8, stiffness: 75, damping: 15 });
+  const display = useTransform(spring, (current) => Math.round(current));
+
+  useEffect(() => {
+    spring.set(value);
+  }, [spring, value]);
+
+  return <motion.span>{display}</motion.span>;
+}
+
 function StatCardsGrid({
   statTemplates = [],
   studentStatsMap = {},
@@ -48,7 +62,7 @@ function StatCardsGrid({
 
             {/* 중앙: 점수 표시 */}
             <div className="text-2xl font-bold mb-3 text-center">
-              {statValue} <span className="text-base text-white/50">/ {stat.max_value}</span>
+              <AnimatedNumber value={statValue} /> <span className="text-base text-white/50">/ {stat.max_value}</span>
             </div>
 
             {/* 프로그레스 바 */}

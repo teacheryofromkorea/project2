@@ -12,9 +12,11 @@ function StatsDashboard({
   isMultiSelectMode = false,
   loading = false,
   onStudentsUpdated,
+  onOptimisticStatUpdate,
 }) {
   const [ownedPetIds, setOwnedPetIds] = useState([]);
   const [lastDrawnPetId, setLastDrawnPetId] = useState(null);
+  const [optimisticLog, setOptimisticLog] = useState(null);
 
   const selectedStudent = students.find(
     (s) => s.id === selectedStudentId
@@ -62,6 +64,8 @@ function StatsDashboard({
             selectedStudentIds={selectedStudentIds}
             isMultiSelectMode={isMultiSelectMode}
             onStudentsUpdated={onStudentsUpdated}
+            onOptimisticStatUpdate={onOptimisticStatUpdate}
+            onOptimisticLog={setOptimisticLog}
           />
         </div>
 
@@ -69,6 +73,7 @@ function StatsDashboard({
         <div className="rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10 p-8 shadow-2xl transition-all duration-500 hover:bg-white/10 hover:border-white/20 hover:shadow-emerald-500/10 h-[500px] overflow-y-auto custom-scrollbar">
           <PraiseHistorySection
             selectedStudentId={isMultiSelectMode ? null : selectedStudentId}
+            optimisticLog={optimisticLog}
           />
         </div>
 

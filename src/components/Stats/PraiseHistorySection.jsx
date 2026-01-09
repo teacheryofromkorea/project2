@@ -15,11 +15,22 @@ import { ko } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export default function PraiseHistorySection({ selectedStudentId }) {
+export default function PraiseHistorySection({ selectedStudentId, optimisticLog }) {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
+
+    // Optimistic Log 추가
+    useEffect(() => {
+        if (optimisticLog) {
+            setLogs((prev) => [optimisticLog, ...prev]);
+            // 만약 현재 보고 있는 날짜가 오늘이 아니라면 오늘로 이동 (사용자 편의)
+            if (!isToday(selectedDate)) {
+                setSelectedDate(new Date());
+            }
+        }
+    }, [optimisticLog]);
 
     // 초기 데이터 로드
     const fetchLogs = async () => {
@@ -83,7 +94,16 @@ export default function PraiseHistorySection({ selectedStudentId }) {
                         .single();
 
                     if (!error && data) {
-                        setLogs((prev) => [data, ...prev]);
+                        setLogs((prev) => {
+                            // 중복 방지 (Optimistic update로 이미 추가되었을 수 있음)
+                            // id가 temp-로 시작하는 것은 실제 DB id로 교체해야 이상적이지만,
+                            // 지금은 단순하게 중복 렌더링만 처리하거나, 리스트 갱신을 수행함.
+                            // 만약 방금 추가한 optimisticLog와 내용이 같다면 중복 제거가 필요할 수 있음.
+                            // 여기서는 간단히 최신 데이터를 앞에 추가하되, 중복 방지를 위해 id 체크
+                            const exists = prev.some(log => log.id === data.id);
+                            if (exists) return prev;
+                            return [data, ...prev];
+                        });
                     }
                 }
             )
@@ -290,29 +310,31 @@ function LogItem({ log }) {
 
             {/* 내용 */}
             <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-white text-lg">{log.student?.name}</span>
-                    <span
-                        className={`text-base font-bold ${isPositive ? "text-emerald-400" : "text-rose-400"
-                            }`}
-                    >
-                        {isPositive ? "+" : ""}
-                        {log.delta}
-                    </span>
-                    <span className="text-sm text-white/40 ml-auto font-mono">
+                {/* 상단: 칭찬 종류 + 시간 */}
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-lg">{log.stat?.name}</span>
+                        <span
+                            className={`text-lg font-bold ${isPositive ? "text-emerald-400" : "text-rose-400"
+                                }`}
+                        >
+                            {isPositive ? "+" : ""}
+                            {log.delta}
+                        </span>
+                    </div>
+                    <span className="text-sm text-white/40 font-mono">
                         {timeLabel}
                     </span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <span className="text-base text-white/60">{log.stat?.name}</span>
-                    {log.reason && (
-                        <>
-                            <span className="text-xs text-white/20">|</span>
-                            <span className="text-base text-white/80">"{log.reason}"</span>
-                        </>
-                    )}
-                </div>
+                {/* 하단: 사유 (강조됨) */}
+                {log.reason && (
+                    <div className="bg-or-backdrop-light rounded-lg p-3 border border-white/5">
+                        <p className="text-white text-base leading-relaxed break-words">
+                            "{log.reason}"
+                        </p>
+                    </div>
+                )}
             </div>
         </motion.div>
     );

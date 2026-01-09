@@ -15,6 +15,8 @@ function CoreStatsSection({
   isMultiSelectMode = false,
   onStudentsUpdated,
   onNestedModalStateChange, // New prop to notify parent about internal modal state
+  onOptimisticStatUpdate,
+  onOptimisticLog,
 }) {
   const [statTemplates, setStatTemplates] = useState([]);
   const [studentStatsMap, setStudentStatsMap] = useState({});
@@ -140,13 +142,23 @@ function CoreStatsSection({
     if (!pendingStat || pendingTargetIds.length === 0) return;
 
     const delta = pendingMode === "increase" ? 1 : -1;
+    const currentMap = { ...studentStatsMap };
+    const updatesToPersist = [];
 
-    for (const studentId of pendingTargetIds) {
-      const currentStats = studentStatsMap[studentId] || [];
-      const currentValue =
-        currentStats.find(
-          (s) => s.stat_template_id === pendingStat.id
-        )?.value ?? 0;
+    // 🚀 Optimistic Update: 즉시 UI 반영
+    pendingTargetIds.forEach((studentId) => {
+      const currentStats = currentMap[studentId] || [];
+      const statIndex = currentStats.findIndex(
+        (s) => s.stat_template_id === pendingStat.id
+      );
+
+      let currentValue = 0;
+      let existingStat = null;
+
+      if (statIndex > -1) {
+        existingStat = currentStats[statIndex];
+        currentValue = existingStat.value;
+      }
 
       const nextValue = Math.min(
         pendingStat.max_value,
@@ -154,96 +166,138 @@ function CoreStatsSection({
       );
 
       // 값이 변하지 않으면 skip
-      if (nextValue === currentValue) continue;
+      if (nextValue === currentValue) return;
 
-      // 1️⃣ student_stats upsert
-      await supabase.from("student_stats").upsert(
-        {
+      // 상태 업데이트를 위한 새로운 객체 생성
+      const updatedStat = existingStat
+        ? { ...existingStat, value: nextValue }
+        : {
           student_id: studentId,
           stat_template_id: pendingStat.id,
           value: nextValue,
-        },
-        {
-          onConflict: "student_id,stat_template_id",
-        }
-      );
+        };
 
-      // 2️⃣ 로그 기록
-      await supabase.from("student_stat_logs").insert({
-        student_id: studentId,
-        stat_template_id: pendingStat.id,
-        delta,
-        reason,
+      // 맵 업데이트
+      const newStats = [...currentStats];
+      if (statIndex > -1) {
+        newStats[statIndex] = updatedStat;
+      } else {
+        newStats.push(updatedStat);
+      }
+      currentMap[studentId] = newStats;
+
+      // DB 저장을 위한 정보 수집
+      updatesToPersist.push({
+        studentId,
+        nextValue,
+        statId: pendingStat.id,
       });
-      // ⚠️ gacha_progress는 능력치를 '올린 기록'만 누적하는 내부 보상 카운터
-      // 능력치를 내릴 때는 절대 감소하지 않는다
-      if (delta === 1) {
-        // ✅ props(students) 값은 최신이 아닐 수 있으므로, DB에서 현재 gacha_progress를 직접 읽어서 증가
-        const { data: progressRow, error: progressReadError } = await supabase
-          .from("students")
-          .select("gacha_progress")
-          .eq("id", studentId)
-          .maybeSingle();
+    });
 
-        if (progressReadError) {
-          console.error("[gacha_progress] read failed", progressReadError);
-        } else {
-          const beforeProgress = progressRow?.gacha_progress ?? 0;
-          const afterProgress = beforeProgress + 1;
+    // 상태 즉시 반영 및 모달 닫기
+    setStudentStatsMap(currentMap);
+    setReasonModalOpen(false);
 
-          const { error: progressUpdateError } = await supabase
+    // 🚀 Optimistic Update: 상위 컴포넌트(Gacha Progress/Tickets) 즉시 반영
+    if (onOptimisticStatUpdate) {
+      pendingTargetIds.forEach((studentId) => {
+        onOptimisticStatUpdate({
+          studentId,
+          delta,
+          statPerGacha,
+        });
+
+        // 🚀 Optimistic Update: 칭찬 히스토리 즉시 반영
+        if (onOptimisticLog) {
+          const student = studentsMap[studentId]; // studentsMap 사용 (미리 만들어둠)
+          if (student) {
+            const tempLog = {
+              id: `temp-${Date.now()}-${studentId}`,
+              created_at: new Date().toISOString(),
+              delta,
+              reason,
+              student: {
+                id: student.id,
+                name: student.name,
+                number: student.number,
+                gender: student.gender,
+              },
+              stat: {
+                id: pendingStat.id,
+                name: pendingStat.name,
+                icon: pendingStat.icon,
+                color: pendingStat.color,
+              },
+            };
+            onOptimisticLog(tempLog);
+          }
+        }
+      });
+    }
+
+    // 📡 Background Sync: 서버 통신은 백그라운드에서 처리
+    try {
+      for (const update of updatesToPersist) {
+        // 1️⃣ student_stats upsert
+        await supabase.from("student_stats").upsert(
+          {
+            student_id: update.studentId,
+            stat_template_id: update.statId,
+            value: update.nextValue,
+          },
+          {
+            onConflict: "student_id,stat_template_id",
+          }
+        );
+
+        // 2️⃣ 로그 기록
+        await supabase.from("student_stat_logs").insert({
+          student_id: update.studentId,
+          stat_template_id: update.statId,
+          delta,
+          reason,
+        });
+
+        // 3️⃣ Gacha Progress & Ticket handling (증가일 때만)
+        if (delta === 1) {
+          const { data: progressRow, error: progressReadError } = await supabase
             .from("students")
-            .update({ gacha_progress: afterProgress })
-            .eq("id", studentId);
+            .select("gacha_progress")
+            .eq("id", update.studentId)
+            .maybeSingle();
 
-          if (progressUpdateError) {
-            console.error("[gacha_progress] update failed", progressUpdateError);
-          } else {
-            // 🎟️ 설정된 기준을 넘긴 경우에만 티켓 지급
-            const beforeTickets = Math.floor(beforeProgress / statPerGacha);
-            const afterTickets = Math.floor(afterProgress / statPerGacha);
-            const ticketToGive = afterTickets - beforeTickets;
+          if (!progressReadError) {
+            const beforeProgress = progressRow?.gacha_progress ?? 0;
+            const afterProgress = beforeProgress + 1;
 
-            for (let i = 0; i < ticketToGive; i++) {
-              const { error: ticketError } = await supabase.rpc(
-                "increment_gacha_ticket",
-                {
-                  target_student_id: studentId,
-                }
-              );
-              if (ticketError) {
-                console.error("[gacha_ticket] increment failed", ticketError);
+            const { error: progressUpdateError } = await supabase
+              .from("students")
+              .update({ gacha_progress: afterProgress })
+              .eq("id", update.studentId);
+
+            if (!progressUpdateError) {
+              // 🎟️ 설정된 기준을 넘긴 경우에만 티켓 지급
+              const beforeTickets = Math.floor(beforeProgress / statPerGacha);
+              const afterTickets = Math.floor(afterProgress / statPerGacha);
+              const ticketToGive = afterTickets - beforeTickets;
+
+              for (let i = 0; i < ticketToGive; i++) {
+                await supabase.rpc("increment_gacha_ticket", {
+                  target_student_id: update.studentId,
+                });
               }
             }
           }
         }
       }
+
+      // 🔄 최종 데이터 일관성을 위해 백그라운드에서 조용히 재동기화 (옵션)
+      // onStudentsUpdated(true); // true = silent update
+    } catch (error) {
+      console.error("Optimistic update failed:", error);
+      // 에러 발생 시 여기서 상태 롤백 로직을 추가할 수도 있음
+      // 현재는 간단히 에러 로그만 출력하고 유지 (다음 fetch에서 보정됨)
     }
-
-    // 🔄 최신 값 다시 로드
-    const { data } = await supabase
-      .from("student_stats")
-      .select("*")
-      .in("student_id", pendingTargetIds);
-
-    const map = {};
-    pendingTargetIds.forEach((id) => {
-      map[id] = data.filter(
-        (s) => s.student_id === id
-      );
-    });
-
-    setStudentStatsMap((prev) => ({
-      ...prev,
-      ...map,
-    }));
-
-    // 🔄 부모(StatsPage)에서 students / gacha 관련 상태 다시 fetch
-    if (typeof onStudentsUpdated === "function") {
-      await onStudentsUpdated();
-    }
-
-    setReasonModalOpen(false);
   };
 
   const handleUpdateMaxValue = async (newMax) => {
