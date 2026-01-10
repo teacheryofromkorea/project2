@@ -14,76 +14,9 @@ import {
 import { ko } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Pencil, Trash2, X } from "lucide-react";
+import LogEditModal from "./LogEditModal";
 
-// 로그 수정 모달
-function LogEditModal({ isOpen, log, onClose, onUpdate, onDelete }) {
-    const [reason, setReason] = useState("");
-
-    useEffect(() => {
-        if (log) {
-            setReason(log.reason || "");
-        }
-    }, [log]);
-
-    if (!isOpen || !log) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[#1e1e24] rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-white/10"
-            >
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-white">기록 수정</h3>
-                    <button onClick={onClose} className="text-white/40 hover:text-white">
-                        <X size={20} />
-                    </button>
-                </div>
-
-                <div className="mb-4">
-                    <p className="text-sm text-white/60 mb-1">칭찬 종류</p>
-                    <div className="text-white font-medium flex items-center gap-2">
-                        <span>{log.stat?.icon}</span>
-                        <span>{log.stat?.name}</span>
-                        <span className={log.delta > 0 ? "text-emerald-400" : "text-rose-400"}>
-                            ({log.delta > 0 ? "+" : ""}{log.delta})
-                        </span>
-                    </div>
-                </div>
-
-                <div className="mb-6">
-                    <label className="block text-sm text-white/60 mb-2">사유 (선택)</label>
-                    <textarea
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        className="w-full h-24 bg-black/20 rounded-xl p-3 text-white placeholder-white/20 border border-white/10 focus:border-indigo-500/50 outline-none resize-none"
-                        placeholder="사유를 입력해주세요..."
-                    />
-                </div>
-
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => onDelete(log.id)}
-                        className="flex-1 py-3 rounded-xl font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 transition flex items-center justify-center gap-2"
-                    >
-                        <Trash2 size={16} />
-                        삭제
-                    </button>
-                    <button
-                        onClick={() => onUpdate(log.id, reason)}
-                        className="flex-[2] py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition"
-                    >
-                        수정 완료
-                    </button>
-                </div>
-            </motion.div>
-        </div>
-    );
-}
-
-export default function PraiseHistorySection({ selectedStudentId, optimisticLog }) {
+export default function PraiseHistorySection({ selectedStudentId, optimisticLog, onLogDeleted }) {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -216,14 +149,48 @@ id,
     };
 
     const handleDeleteLog = async (logId) => {
-        if (!confirm("정말 이 기록을 삭제하시겠습니까?\n(점수는 되돌려지지 않습니다)")) return;
+        // 모달에서 이미 확인했으므로 confirm 창 제거
+
+        const targetLog = logs.find(log => log.id === logId);
 
         // Optimistic Delete
         setLogs((prev) => prev.filter((log) => log.id !== logId));
-        setIsEditModalOpen(false);
+        setIsEditModalOpen(false); // 모달 닫기
 
         if (typeof logId === "string" && logId.startsWith("temp-")) return;
 
+        if (targetLog) {
+            // 1. 점수 되돌리기 (Revert Stat)
+            const revertDelta = -1 * targetLog.delta;
+
+            // DB Update (Stat)
+            const { data: currentStat } = await supabase
+                .from("student_stats")
+                .select("value")
+                .eq("student_id", targetLog.student_id || targetLog.student?.id)
+                .eq("stat_template_id", targetLog.stat_template_id || targetLog.stat?.id)
+                .single();
+
+            if (currentStat) {
+                const newValue = Math.max(0, currentStat.value + revertDelta);
+                await supabase
+                    .from("student_stats")
+                    .update({ value: newValue })
+                    .eq("student_id", targetLog.student_id || targetLog.student?.id)
+                    .eq("stat_template_id", targetLog.stat_template_id || targetLog.stat?.id);
+
+                // Parent에게 알림 (UI 즉시 반영)
+                if (onLogDeleted) {
+                    onLogDeleted({
+                        studentId: targetLog.student_id || targetLog.student?.id,
+                        statId: targetLog.stat_template_id || targetLog.stat?.id,
+                        delta: revertDelta
+                    });
+                }
+            }
+        }
+
+        // 2. 로그 삭제 (완벽하게 await 하여 삭제 보장)
         const { error } = await supabase
             .from("student_stat_logs")
             .delete()
@@ -231,6 +198,10 @@ id,
 
         if (error) {
             console.error("Failed to delete log:", error);
+            // 에러 발생 시 롤백 로직이 필요하지만, 여기서는 콘솔 출력만.
+            // 현실적으로는 toast로 알림을 주는게 좋음.
+        } else {
+            console.log("Log deleted successfully from DB:", logId);
         }
     };
 

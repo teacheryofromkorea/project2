@@ -17,6 +17,7 @@ function StatsDashboard({
   const [ownedPetIds, setOwnedPetIds] = useState([]);
   const [lastDrawnPetId, setLastDrawnPetId] = useState(null);
   const [optimisticLog, setOptimisticLog] = useState(null);
+  const [externalStatUpdate, setExternalStatUpdate] = useState(null);
 
   const selectedStudent = students.find(
     (s) => s.id === selectedStudentId
@@ -29,6 +30,16 @@ function StatsDashboard({
     }
     setOwnedPetIds(selectedStudent.pets || []);
   }, [selectedStudentId, selectedStudent?.pets]);
+
+  const handleLogDeleted = (updateData) => {
+    // updateData: { studentId, statId, delta }
+    setExternalStatUpdate(updateData);
+
+    // reset after a short delay so duplicate updates can be triggered if needed?
+    // Actually, useEffect dependency on object identity is enough if we create new object each time.
+    // Ideally, we should use a wrapper or ID. 
+    // But since deletion is a discrete event, setting it usually triggers the effect once.
+  };
 
   if (loading) {
     return (
@@ -66,6 +77,7 @@ function StatsDashboard({
             onStudentsUpdated={onStudentsUpdated}
             onOptimisticStatUpdate={onOptimisticStatUpdate}
             onOptimisticLog={setOptimisticLog}
+            externalStatUpdate={externalStatUpdate}
           />
         </div>
 
@@ -74,6 +86,7 @@ function StatsDashboard({
           <PraiseHistorySection
             selectedStudentId={isMultiSelectMode ? null : selectedStudentId}
             optimisticLog={optimisticLog}
+            onLogDeleted={handleLogDeleted}
           />
         </div>
 

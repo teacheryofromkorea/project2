@@ -17,6 +17,7 @@ function CoreStatsSection({
   onNestedModalStateChange, // New prop to notify parent about internal modal state
   onOptimisticStatUpdate,
   onOptimisticLog,
+  externalStatUpdate,
 }) {
   const [statTemplates, setStatTemplates] = useState([]);
   const [studentStatsMap, setStudentStatsMap] = useState({});
@@ -122,6 +123,11 @@ function CoreStatsSection({
     loadStudentStats();
   }, [targetStudentIds.join(",")]);
 
+  /* 
+    모달 관련 로직은 이제 사용되지 않을 수 있지만, 
+    추후 '길게 눌러서 사유 입력' 등의 기능을 위해 openReasonModal 함수 자체는 남겨둘 수 있습니다.
+    하지만 현재 요구사항(즉시 반영)에 맞춰 handleIncrease/Decrease에서는 직접 실행합니다.
+  */
   const openReasonModal = (mode, stat, targetIds) => {
     setPendingMode(mode);
     setPendingStat(stat);
@@ -130,12 +136,47 @@ function CoreStatsSection({
     setReasonModalOpen(true);
   };
 
-  const handleIncreaseWithReason = (stat, targetIds) => {
-    openReasonModal("increase", stat, targetIds);
-  };
+  // 🔄 외부(PraiseHistory)에서 변경된 스탯 반영 (로그 삭제 시)
+  useEffect(() => {
+    if (externalStatUpdate) {
+      const { studentId, statId, delta } = externalStatUpdate;
+
+      setStudentStatsMap((prevMap) => {
+        const currentStats = prevMap[studentId] || [];
+        const statIndex = currentStats.findIndex(
+          (s) => s.stat_template_id === statId
+        );
+
+        if (statIndex === -1) return prevMap; // 없으면 무시
+
+        const existingStat = currentStats[statIndex];
+        const nextValue = Math.max(0, existingStat.value + delta);
+
+        if (existingStat.value === nextValue) return prevMap; // 변화 없으면 무시
+
+        const newStats = [...currentStats];
+        newStats[statIndex] = { ...existingStat, value: nextValue };
+
+        return {
+          ...prevMap,
+          [studentId]: newStats,
+        };
+      });
+
+      // Gacha Progress도 업데이트
+      if (onOptimisticStatUpdate) {
+        onOptimisticStatUpdate({
+          studentId,
+          delta,
+          statPerGacha
+        });
+      }
+    }
+  }, [externalStatUpdate]);
 
   const handleDecrease = (stat, targetIds) => {
-    openReasonModal("decrease", stat, targetIds);
+    // 모달 없이 즉시 감소 (사유 없음)
+    executeStatUpdate(stat, "decrease", targetIds, "");
   };
 
   // 🚀 통합 업데이트 로직 (Quick Update & Reason Update 공용)
