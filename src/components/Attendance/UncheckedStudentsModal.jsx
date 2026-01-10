@@ -21,7 +21,7 @@ const ATTENDANCE_OPTIONS = [
 export default function UncheckedStudentsModal({
     isOpen,
     onClose,
-    uncheckedStudents, // Array of student objects
+    uncheckedStudents = [], // ✅ Default to empty array
     onSaved, // Callback to refresh parent data
     title, // ✅ Optional customizable title
     description, // ✅ Optional customizable description
@@ -103,7 +103,7 @@ export default function UncheckedStudentsModal({
                             <p className="text-gray-500 text-sm mt-1">{description}</p>
                         ) : (
                             <p className="text-gray-500 text-sm mt-1">
-                                총 <span className="text-red-600 font-bold">{uncheckedStudents.length}명</span>의 학생이 아직 출석 체크되지 않았습니다.
+                                총 <span className="text-red-600 font-bold">{uncheckedStudents?.length || 0}명</span>의 학생이 아직 출석 체크되지 않았습니다.
                             </p>
                         )}
                     </div>

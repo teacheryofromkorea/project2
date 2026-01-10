@@ -8,6 +8,7 @@ import MissionSidebar from "../Attendance/MissionSidebar";
 import SeatGrid from "../Attendance/SeatGrid";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import LiveClock from "../common/LiveClock"; // ✅ Import shared clock
+import UncheckedStudentsModal from "../Attendance/UncheckedStudentsModal"; // ✅ Reuse modal
 
 export default function EndTimeBoard() {
   const [students, setStudents] = useState([]);
@@ -22,6 +23,11 @@ export default function EndTimeBoard() {
   const [showIncompleteOnly, setShowIncompleteOnly] = useState(false);
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  // ✅ 출결 관리 모달 상태
+  const [isUncheckedModalOpen, setIsUncheckedModalOpen] = useState(false);
+  const [modalTargetStudents, setModalTargetStudents] = useState([]);
+  const [modalConfig, setModalConfig] = useState({ title: null, description: null });
 
   const handleOpenTaskModal = (student) => {
     setTargetStudent(student);
@@ -365,14 +371,49 @@ export default function EndTimeBoard() {
                 <div className="flex items-center justify-between mb-5">
                   <LiveClock />
                   <div className="flex gap-2">
-                    <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
+                    {/* 전체 (Interactive) */}
+                    <button
+                      onClick={() => {
+                        // 전체 학생 + 현재 상태
+                        const enrichedStudents = students.map(s => {
+                          const statusRow = attendanceStatus.find(a => a.student_id === s.id);
+                          return { ...s, status: statusRow?.status || 'unchecked' };
+                        });
+                        setModalTargetStudents(enrichedStudents);
+                        setModalConfig({
+                          title: "📋 전체 학생 명단",
+                          description: "전체 학생의 출결 상태를 확인하고 수정합니다."
+                        });
+                        setIsUncheckedModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2 hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
                       <span className="text-[13px] text-slate-500 font-bold uppercase tracking-wider">전체</span>
                       <span className="text-base font-extrabold text-gray-900 leading-none">{stats.total}</span>
-                    </div>
-                    <div className="px-3 py-1.5 rounded-xl bg-white border border-green-200 shadow-sm flex items-center gap-2">
+                    </button>
+
+                    {/* 출석 (Interactive) */}
+                    <button
+                      onClick={() => {
+                        // 출석한 학생만 필터링
+                        const presentStudents = students
+                          .filter(s => presentStudentIds.includes(s.id))
+                          .map(s => ({ ...s, status: 'present' }));
+
+                        setModalTargetStudents(presentStudents);
+                        setModalConfig({
+                          title: "✅ 출석한 학생",
+                          description: "현재 출석으로 체크된 학생 목록입니다."
+                        });
+                        setIsUncheckedModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-white border border-green-200 shadow-sm flex items-center gap-2 hover:bg-green-50 transition-colors cursor-pointer"
+                    >
                       <span className="text-[13px] text-green-700 font-bold uppercase tracking-wider">출석</span>
                       <span className="text-base font-extrabold text-green-700 leading-none">{stats.attended}</span>
-                    </div>
+                    </button>
+
+                    {/* 하교 (Static for now) */}
                     <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2">
                       <span className="text-[13px] text-purple-700 font-bold uppercase tracking-wider">하교</span>
                       <span className="text-base font-extrabold text-purple-700 leading-none">{stats.dismissed}</span>
@@ -437,6 +478,18 @@ export default function EndTimeBoard() {
           await fetchMissionStatus();
           await fetchRoutineItems();
           await fetchRoutineStatus();
+        }}
+      />
+
+      {/* ✅ Unchecked Students Modal (Reused) */}
+      <UncheckedStudentsModal
+        isOpen={isUncheckedModalOpen}
+        onClose={() => setIsUncheckedModalOpen(false)}
+        uncheckedStudents={modalTargetStudents} // ✅ Correct prop name
+        title={modalConfig.title} // ✅ Correct prop name
+        description={modalConfig.description} // ✅ Correct prop name
+        onSaved={async () => {
+          await fetchAttendanceStatus(); // ✅ Refresh status after save
         }}
       />
     </>

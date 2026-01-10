@@ -134,6 +134,7 @@ export default function GenericRoutineSidebar({
                             onChange={(e) => setSelectedBlockId?.(e.target.value || null)}
                             className={`w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 ${styles.ring}`}
                         >
+                            <option value="" disabled>쉬는시간 선택</option>
                             {breakBlocks.map((block) => (
                                 <option key={block.id} value={block.id}>
                                     {block.name} ({block.start_time?.slice(0, 5)} ~ {block.end_time?.slice(0, 5)})
