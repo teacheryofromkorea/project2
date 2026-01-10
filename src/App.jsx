@@ -13,6 +13,7 @@ import TopNav from "./components/TopNav";
 import { LockProvider } from "./context/LockContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import PageTransition from "./components/common/PageTransition"; // 🔹 Import PageTransition
+import DynamicBackground from "./components/common/DynamicBackground"; // 🔹 Dynamic Background
 
 import RoutineSidebar from "./components/Attendance/RoutineSidebar";
 import MissionSidebar from "./components/Attendance/MissionSidebar";
@@ -149,9 +150,14 @@ function AppContent() {
     navigate(nextPath);
   };
 
+
+  // ... (other imports)
+
+  // ... (AppContent function setup)
+
   return (
     <div
-      className={`min-h-screen flex flex-col relative transition-colors duration-500 
+      className={`min-h-screen flex flex-col relative transition-colors duration-700 
         ${isLandingPage ? "bg-white" : (
           isStatsPage
             ? "bg-[#0a051a] text-white overflow-x-hidden" // Deep Space Void
@@ -161,7 +167,7 @@ function AppContent() {
 
       {/* 🌌 Stats Page Background (Cosmic Aurora & Geometric Dreams) */}
       {!isLandingPage && isStatsPage && (
-        <div className="fixed inset-0 z-0 pointer-events-none bg-[#0a051a] overflow-hidden">
+        <div className="fixed inset-0 z-0 pointer-events-none bg-[#0a051a] overflow-hidden transition-opacity duration-700 opacity-100">
           {/* 1. Nebula Orbs (Ambient Light) */}
           <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-violet-600/30 rounded-full blur-[120px] animate-pulse-slow mix-blend-screen" />
           <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-indigo-600/30 rounded-full blur-[100px] animate-pulse-slow mix-blend-screen" style={{ animationDelay: '2s' }} />
@@ -175,21 +181,9 @@ function AppContent() {
         </div>
       )}
 
-      {/* Background Layer: Artistic Mesh Gradient (MMCA Style) */}
+      {/* Background Layer: Dynamic Route Theme */}
       {!isLandingPage && !isStatsPage && (
-        <div className="fixed inset-0 z-0 pointer-events-none bg-slate-50">
-          {/* Noise Texture Overlay */}
-          <div className="absolute inset-0 opacity-[0.03] mix-blend-multiply pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
-
-          {/* Vibrant Color Orbs (Higher Intensity) */}
-          <div className="absolute top-[15%] left-[20%] w-[65vw] h-[65vw] bg-blue-600/40 rounded-full blur-[130px] animate-pulse-slow" />
-          <div className="absolute top-[-5%] left-[-5%] w-[45vw] h-[45vw] bg-rose-600/35 rounded-full blur-[110px] animate-pulse-slow" style={{ animationDelay: '1s' }} />
-          <div className="absolute bottom-[-5%] right-[5%] w-[50vw] h-[50vw] bg-amber-500/30 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '3s' }} />
-          <div className="absolute bottom-[15%] left-[-5%] w-[40vw] h-[40vw] bg-cyan-500/35 rounded-full blur-[100px] animate-pulse-slow" style={{ animationDelay: '2s' }} />
-
-          {/* Central Mixing Point */}
-          <div className="absolute top-[35%] right-[15%] w-[40vw] h-[40vw] bg-indigo-600/25 rounded-full blur-[140px] animate-pulse-slow" style={{ animationDelay: '4s' }} />
-        </div>
+        <DynamicBackground />
       )}
 
       {/* Main Content Wrapper */}
