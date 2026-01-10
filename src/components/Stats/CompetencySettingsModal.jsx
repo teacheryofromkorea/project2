@@ -190,7 +190,7 @@ export default function CompetencySettingsModal({
         }
     };
 
-    if (!isOpen) return null;
+
 
     return (
         <BaseModal isOpen={isOpen} onClose={onClose}>

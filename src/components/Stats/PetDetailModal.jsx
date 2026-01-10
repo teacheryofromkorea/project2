@@ -1,11 +1,15 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import BaseModal from "../common/BaseModal";
 
 export default function PetDetailModal({ pet, isOpen, onClose }) {
-  if (!isOpen || !pet) return null;
+  const [displayPet, setDisplayPet] = useState(pet);
+
+  useEffect(() => {
+    if (pet) setDisplayPet(pet);
+  }, [pet]);
 
   // isOpen check handled by BaseModal
-  if (!pet) return null;
+  if (!displayPet) return null;
 
   const rarityStyle = {
     common: {
@@ -28,7 +32,7 @@ export default function PetDetailModal({ pet, isOpen, onClose }) {
       glow: "shadow-[0_0_50px_rgba(255,215,120,0.6)]",
       text: "text-yellow-300",
     },
-  }[pet.rarity];
+  }[displayPet.rarity];
 
   return (
     <BaseModal
@@ -60,16 +64,16 @@ export default function PetDetailModal({ pet, isOpen, onClose }) {
         {/* Emoji */}
         <div className="flex justify-center mt-6 mb-4 relative">
           <div className="absolute inset-0 flex justify-center items-center blur-2xl opacity-60">
-            <span className="text-7xl">{pet.emoji}</span>
+            <span className="text-7xl">{displayPet.emoji}</span>
           </div>
           <div className="relative text-7xl drop-shadow-2xl scale-110">
-            {pet.emoji}
+            {displayPet.emoji}
           </div>
         </div>
 
         {/* Name */}
         <h2 className="text-2xl font-bold text-center mb-1 text-white">
-          {pet.name}
+          {displayPet.name}
         </h2>
 
         {/* Rarity badge */}
@@ -85,13 +89,13 @@ export default function PetDetailModal({ pet, isOpen, onClose }) {
 
         {/* Description */}
         <p className="text-center text-sm leading-relaxed text-blue-100/70 px-4 mt-2 mb-6">
-          {pet.description}
+          {displayPet.description}
         </p>
 
         {/* Footer */}
         <div className="mt-auto flex justify-center border-t border-white/5 pt-4">
           <span className="text-[10px] text-white/30 tracking-widest font-light">
-            SET · {pet.setId.toUpperCase()}
+            SET · {displayPet.setId.toUpperCase()}
           </span>
         </div>
       </div>

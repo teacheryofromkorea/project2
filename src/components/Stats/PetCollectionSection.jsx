@@ -143,15 +143,11 @@ ${owned ? "group-hover:scale-125 group-hover:rotate-6" : "scale-90"}
         })}
       </div>
 
-      {
-        selectedPet && (
-          <PetDetailModal
-            pet={selectedPet}
-            isOpen={true}
-            onClose={() => setSelectedPet(null)}
-          />
-        )
-      }
+      <PetDetailModal
+        pet={selectedPet}
+        isOpen={!!selectedPet}
+        onClose={() => setSelectedPet(null)}
+      />
     </section >
   );
 }
