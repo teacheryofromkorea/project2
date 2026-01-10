@@ -8,34 +8,7 @@ import AttendanceConfirmModal from "./AttendanceConfirmModal";
 import UncheckedStudentsModal from "./UncheckedStudentsModal"; // ✅ Import new modal
 import useAttendanceRoutine from "../../hooks/Attendance/useAttendanceRoutine";
 
-// 🕒 Live Clock Component (Isolated for performance)
-const LiveClock = () => {
-  const [time, setTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const dateString = time.toLocaleDateString("ko-KR", {
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  });
-
-  return (
-    <div className="flex items-baseline gap-3">
-      <span className="text-5xl font-black text-gray-900 tracking-tighter leading-none tabular-nums translate-y-1">
-        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-      </span>
-      <span className="text-xl font-bold text-slate-400 tracking-tight">
-        {dateString}
-      </span>
-    </div>
-  );
-};
+import LiveClock from "../common/LiveClock"; // ✅ Import shared component
 
 function AttendanceBoard() {
   const today = getTodayString(); // 오늘 날짜 (Local Time)
