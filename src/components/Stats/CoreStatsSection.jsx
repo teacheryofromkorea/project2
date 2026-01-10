@@ -130,7 +130,7 @@ function CoreStatsSection({
     setReasonModalOpen(true);
   };
 
-  const handleIncrease = (stat, targetIds) => {
+  const handleIncreaseWithReason = (stat, targetIds) => {
     openReasonModal("increase", stat, targetIds);
   };
 
@@ -138,18 +138,19 @@ function CoreStatsSection({
     openReasonModal("decrease", stat, targetIds);
   };
 
-  const handleConfirmReason = async () => {
-    if (!pendingStat || pendingTargetIds.length === 0) return;
+  // 🚀 통합 업데이트 로직 (Quick Update & Reason Update 공용)
+  const executeStatUpdate = async (stat, mode, targetIds, reasonText) => {
+    if (!stat || targetIds.length === 0) return;
 
-    const delta = pendingMode === "increase" ? 1 : -1;
+    const delta = mode === "increase" ? 1 : -1;
     const currentMap = { ...studentStatsMap };
     const updatesToPersist = [];
 
     // 🚀 Optimistic Update: 즉시 UI 반영
-    pendingTargetIds.forEach((studentId) => {
+    targetIds.forEach((studentId) => {
       const currentStats = currentMap[studentId] || [];
       const statIndex = currentStats.findIndex(
-        (s) => s.stat_template_id === pendingStat.id
+        (s) => s.stat_template_id === stat.id
       );
 
       let currentValue = 0;
@@ -161,7 +162,7 @@ function CoreStatsSection({
       }
 
       const nextValue = Math.min(
-        pendingStat.max_value,
+        stat.max_value,
         Math.max(0, currentValue + delta)
       );
 
@@ -173,7 +174,7 @@ function CoreStatsSection({
         ? { ...existingStat, value: nextValue }
         : {
           student_id: studentId,
-          stat_template_id: pendingStat.id,
+          stat_template_id: stat.id,
           value: nextValue,
         };
 
@@ -190,7 +191,7 @@ function CoreStatsSection({
       updatesToPersist.push({
         studentId,
         nextValue,
-        statId: pendingStat.id,
+        statId: stat.id,
       });
     });
 
@@ -200,7 +201,7 @@ function CoreStatsSection({
 
     // 🚀 Optimistic Update: 상위 컴포넌트(Gacha Progress/Tickets) 즉시 반영
     if (onOptimisticStatUpdate) {
-      pendingTargetIds.forEach((studentId) => {
+      targetIds.forEach((studentId) => {
         onOptimisticStatUpdate({
           studentId,
           delta,
@@ -215,7 +216,7 @@ function CoreStatsSection({
               id: `temp-${Date.now()}-${studentId}`,
               created_at: new Date().toISOString(),
               delta,
-              reason,
+              reason: reasonText,
               student: {
                 id: student.id,
                 name: student.name,
@@ -223,10 +224,10 @@ function CoreStatsSection({
                 gender: student.gender,
               },
               stat: {
-                id: pendingStat.id,
-                name: pendingStat.name,
-                icon: pendingStat.icon,
-                color: pendingStat.color,
+                id: stat.id,
+                name: stat.name,
+                icon: stat.icon,
+                color: stat.color,
               },
             };
             onOptimisticLog(tempLog);
@@ -255,7 +256,7 @@ function CoreStatsSection({
           student_id: update.studentId,
           stat_template_id: update.statId,
           delta,
-          reason,
+          reason: reasonText,
         });
 
         // 3️⃣ Gacha Progress & Ticket handling (증가일 때만)
@@ -298,6 +299,14 @@ function CoreStatsSection({
       // 에러 발생 시 여기서 상태 롤백 로직을 추가할 수도 있음
       // 현재는 간단히 에러 로그만 출력하고 유지 (다음 fetch에서 보정됨)
     }
+  };
+
+  const handleConfirmReason = async () => {
+    await executeStatUpdate(pendingStat, pendingMode, pendingTargetIds, reason);
+  };
+
+  const handleIncreaseQuick = (stat, targetIds) => {
+    executeStatUpdate(stat, "increase", targetIds, "");
   };
 
   const handleUpdateMaxValue = async (newMax) => {
@@ -460,8 +469,8 @@ function CoreStatsSection({
             studentStatsMap={studentStatsMap}
             selectedStudentIds={targetStudentIds}
             isMultiSelectMode={isMultiSelectMode}
-            onIncrease={handleIncrease}
             onDecrease={handleDecrease}
+            onIncrease={handleIncreaseQuick}
             gridClass={
               statTemplates.length >= 3
                 ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" // 차트 있을 때: 기본 2열, 아주 넓으면 3열
