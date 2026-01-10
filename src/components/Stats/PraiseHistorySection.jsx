@@ -315,7 +315,7 @@ hover: scale - 110 hover: z - 20
     `}
                                     title={`${format(day, "M/d")}: ${count} 건`}
                                 >
-                                    <span className={count > 0 ? "text-white" : "text-white/20"}>
+                                    <span className={`font-bold drop-shadow-md ${count > 0 ? "text-white" : "text-white/50"}`}>
                                         {format(day, "d")}
                                     </span>
                                 </button>
