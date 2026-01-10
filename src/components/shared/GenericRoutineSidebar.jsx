@@ -26,9 +26,72 @@ export default function GenericRoutineSidebar({
     breakBlocks,
     selectedBlockId,
     setSelectedBlockId,
+    themeColor = "indigo", // Default theme color
 }) {
     const { locked } = useLock();
     const [isEditing, setIsEditing] = useState(false);
+
+    // Theme Styles Mapping
+    const THEME_STYLES = {
+        indigo: {
+            accent: "bg-indigo-600",
+            text: "text-indigo-600",
+            textDark: "text-indigo-900",
+            border: "border-indigo-200",
+            hoverBorder: "hover:border-indigo-300",
+            bg: "bg-indigo-50",
+            hoverBg: "hover:bg-indigo-100",
+            hoverText: "hover:text-indigo-700",
+            ring: "focus:ring-indigo-500",
+            blob1: "from-indigo-400/35 via-purple-400/25 to-indigo-300/15",
+            blob2: "from-purple-500/30 via-indigo-400/20 to-transparent",
+            blob3: "from-indigo-500/25 to-transparent",
+        },
+        emerald: {
+            accent: "bg-emerald-600",
+            text: "text-emerald-600",
+            textDark: "text-emerald-900",
+            border: "border-emerald-200",
+            hoverBorder: "hover:border-emerald-300",
+            bg: "bg-emerald-50",
+            hoverBg: "hover:bg-emerald-100",
+            hoverText: "hover:text-emerald-700",
+            ring: "focus:ring-emerald-500",
+            blob1: "from-emerald-400/35 via-lime-400/25 to-emerald-300/15",
+            blob2: "from-lime-500/30 via-emerald-400/20 to-transparent",
+            blob3: "from-emerald-500/25 to-transparent",
+        },
+        orange: {
+            accent: "bg-orange-600",
+            text: "text-orange-600",
+            textDark: "text-orange-900",
+            border: "border-orange-200",
+            hoverBorder: "hover:border-orange-300",
+            bg: "bg-orange-50",
+            hoverBg: "hover:bg-orange-100",
+            hoverText: "hover:text-orange-700",
+            ring: "focus:ring-orange-500",
+            blob1: "from-orange-400/35 via-amber-400/25 to-orange-300/15",
+            blob2: "from-amber-500/30 via-orange-400/20 to-transparent",
+            blob3: "from-orange-500/25 to-transparent",
+        },
+        violet: {
+            accent: "bg-violet-600",
+            text: "text-violet-600",
+            textDark: "text-violet-900",
+            border: "border-violet-200",
+            hoverBorder: "hover:border-violet-300",
+            bg: "bg-violet-50",
+            hoverBg: "hover:bg-violet-100",
+            hoverText: "hover:text-violet-700",
+            ring: "focus:ring-violet-500",
+            blob1: "from-violet-400/35 via-fuchsia-400/25 to-violet-300/15",
+            blob2: "from-fuchsia-500/30 via-violet-400/20 to-transparent",
+            blob3: "from-violet-500/25 to-transparent",
+        },
+    };
+
+    const styles = THEME_STYLES[themeColor] || THEME_STYLES.indigo;
 
     // ESC handler removed (BaseModal handles it)
 
@@ -52,14 +115,14 @@ export default function GenericRoutineSidebar({
                 {/* Decorative brush stroke blob */}
                 <div className="absolute inset-0 pointer-events-none overflow-hidden">
                     <div className="absolute -top-4 -left-8 w-48 h-64">
-                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-400/35 via-purple-400/25 to-indigo-300/15 rounded-[40%_60%_70%_30%/60%_30%_70%_40%] blur-lg" />
-                        <div className="absolute top-8 left-12 w-32 h-40 bg-gradient-to-bl from-purple-500/30 via-indigo-400/20 to-transparent rounded-[60%_40%_30%_70%/40%_60%_40%_60%] blur-md" />
-                        <div className="absolute top-16 left-8 w-24 h-32 bg-gradient-to-tr from-indigo-500/25 to-transparent rounded-[50%_50%_60%_40%/30%_70%_60%_40%] blur-sm" />
+                        <div className={`absolute inset-0 bg-gradient-to-br ${styles.blob1} rounded-[40%_60%_70%_30%/60%_30%_70%_40%] blur-lg`} />
+                        <div className={`absolute top-8 left-12 w-32 h-40 bg-gradient-to-bl ${styles.blob2} rounded-[60%_40%_30%_70%/40%_60%_40%_60%] blur-md`} />
+                        <div className={`absolute top-16 left-8 w-24 h-32 bg-gradient-to-tr ${styles.blob3} rounded-[50%_50%_60%_40%/30%_70%_60%_40%] blur-sm`} />
                     </div>
                 </div>
 
                 <h2 className="text-xl font-extrabold mb-6 text-gray-900 tracking-tight flex items-center gap-2 relative z-10">
-                    <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
+                    <span className={`w-1.5 h-6 ${styles.accent} rounded-full`}></span>
                     {routineTitle || "루틴"}
                 </h2>
 
@@ -69,7 +132,7 @@ export default function GenericRoutineSidebar({
                         <select
                             value={selectedBlockId || ""}
                             onChange={(e) => setSelectedBlockId?.(e.target.value || null)}
-                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className={`w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 ${styles.ring}`}
                         >
                             {breakBlocks.map((block) => (
                                 <option key={block.id} value={block.id}>
@@ -83,10 +146,10 @@ export default function GenericRoutineSidebar({
                 <ul className="space-y-2 flex-1 flex flex-col justify-center min-h-0 overflow-y-auto px-1 relative z-10">
                     {routineItems.map((item, idx) => (
                         <li key={item.id || idx}>
-                            <button className="relative w-full bg-slate-50 hover:bg-white border border-slate-200 hover:border-indigo-300 rounded-xl px-4 py-3 text-left transition-all duration-200 group shadow-sm hover:shadow-md">
+                            <button className={`relative w-full bg-slate-50 hover:bg-white border border-slate-200 ${styles.hoverBorder} rounded-xl px-4 py-3 text-left transition-all duration-200 group shadow-sm hover:shadow-md`}>
                                 <div className="flex items-start gap-3">
                                     <div className="flex-1">
-                                        <span className="text-slate-700 text-lg font-bold group-hover:text-indigo-900 transition-colors leading-relaxed block">
+                                        <span className={`text-slate-700 text-lg font-bold group-hover:${styles.textDark} transition-colors leading-relaxed block`}>
                                             {item.text || item.content}
                                         </span>
                                     </div>
@@ -101,7 +164,7 @@ export default function GenericRoutineSidebar({
                     className={`mt-6 w-full text-sm font-semibold py-3 rounded-xl transition-all border relative z-10
             ${locked
                             ? "bg-gray-100 text-gray-400 border-transparent cursor-not-allowed"
-                            : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700 hover:border-indigo-300 hover:shadow-sm"
+                            : `${styles.bg} ${styles.text} ${styles.border} ${styles.hoverBg} ${styles.hoverText} ${styles.hoverBorder} hover:shadow-sm`
                         }
           `}
                     onClick={() => {

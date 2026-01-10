@@ -338,6 +338,7 @@ export default function LunchTimeBoard() {
               moveRoutine={moveRoutine}
               updateRoutine={updateRoutine}
               saveRoutineTitle={saveRoutineTitle}
+              themeColor="orange" // 🍊 Lunch Theme
             />
 
             {/* Center: Seat Grid with Header */}
@@ -346,7 +347,7 @@ export default function LunchTimeBoard() {
               <div className="flex-none mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-2xl font-extrabold text-gray-900">
-                    Lunch <span className="text-indigo-600">Status</span>
+                    Lunch <span className="text-orange-600">Status</span>
                   </h2>
                   <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
@@ -371,7 +372,7 @@ export default function LunchTimeBoard() {
                       type="checkbox"
                       checked={showIncompleteOnly}
                       onChange={(e) => setShowIncompleteOnly(e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                      className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
                     />
                     <span className="text-sm font-semibold text-gray-700">미실시자만 보기</span>
                   </label>
@@ -404,6 +405,7 @@ export default function LunchTimeBoard() {
               students={students.filter((s) => presentStudentIds.includes(s.id))}
               studentMissionStatus={missionStatus}
               onOpenModal={handleOpenTaskModal}
+              themeColor="orange" // 🍊 Lunch Theme
             />
           </div>
         </div>

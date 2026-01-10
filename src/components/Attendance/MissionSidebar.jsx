@@ -4,7 +4,9 @@ import { supabase } from "../../lib/supabaseClient";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
 import { useLock } from "../../context/LockContext";
 
-function MissionSidebar() {
+function MissionSidebar({
+  themeColor = "pink" // Default theme
+}) {
   const [missions, setMissions] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [newMission, setNewMission] = useState("");
@@ -13,6 +15,77 @@ function MissionSidebar() {
   const [missionTitle, setMissionTitle] = useState("오늘의 미션");
 
   const { locked } = useLock();
+
+  // Theme Styles Mapping
+  const THEME_STYLES = {
+    pink: {
+      accent: "bg-pink-600",
+      text: "text-pink-600",
+      textDark: "text-pink-900",
+      border: "border-pink-200",
+      hoverBorder: "hover:border-pink-300",
+      bg: "bg-pink-50",
+      hoverBg: "hover:bg-pink-100",
+      hoverText: "hover:text-pink-700",
+      blob1: "from-pink-400/35 via-rose-400/25 to-pink-300/15",
+      blob2: "from-rose-500/30 via-pink-400/20 to-transparent",
+      blob3: "from-pink-500/25 to-transparent",
+    },
+    indigo: {
+      accent: "bg-indigo-600",
+      text: "text-indigo-600",
+      textDark: "text-indigo-900",
+      border: "border-indigo-200",
+      hoverBorder: "hover:border-indigo-300",
+      bg: "bg-indigo-50",
+      hoverBg: "hover:bg-indigo-100",
+      hoverText: "hover:text-indigo-700",
+      blob1: "from-indigo-400/35 via-violet-400/25 to-indigo-300/15",
+      blob2: "from-violet-500/30 via-indigo-400/20 to-transparent",
+      blob3: "from-indigo-500/25 to-transparent",
+    },
+    emerald: {
+      accent: "bg-emerald-600",
+      text: "text-emerald-600",
+      textDark: "text-emerald-900",
+      border: "border-emerald-200",
+      hoverBorder: "hover:border-emerald-300",
+      bg: "bg-emerald-50",
+      hoverBg: "hover:bg-emerald-100",
+      hoverText: "hover:text-emerald-700",
+      blob1: "from-emerald-400/35 via-teal-400/25 to-emerald-300/15",
+      blob2: "from-teal-500/30 via-emerald-400/20 to-transparent",
+      blob3: "from-emerald-500/25 to-transparent",
+    },
+    orange: {
+      accent: "bg-orange-600",
+      text: "text-orange-600",
+      textDark: "text-orange-900",
+      border: "border-orange-200",
+      hoverBorder: "hover:border-orange-300",
+      bg: "bg-orange-50",
+      hoverBg: "hover:bg-orange-100",
+      hoverText: "hover:text-orange-700",
+      blob1: "from-orange-400/35 via-amber-400/25 to-orange-300/15",
+      blob2: "from-amber-500/30 via-orange-400/20 to-transparent",
+      blob3: "from-orange-500/25 to-transparent",
+    },
+    violet: {
+      accent: "bg-violet-600",
+      text: "text-violet-600",
+      textDark: "text-violet-900",
+      border: "border-violet-200",
+      hoverBorder: "hover:border-violet-300",
+      bg: "bg-violet-50",
+      hoverBg: "hover:bg-violet-100",
+      hoverText: "hover:text-violet-700",
+      blob1: "from-violet-400/35 via-fuchsia-400/25 to-violet-300/15",
+      blob2: "from-fuchsia-500/30 via-violet-400/20 to-transparent",
+      blob3: "from-violet-500/25 to-transparent",
+    },
+  };
+
+  const styles = THEME_STYLES[themeColor] || THEME_STYLES.pink;
 
   // -------------------------
   // 1) SUPABASE: 미션 불러오기
@@ -210,14 +283,14 @@ function MissionSidebar() {
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {/* Single large artistic brush blob */}
           <div className="absolute -top-4 -right-8 w-48 h-64">
-            <div className="absolute inset-0 bg-gradient-to-bl from-pink-400/35 via-rose-400/25 to-pink-300/15 rounded-[60%_40%_50%_50%/30%_70%_60%_40%] blur-lg" />
-            <div className="absolute top-8 right-12 w-32 h-40 bg-gradient-to-br from-rose-500/30 via-pink-400/20 to-transparent rounded-[40%_60%_70%_30%/50%_50%_40%_60%] blur-md" />
-            <div className="absolute top-16 right-8 w-24 h-32 bg-gradient-to-tl from-pink-500/25 to-transparent rounded-[50%_50%_60%_40%/40%_60%_50%_50%] blur-sm" />
+            <div className={`absolute inset-0 bg-gradient-to-bl ${styles.blob1} rounded-[60%_40%_50%_50%/30%_70%_60%_40%] blur-lg`} />
+            <div className={`absolute top-8 right-12 w-32 h-40 bg-gradient-to-br ${styles.blob2} rounded-[40%_60%_70%_30%/50%_50%_40%_60%] blur-md`} />
+            <div className={`absolute top-16 right-8 w-24 h-32 bg-gradient-to-tl ${styles.blob3} rounded-[50%_50%_60%_40%/40%_60%_50%_50%] blur-sm`} />
           </div>
         </div>
 
         <h2 className="text-xl font-extrabold mb-6 text-gray-900 tracking-tight flex items-center gap-2">
-          <span className="w-1.5 h-6 bg-pink-600 rounded-full"></span>
+          <span className={`w-1.5 h-6 ${styles.accent} rounded-full`}></span>
           {missionTitle}
         </h2>
 
@@ -225,21 +298,21 @@ function MissionSidebar() {
           {missions.map((item, idx) => (
             <li key={item.id}>
               <div
-                className="
+                className={`
                   relative w-full
                   bg-slate-50 hover:bg-white
-                  border border-slate-200 hover:border-pink-300
+                  border border-slate-200 ${styles.hoverBorder}
                   rounded-xl
                   px-4 py-3
                   text-center
                   transition-all duration-200
                   group
                   shadow-sm hover:shadow-md
-                "
+                `}
               >
 
                 {/* 메모 내용 */}
-                <div className="text-slate-700 text-lg font-bold group-hover:text-pink-900 transition-colors leading-relaxed block">
+                <div className={`text-slate-700 text-lg font-bold group-hover:${styles.textDark} transition-colors leading-relaxed block`}>
                   {item.text}
                 </div>
               </div>
@@ -252,7 +325,7 @@ function MissionSidebar() {
           className={`mt-6 w-full text-sm font-semibold py-3 rounded-xl transition-all border
     ${locked
               ? "bg-gray-100 text-gray-400 border-transparent cursor-not-allowed"
-              : "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100 hover:text-pink-700 hover:border-pink-300 hover:shadow-sm"
+              : `${styles.bg} ${styles.text} ${styles.border} ${styles.hoverBg} ${styles.hoverText} ${styles.hoverBorder} hover:shadow-sm`
             }
   `}
           onClick={() => {

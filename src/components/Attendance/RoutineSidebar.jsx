@@ -26,32 +26,85 @@ function RoutineSidebar({
   breakBlocks,
   selectedBlockId,
   setSelectedBlockId,
+  themeColor = "indigo", // Default theme
 }) {
   const { locked } = useLock();
 
+  // Theme Styles Mapping
+  const THEME_STYLES = {
+    indigo: {
+      accent: "bg-indigo-600",
+      text: "text-indigo-600",
+      textDark: "text-indigo-900", // For hover states
+      border: "border-indigo-200",
+      hoverBorder: "hover:border-indigo-300",
+      bg: "bg-indigo-50",
+      hoverBg: "hover:bg-indigo-100",
+      hoverText: "hover:text-indigo-700",
+      ring: "focus:ring-indigo-500",
+      blob1: "from-indigo-400/35 via-purple-400/25 to-indigo-300/15",
+      blob2: "from-purple-500/30 via-indigo-400/20 to-transparent",
+      blob3: "from-indigo-500/25 to-transparent",
+    },
+    emerald: {
+      accent: "bg-emerald-600",
+      text: "text-emerald-600",
+      textDark: "text-emerald-900",
+      border: "border-emerald-200",
+      hoverBorder: "hover:border-emerald-300",
+      bg: "bg-emerald-50",
+      hoverBg: "hover:bg-emerald-100",
+      hoverText: "hover:text-emerald-700",
+      ring: "focus:ring-emerald-500",
+      blob1: "from-emerald-400/35 via-lime-400/25 to-emerald-300/15",
+      blob2: "from-lime-500/30 via-emerald-400/20 to-transparent",
+      blob3: "from-emerald-500/25 to-transparent",
+    },
+    orange: {
+      accent: "bg-orange-600",
+      text: "text-orange-600",
+      textDark: "text-orange-900",
+      border: "border-orange-200",
+      hoverBorder: "hover:border-orange-300",
+      bg: "bg-orange-50",
+      hoverBg: "hover:bg-orange-100",
+      hoverText: "hover:text-orange-700",
+      ring: "focus:ring-orange-500",
+      blob1: "from-orange-400/35 via-amber-400/25 to-orange-300/15",
+      blob2: "from-amber-500/30 via-orange-400/20 to-transparent",
+      blob3: "from-orange-500/25 to-transparent",
+    },
+    violet: {
+      accent: "bg-violet-600",
+      text: "text-violet-600",
+      textDark: "text-violet-900",
+      border: "border-violet-200",
+      hoverBorder: "hover:border-violet-300",
+      bg: "bg-violet-50",
+      hoverBg: "hover:bg-violet-100",
+      hoverText: "hover:text-violet-700",
+      ring: "focus:ring-violet-500",
+      blob1: "from-violet-400/35 via-fuchsia-400/25 to-violet-300/15",
+      blob2: "from-fuchsia-500/30 via-violet-400/20 to-transparent",
+      blob3: "from-violet-500/25 to-transparent",
+    },
+  };
+
+  const styles = THEME_STYLES[themeColor] || THEME_STYLES.indigo;
+
   // 🗂 Internal state for Attendance tab (via Hook)
-  // 기존 로직(routines 테이블 직접 접근)을 훅으로 대체
   const {
     routineItems: internalItems,
     routineTitle: internalTitle,
     fetchRoutineTitle: internalFetch,
-
-    // setter & actions (매핑)
     setTempTitle: setInternalTempTitle,
-    // tempTitle state is managed inside hook, but we need to pass it to UI inputs?
-    // Wait, useAttendanceRoutine exposes tempTitle and setTempTitle.
-
-    tempTitle: internalTempTitleVal, // UI용
-
+    tempTitle: internalTempTitleVal,
     newContent: internalNewRoutine,
     setNewContent: setInternalNewRoutine,
-
-    // Edit state
-    editRoutine: internalEditItem, // hook uses object, old code used index
+    editRoutine: internalEditItem,
     setEditRoutine: setInternalEditItem,
     editText: internalEditText,
     setEditText: setInternalEditText,
-
     addRoutineItem: internalAddRoutine,
     deleteRoutineItem: internalDeleteRoutine,
     moveRoutine: internalMoveRoutine,
@@ -59,10 +112,8 @@ function RoutineSidebar({
     saveRoutineTitle: internalSaveRoutineTitle,
   } = useAttendanceRoutine();
 
-  // Determine which data source to use
   const usingExternalData = externalItems !== undefined;
 
-  // 📌 훅 초기화 (External Data 아닐 때만)
   useEffect(() => {
     if (!usingExternalData) {
       internalFetch();
@@ -72,20 +123,10 @@ function RoutineSidebar({
   const routineItems = usingExternalData ? externalItems : internalItems;
   const routineTitle = usingExternalData ? externalTitle : internalTitle;
 
-  // 모든 모달 상태 useState (UI Control)
   const [isEditing, setIsEditing] = useState(false);
 
-  // Hook uses object for edit, but old UI used index logic for internal items.
-  // We need to adapt.
-  // The Hook's `editRoutine` is the item object {id, text, ...}.
-  // The UI selects item by index or object.
-  // Let's rely on the Hook's `editRoutine` (object) instead of `internalEditIndex`.
-
-  // Handlers mapping
   const handleAddRoutine = usingExternalData ? addRoutineItem : internalAddRoutine;
   const handleDeleteRoutine = usingExternalData ? deleteRoutineItem : (index) => internalDeleteRoutine(internalItems[index].id);
-  // Hook's delete takes ID. Old internalDelete took index.
-
   const handleMoveRoutine = usingExternalData ? moveRoutine : internalMoveRoutine;
   const handleUpdateRoutine = usingExternalData ? updateRoutine : internalUpdateRoutine;
 
@@ -95,14 +136,11 @@ function RoutineSidebar({
   const currentEditText = usingExternalData ? editText : internalEditText;
   const setCurrentEditText = usingExternalData ? setEditText : setInternalEditText;
 
-  // Edit Target
   const currentEditRoutine = usingExternalData ? editRoutine : internalEditItem;
 
-  // Modal title input value
   const currentTempTitle = usingExternalData ? tempTitle : internalTempTitleVal;
   const setCurrentTempTitle = usingExternalData ? setTempTitle : setInternalTempTitle;
 
-  // ESC handling (simple)
   useEffect(() => {
     if (locked) {
       setIsEditing(false);
@@ -130,15 +168,14 @@ function RoutineSidebar({
       >
         {/* Decorative brush stroke blob */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {/* Single large artistic brush blob */}
           <div className="absolute -top-4 -left-8 w-48 h-64">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-400/35 via-purple-400/25 to-indigo-300/15 rounded-[40%_60%_70%_30%/60%_30%_70%_40%] blur-lg" />
-            <div className="absolute top-8 left-12 w-32 h-40 bg-gradient-to-bl from-purple-500/30 via-indigo-400/20 to-transparent rounded-[60%_40%_30%_70%/40%_60%_40%_60%] blur-md" />
-            <div className="absolute top-16 left-8 w-24 h-32 bg-gradient-to-tr from-indigo-500/25 to-transparent rounded-[50%_50%_60%_40%/30%_70%_60%_40%] blur-sm" />
+            <div className={`absolute inset-0 bg-gradient-to-br ${styles.blob1} rounded-[40%_60%_70%_30%/60%_30%_70%_40%] blur-lg`} />
+            <div className={`absolute top-8 left-12 w-32 h-40 bg-gradient-to-bl ${styles.blob2} rounded-[60%_40%_30%_70%/40%_60%_40%_60%] blur-md`} />
+            <div className={`absolute top-16 left-8 w-24 h-32 bg-gradient-to-tr ${styles.blob3} rounded-[50%_50%_60%_40%/30%_70%_60%_40%] blur-sm`} />
           </div>
         </div>
         <h2 className="text-xl font-extrabold mb-6 text-gray-900 tracking-tight flex items-center gap-2 relative z-10">
-          <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
+          <span className={`w-1.5 h-6 ${styles.accent} rounded-full`}></span>
           {routineTitle}
         </h2>
 
@@ -148,7 +185,7 @@ function RoutineSidebar({
             <select
               value={selectedBlockId || ""}
               onChange={(e) => setSelectedBlockId?.(e.target.value || null)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className={`w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 ${styles.ring}`}
             >
               {breakBlocks.map((block) => (
                 <option key={block.id} value={block.id}>
@@ -162,40 +199,37 @@ function RoutineSidebar({
         <ul className="space-y-2 flex-1 flex flex-col justify-center min-h-0 overflow-y-auto px-1 relative z-10">
           {routineItems.map((item, idx) => (
             <li key={item.id || idx}>
-
               <button
-                className="
+                className={`
                   relative w-full
                   bg-slate-50 hover:bg-white
-                  border border-slate-200 hover:border-indigo-300
+                  border border-slate-200 ${styles.hoverBorder}
                   rounded-xl
                   px-4 py-3
                   text-left
                   transition-all duration-200
                   group
                   shadow-sm hover:shadow-md
-                "
+                `}
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
-                    <span className="text-slate-700 text-lg font-bold group-hover:text-indigo-900 transition-colors leading-relaxed block">
+                    <span className={`text-slate-700 text-lg font-bold group-hover:${styles.textDark} transition-colors leading-relaxed block`}>
                       {item.text || item.content}
                     </span>
                   </div>
                 </div>
               </button>
-
             </li>
           ))}
         </ul>
-
 
         <button
           disabled={locked}
           className={`mt-6 w-full text-sm font-semibold py-3 rounded-xl transition-all border relative z-10
             ${locked
               ? "bg-gray-100 text-gray-400 border-transparent cursor-not-allowed"
-              : "bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700 hover:border-indigo-300 hover:shadow-sm"
+              : `${styles.bg} ${styles.text} ${styles.border} ${styles.hoverBg} ${styles.hoverText} ${styles.hoverBorder} hover:shadow-sm`
             }
           `}
           onClick={() => {

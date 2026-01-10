@@ -41,9 +41,9 @@ function AttendanceLayout() {
     <PageTransition>
       <div className="flex-1 flex flex-col min-h-0">
         <div className="grid grid-cols-[260px,1fr,260px] gap-6 w-full max-w-[1700px] flex-1 mx-auto min-h-0">
-          <RoutineSidebar />
+          <RoutineSidebar themeColor="indigo" />
           <AttendanceBoard />
-          <MissionSidebar />
+          <MissionSidebar themeColor="indigo" />
         </div>
       </div>
     </PageTransition>

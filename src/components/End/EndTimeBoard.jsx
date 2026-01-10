@@ -354,6 +354,7 @@ export default function EndTimeBoard() {
               moveRoutine={moveRoutine}
               updateRoutine={updateRoutine}
               saveRoutineTitle={saveRoutineTitle}
+              themeColor="violet" // 🌇 End Theme
             />
 
             {/* Center: Seat Grid with Header */}
@@ -362,7 +363,7 @@ export default function EndTimeBoard() {
               <div className="flex-none mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-2xl font-extrabold text-gray-900">
-                    End <span className="text-indigo-600">Status</span>
+                    End <span className="text-violet-600">Status</span>
                   </h2>
                   <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
@@ -387,7 +388,7 @@ export default function EndTimeBoard() {
                       type="checkbox"
                       checked={showIncompleteOnly}
                       onChange={(e) => setShowIncompleteOnly(e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                      className="w-4 h-4 text-violet-600 rounded focus:ring-violet-500"
                     />
                     <span className="text-sm font-semibold text-gray-700">미실시자만 보기</span>
                   </label>
@@ -419,6 +420,7 @@ export default function EndTimeBoard() {
               students={students.filter((s) => presentStudentIds.includes(s.id))}
               studentMissionStatus={missionStatus}
               onOpenModal={handleOpenTaskModal}
+              themeColor="violet" // 🌇 End Theme
             />
           </div>
         </div>

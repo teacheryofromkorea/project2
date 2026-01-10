@@ -8,13 +8,40 @@ import AttendanceConfirmModal from "./AttendanceConfirmModal";
 import UncheckedStudentsModal from "./UncheckedStudentsModal"; // ✅ Import new modal
 import useAttendanceRoutine from "../../hooks/Attendance/useAttendanceRoutine";
 
-function AttendanceBoard() {
-  const today = getTodayString(); // 오늘 날짜 (Local Time)
-  const todayLabel = new Date().toLocaleDateString("ko-KR", {
+// 🕒 Live Clock Component (Isolated for performance)
+const LiveClock = () => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const dateString = time.toLocaleDateString("ko-KR", {
     month: "long",
     day: "numeric",
     weekday: "short",
   });
+
+  return (
+    <div className="flex items-baseline gap-3">
+      <span className="text-5xl font-black text-gray-900 tracking-tighter leading-none tabular-nums translate-y-1">
+        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+      </span>
+      <span className="text-xl font-bold text-slate-400 tracking-tight">
+        {dateString}
+      </span>
+    </div>
+  );
+};
+
+function AttendanceBoard() {
+  const today = getTodayString(); // 오늘 날짜 (Local Time)
+  // todayLabel removed as it's now handled by LiveClock
+  // ... rest of component
+
 
   const [students, setStudents] = useState([]);
 
@@ -297,29 +324,58 @@ function AttendanceBoard() {
       </div>
 
       {/* 상단 헤더 영역 */}
-      <div className="relative z-10 px-4 pt-5">
+      <div className="relative z-10 px-4 pt-4">
         <div className="w-full">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-sm">
-                Attendance
-              </h1>
+              <LiveClock />
             </div>
 
             {/* 우측 상단 상태 요약 카드 */}
             <div className="flex gap-2">
-              <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const enrichedStudents = students.map(s => {
+                    const statusRow = attendanceStatus.find(a => a.student_id === s.id);
+                    return { ...s, status: statusRow?.status || (statusRow?.present ? 'present' : 'unchecked') };
+                  });
+                  setModalTargetStudents(enrichedStudents);
+                  setModalConfig({
+                    title: "👨‍🎓 전체 학생 목록",
+                    description: "전체 학생의 출결 상태를 확인하고 수정할 수 있습니다."
+                  });
+                  setModalType("unchecked");
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2 hover:bg-gray-50 transition-colors cursor-pointer"
+              >
                 <span className="text-[13px] text-slate-500 font-bold uppercase tracking-wider">전체</span>
                 <span className="text-base font-extrabold text-gray-900 leading-none">{students.length}</span>
-              </div>
+              </button>
 
-              <div className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2 relative overflow-hidden">
+              <button
+                onClick={() => {
+                  const presentStudents = students.filter(s => {
+                    const statusRow = attendanceStatus.find(a => a.student_id === s.id);
+                    return statusRow?.status === 'present' || statusRow?.present === true;
+                  });
+                  // Enrich (they are all present)
+                  const enrichedPresentStudents = presentStudents.map(s => ({ ...s, status: 'present' }));
+
+                  setModalTargetStudents(enrichedPresentStudents);
+                  setModalConfig({
+                    title: "✅ 출석 학생",
+                    description: "현재 출석으로 처리된 학생 목록입니다."
+                  });
+                  setModalType("unchecked");
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 shadow-sm flex items-center gap-2 relative overflow-hidden hover:bg-purple-50 transition-colors cursor-pointer"
+              >
                 <div className="absolute top-0 right-0 w-6 h-6 bg-purple-100/40 rounded-full blur-xl -mr-2 -mt-2" />
                 <span className="text-[13px] text-purple-700 font-bold uppercase tracking-wider relative z-10">출석</span>
                 <span className="text-base font-extrabold text-purple-700 relative z-10 leading-none">
                   {attendanceStatus.filter(a => a.present || a.status === 'present').length}
                 </span>
-              </div>
+              </button>
 
               {/* ✅ 기타 상태 (Other) Button */}
               {otherStudents.length > 0 && (
