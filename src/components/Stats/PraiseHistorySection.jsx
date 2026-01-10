@@ -205,12 +205,17 @@ id,
         }
     };
 
-    // 날짜별 로그 카운트 맵 생성
-    const logCountByDate = useMemo(() => {
+    // 날짜별 로그 통계 맵 생성 (Count, Plus Sum, Minus Sum)
+    const dailyStatsMap = useMemo(() => {
         const map = {};
         logs.forEach((log) => {
             const dateKey = format(new Date(log.created_at), "yyyy-MM-dd");
-            map[dateKey] = (map[dateKey] || 0) + 1;
+            if (!map[dateKey]) {
+                map[dateKey] = { count: 0, positive: 0, negative: 0 };
+            }
+            map[dateKey].count += 1;
+            if (log.delta > 0) map[dateKey].positive += log.delta;
+            if (log.delta < 0) map[dateKey].negative += log.delta; // delta is already negative
         });
         return map;
     }, [logs]);
@@ -231,7 +236,7 @@ id,
         return eachDayOfInterval({ start, end });
     }, [currentMonth]);
 
-    // 히트맵 색상 결정
+    // 히트맵 색상 결정 (기존 유지)
     const getHeatColor = (count) => {
         if (count === 0) return "bg-white/5";
         if (count <= 2) return "bg-emerald-900/50";
@@ -298,7 +303,8 @@ id,
 
                         {daysInMonth.map((day) => {
                             const dateKey = format(day, "yyyy-MM-dd");
-                            const count = logCountByDate[dateKey] || 0;
+                            const stats = dailyStatsMap[dateKey] || { count: 0, positive: 0, negative: 0 };
+                            const count = stats.count;
                             const isSelected = isSameDay(day, selectedDate);
                             const isTodayDate = isToday(day);
 
@@ -307,17 +313,34 @@ id,
                                     key={dateKey}
                                     onClick={() => setSelectedDate(day)}
                                     className={`
-w - full h - full rounded - lg flex items - center justify - center text - sm font - medium transition - all
-                  ${getHeatColor(count)}
-                  ${isSelected ? "ring-2 ring-white ring-offset-2 ring-offset-transparent z-10" : ""}
-                  ${isTodayDate && !isSelected ? "ring-1 ring-amber-400" : ""}
-hover: scale - 110 hover: z - 20
-    `}
-                                    title={`${format(day, "M/d")}: ${count} 건`}
+                                        relative w-full h-full rounded-lg transition-all overflow-hidden
+                                        ${getHeatColor(count)}
+                                        ${isSelected ? "ring-2 ring-white ring-offset-2 ring-offset-transparent z-10 scale-105" : ""}
+                                        ${isTodayDate && !isSelected ? "ring-1 ring-amber-400" : ""}
+                                        hover:scale-110 hover:z-20
+                                    `}
+                                    title={`${format(day, "M/d")}: ${count} 건 (+${stats.positive} / ${stats.negative})`}
                                 >
-                                    <span className={`font-bold drop-shadow-md ${count > 0 ? "text-white" : "text-white/50"}`}>
+                                    {/* 날짜 (좌상단 고정, 작게) */}
+                                    <span className={`absolute top-1 left-1.5 text-[10px] font-bold leading-none ${count > 0 ? "text-white/60" : "text-white/30"}`}>
                                         {format(day, "d")}
                                     </span>
+
+                                    {/* 스탯 요약 (중앙 정렬, 더 크게) */}
+                                    {count > 0 && (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center pt-2 gap-0.5">
+                                            {stats.positive > 0 && (
+                                                <span className="text-xs font-black text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+                                                    +{stats.positive}
+                                                </span>
+                                            )}
+                                            {stats.negative < 0 && (
+                                                <span className="text-xs font-black text-rose-300 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+                                                    {stats.negative}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </button>
                             );
                         })}
