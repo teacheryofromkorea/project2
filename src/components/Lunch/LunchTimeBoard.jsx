@@ -7,6 +7,7 @@ import GenericRoutineSidebar from "../shared/GenericRoutineSidebar";
 import MissionSidebar from "../Attendance/MissionSidebar";
 import SeatGrid from "../Attendance/SeatGrid";
 import { handleSupabaseError } from "../../utils/handleSupabaseError";
+import LiveClock from "../common/LiveClock"; // ✅ Import shared clock
 
 export default function LunchTimeBoard() {
   const [students, setStudents] = useState([]);
@@ -342,13 +343,11 @@ export default function LunchTimeBoard() {
             />
 
             {/* Center: Seat Grid with Header */}
-            <div className="relative w-full h-full rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 p-6 sm:p-8 shadow-xl flex flex-col overflow-hidden">
+            <div className="relative w-full h-full rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 px-6 sm:px-8 pt-4 sm:pt-5 pb-6 sm:pb-8 shadow-xl flex flex-col overflow-hidden">
               {/* Header inside SeatGrid */}
               <div className="flex-none mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-2xl font-extrabold text-gray-900">
-                    Lunch <span className="text-orange-600">Status</span>
-                  </h2>
+                <div className="flex items-center justify-between mb-5">
+                  <LiveClock />
                   <div className="flex gap-2">
                     <div className="px-3 py-1.5 rounded-xl bg-white/95 border border-gray-200 shadow-sm flex items-center gap-2">
                       <span className="text-[13px] text-slate-500 font-bold uppercase tracking-wider">전체</span>
